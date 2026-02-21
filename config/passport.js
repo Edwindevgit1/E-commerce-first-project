@@ -7,10 +7,12 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: '/auth/google/callback',
+      callbackURL: '/api/auth/google/callback',
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        console.log("Google profile data")
+        console.log(profile)
         let user = await User.findOne({ googleId: profile.id });
 
         if (!user) {
@@ -18,7 +20,7 @@ passport.use(
             googleId: profile.id,
             name: profile.displayName,
             email: profile.emails?.[0]?.value,
-            image: profile.photos?.[0]?.value,
+            provider: "google"
           });
         }
 

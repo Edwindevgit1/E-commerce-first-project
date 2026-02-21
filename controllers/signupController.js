@@ -23,7 +23,7 @@ const signupUser = async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.render('user/signup',{
-        error:'User already exists',
+        error:'User already exists please login',
       })
     }
 
@@ -34,7 +34,8 @@ const signupUser = async (req, res) => {
     await User.create({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      provider:"local"
     });
 
     // Redirect to login page
