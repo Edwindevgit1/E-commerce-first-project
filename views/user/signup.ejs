@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Create your account</title>
+  <link rel="stylesheet" href="/css/usersignup.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ================= NAVBAR ================= -->
+<header class="navbar">
+  <div class="nav-container">
+    <div class="logo">NIKE</div>
+
+    <nav class="nav-links">
+      <a href="#">Men</a>
+      <a href="#">Women</a>
+      <a href="#">Shoe</a>
+      <a href="#">Hot deals</a>
+    </nav>
+
+    <div class="nav-icons">
+      <input type="text" placeholder="Search">
+    </div>
+  </div>
+</header>
+
+<!-- ================= MAIN ================= -->
+<div class="main-container">
+
+  <!-- LEFT SIDE -->
+  <div class="left-panel">
+    <div class="left-bg">
+      <div class="signup-box">
+
+        <h1>Create your account</h1>
+        <p class="subtitle">sign upto get started</p>
+        <% if (typeof error !== "undefined" && error) { %>
+          <div id="errorBox" class="error-message">
+            <%= error %>
+          </div>
+        <% } %>
+
+        <form action="/api/auth/register" method="POST">
+
+          <label>Full Name</label>
+          <input type="text" name="name">
+
+          <label>Email</label>
+          <input type="email" name="email">
+
+          <label>Password</label>
+          <input type="password" name="password">
+
+          <div class="password-rules">
+            <p>Password must contain</p>
+            <ul>
+              <li>At least 8 characters</li>
+              <li>one uppercase letter</li>
+              <li>one lowercase letter</li>
+              <li>one special character</li>
+            </ul>
+          </div>
+
+          <button type="submit" class="signup-button">Sign up</button>
+        </form>
+
+        <a href="/api/auth/google" class="google-btn">
+          <img src="/images/Google.png" alt="Google">
+          Sign in with Google
+        </a>
+
+        <p class="signin-text">
+          Already have an account ? <a href="/api/auth/login">Sign in</a>
+        </p>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDE -->
+  <div class="right-panel">
+    <img src="/images/authbackground.png" alt="Signup Background">
+  </div>
+
+</div>
+<script src="/script/signup.js"></script>
+</body>
+</html>

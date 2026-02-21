@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Login</title>
+    <link rel="stylesheet" href="/css/adminlogin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="top-header">
+        <h2>NIKE</h2>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <div class="main-container">
+
+        <!-- LEFT LOGIN PANEL -->
+        <div class="left-panel">
+            <div class="login-box">
+
+                <h1>Admin login page</h1>
+                <p class="subtitle">sign into continue to your account</p>
+
+                <form action="/api/auth/admin" method="POST">
+
+                    <label>Email</label>
+                    <input type="email" name="email">
+
+                    <label>Password</label>
+                    <input type="password" name="password">
+
+                    <button type="submit">Sign in</button>
+
+                </form>
+
+            </div>
+        </div>
+
+        <!-- RIGHT IMAGE PANEL -->
+        <div class="right-panel">
+            <img src="/images/authbackground.png" alt="Login Background">
+        </div>
+
+    </div>
+
+</body>
+</html>

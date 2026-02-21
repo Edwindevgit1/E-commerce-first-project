@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login</title>
+  <link rel="stylesheet" href="/css/userlogin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="nav-container">
+    <div class="logo">NIKE</div>
+
+    <nav class="nav-links">
+      <a href="#">Men</a>
+      <a href="#">Women</a>
+      <a href="#">Shoe</a>
+      <a href="#">Hot deals</a>
+    </nav>
+
+    <div class="nav-icons">
+      <input type="text" placeholder="Search">
+      <span>👤</span>
+      <span>♡</span>
+      <span>🛒</span>
+    </div>
+  </div>
+</header>
+
+<div class="main-container">
+
+  <!-- LEFT SIDE -->
+  <div class="left-panel">
+    <div class="left-bg">
+      <div class="login-box">
+
+        <h1>Welcome back</h1>
+        <p class="subtitle">sign into continue to your account</p>
+
+        <form action="/api/auth/login" method="POST">
+
+          <label>Email</label>
+          <input type="email" name="email">
+
+          <div class="password-row">
+            <label>Password</label>
+            <a href="#" class="forgot">Forgot password ?</a>
+          </div>
+
+          <input type="password" name="password">
+
+          <button type="submit" class="login-button">Sign in</button>
+
+        </form>
+
+        <p class="signup-text">
+          Dont have an account ? <a href="/api/auth/register">Sign up</a>
+        </p>
+
+        <div class="divider">
+          <span></span>
+          <p>or</p>
+          <span></span>
+        </div>
+
+        <button type="button" class="google-btn" type="submit">
+          <img src="/images/Google.png" alt="Google">
+          Sign in with Google
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDE -->
+  <div class="right-panel">
+    <img src="/images/authbackground.png" alt="Login Background">
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,94 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  background: #f5f5f5;
+}
+
+/* HEADER */
+.top-header {
+  padding: 15px 60px;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+/* MAIN LAYOUT */
+.main-container {
+  display: flex;
+  height: 90vh;
+}
+
+/* LEFT SIDE */
+.left-panel {
+  width: 50%;
+  background-color: #e6e6e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-box {
+  width: 90%;
+  background: white;                 /* ✅ white card */
+  padding: 50px;                     /* ✅ space inside */
+  border-radius: 10px;               /* ✅ smooth corners */
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12); /* ✅ card depth */
+}
+
+.login-box h1 {
+  font-size: 34px;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  color: #555;
+  margin-bottom: 40px;
+}
+
+/* FORM */
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  margin-bottom: 8px;
+  margin-top: 25px;
+  font-weight: 500;
+}
+
+input {
+  padding: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+button {
+  margin-top: 35px;
+  padding: 15px;
+  background-color: black;
+  color: white;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #222;
+}
+
+/* RIGHT SIDE */
+.right-panel {
+  width: 50%;
+}
+
+.right-panel img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
