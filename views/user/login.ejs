@@ -37,7 +37,11 @@
 
         <h1>Welcome back</h1>
         <p class="subtitle">sign into continue to your account</p>
-
+        <% if (typeof error !== "undefined" && error) { %>
+          <div id="errorBox" class="error-message">
+            <%= error %>
+          </div>
+        <% } %>
         <form action="/api/auth/login" method="POST">
 
           <label>Email</label>
@@ -45,7 +49,7 @@
 
           <div class="password-row">
             <label>Password</label>
-            <a href="#" class="forgot">Forgot password ?</a>
+            <a href="/api/auth/forgotpass" class="forgot">Forgot password ?</a>
           </div>
 
           <input type="password" name="password">
@@ -64,10 +68,10 @@
           <span></span>
         </div>
 
-        <button type="button" class="google-btn" type="submit">
+        <a href="/api/auth/google" class="google-btn">
           <img src="/images/Google.png" alt="Google">
           Sign in with Google
-        </button>
+        </a>
 
       </div>
     </div>
@@ -79,6 +83,6 @@
   </div>
 
 </div>
-
+<script src="/script/signup.js"></script>
 </body>
 </html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OTP Verification</title>
+    <link rel="stylesheet" href="/css/verify.css">
+</head>
+<body>
+
+<header class="navbar">
+    <div class="logo">NIKE</div>
+
+    <nav class="nav-links">
+        <a href="#">Men</a>
+        <a href="#">Women</a>
+        <a href="#">shoe</a>
+        <a href="#">hot deals</a>
+    </nav>
+
+    <div class="nav-right">
+        <input type="text" placeholder="Search" class="search-box">
+        <span class="icon">👤</span>
+        <span class="icon">♡</span>
+        <span class="icon">🛒</span>
+    </div>
+</header>
+
+<div class="container">
+
+    <div class="otp-section">
+        <div class="otp-card">
+            <h1>OTP Verification</h1>
+            <p class="subtitle">
+                Enter the 6 digit code sent to your email
+            </p>
+
+            <p class="email">*****@example.com</p>
+
+            <form action="/verify-otp" method="POST">
+                <div class="otp-inputs">
+                    <input type="text" maxlength="1" name="otp1">
+                    <input type="text" maxlength="1" name="otp2">
+                    <input type="text" maxlength="1" name="otp3">
+                    <input type="text" maxlength="1" name="otp4">
+                    <input type="text" maxlength="1" name="otp5">
+                    <input type="text" maxlength="1" name="otp6">
+                </div>
+
+                <button type="submit" class="verify-btn">Verify</button>
+            </form>
+
+            <div class="resend">
+              <span>Didn’t receive the code?</span>
+              <button type="button" id="resendBtn" disabled>
+                  Resend OTP in <span id="timer">30</span>s
+              </button>
+          </div>
+        </div>
+    </div>
+
+    <div class="image-section">
+        <img src="/images/authbackground.png" alt="Shoes">
+    </div>
+
+</div>
+<script src="/script/verify-timer.js"></script>
+</body>
+</html>

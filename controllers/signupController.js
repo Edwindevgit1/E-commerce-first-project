@@ -4,48 +4,78 @@ import bcrypt from "bcrypt";
 const signupUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    if(!name||!email||!password){
-      return res.render('user/signup',{
-        error:'All fields are required'
-      })
+
+    // Trim values
+    const trimmedName = name?.trim();
+    const trimmedEmail = email?.trim();
+
+    // Required field validation
+    if (!trimmedName || !trimmedEmail || !password) {
+      return res.render("user/signup", {
+        error: "All fields are required",
+        name: trimmedName,
+        email: trimmedEmail
+      });
     }
+
+    // Enforce lowercase email (your chosen rule)
+    if (/[A-Z]/.test(trimmedEmail)) {
+      return res.render("user/signup", {
+        error: "Email must be in lowercase only",
+        name: trimmedName,
+        email: trimmedEmail
+      });
+    }
+
+    // Password validation
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\W).{8,}$/;
 
     if (!passwordRegex.test(password)) {
       return res.render("user/signup", {
         error: "Password must follow the given conditions",
-        name,
-        email
+        name: trimmedName,
+        email: trimmedEmail
       });
     }
 
-    // Check existing user
-    const existingUser = await User.findOne({ email });
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: trimmedEmail });
+
     if (existingUser) {
-      return res.render('user/signup',{
-        error:'User already exists please login',
-      })
+      if (existingUser.provider === "google") {
+        return res.render("user/signup", {
+          error: "Account exists. Please login using Google.",
+          name: trimmedName,
+          email: trimmedEmail
+        });
+      }
+
+      return res.render("user/signup", {
+        error: "User already exists please login",
+        name: trimmedName,
+        email: trimmedEmail
+      });
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(trimmedPassword, 10);
 
-    // Create user (role defaults to "user")
+    // Create new user
     await User.create({
-      name,
-      email,
+      name: trimmedName,
+      email: trimmedEmail,
       password: hashedPassword,
-      provider:"local"
+      provider: "local"
     });
 
-    // Redirect to login page
     return res.redirect("/api/auth/login");
 
   } catch (error) {
-    console.error(error,'signup error');
-    return res.render('user/signup',{
-      error:'Registration failed'
-    })
+    console.error(error, "signup error");
+
+    return res.render("user/signup", {
+      error: "Registration failed"
+    });
   }
 };
 

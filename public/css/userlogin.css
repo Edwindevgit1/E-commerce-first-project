@@ -185,16 +185,27 @@ button {
 
 /* GOOGLE BUTTON */
 .google-btn {
+  width: 100%;
+  margin-top: 8px;
+  height: 38px;
+  border-radius: 6px;
   background: #fff;
   border: 1px solid #ddd;
+
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 8px;
+
+  font-size: 14px;
+  cursor: pointer;
+
+  text-decoration: none;   /* 🔥 important */
+  color: #000;             /* 🔥 important */
 }
 
 .google-btn img {
-  width: 20px;
+  width: 30px;
 }
 
 /* RIGHT SIDE */
@@ -206,4 +217,12 @@ button {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.error-message {
+  background: #ffe5e5;
+  color: #d60000;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 14px;
 }
