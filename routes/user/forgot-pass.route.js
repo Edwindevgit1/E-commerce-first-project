@@ -1,8 +1,12 @@
-import express from "express"
+import express from "express";
+import sendOtp from "../../controllers/forgotpasswordController.js";
 
-const router=express.Router()
+const router = express.Router();
 
-router.get('/forgotpass',(req,res)=>{
-  res.render('user/forgot-password')
-})
-export default router
+router.get('/forgotpassword', (req, res) => {
+  res.render('user/forgot-password');
+});
+
+router.post('/forgotpassword', sendOtp);
+
+export default router;
