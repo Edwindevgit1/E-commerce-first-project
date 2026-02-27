@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>User Management</title>
+  <link rel="stylesheet" href="/css/admin-usermanagement.css">
+</head>
+<body>
+
+<header class="admin-header">
+  <div class="logo">NIKE</div>
+  <nav>
+    <a href="/api/admin/dashboard">Dashboard</a>
+    <a href="/api/admin/products">Products</a>
+    <a href="/api/admin/categories">Categories</a>
+    <a href="/api/admin/orders">Orders</a>
+    <a href="/api/admin/users">Users</a>
+    <a href="/api/admin/logout">Logout</a>
+  </nav>
+</header>
+
+<div class="container">
+
+  <h1>User Management</h1>
+
+  <div class="search-section">
+    <input type="text" placeholder="Search">
+    <button>Apply</button>
+  </div>
+
+  <table class="user-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Status</th>
+        <th>Total</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <% users.forEach(user => { %>
+        <tr>
+          <td><%= user.name %></td>
+          <td><%= user.email %></td>
+
+          <td>
+            <% if (!user.isBlocked) { %>
+              <span class="status active">Active</span>
+            <% } else { %>
+              <span class="status blocked">Blocked</span>
+            <% } %>
+          </td>
+
+          <td>0</td>
+
+          <td>
+            <% if (!user.isBlocked) { %>
+              <form action="/api/admin/block/<%= user._id %>" method="POST">
+                <button class="btn block">Block</button>
+              </form>
+            <% } else { %>
+              <form action="/api/admin/unblock/<%= user._id %>" method="POST">
+                <button class="btn unblock">Unblock</button>
+              </form>
+            <% } %>
+          </td>
+
+        </tr>
+      <% }) %>
+
+    </tbody>
+  </table>
+
+</div>
+
+</body>
+</html>
