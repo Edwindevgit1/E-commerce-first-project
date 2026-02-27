@@ -21,13 +21,16 @@ const sendOtp = async (req, res) => {
     }
 
     const user = await User.findOne({ email: trimmedEmail });
-
     if (!user) {
       return res.render("user/forgot-password", {
         error: "No account found with this email"
       });
     }
-
+    if (user.provider !== "local") {
+      return res.render("user/forgot-password", {
+        error: "This account uses Google login. Please login using Google."
+      });
+    }
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 

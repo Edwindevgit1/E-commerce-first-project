@@ -33,7 +33,7 @@ const loginUser = async (req, res) => {
       name: user.name,
       email: user.email
     };
-    return res.render('/')
+    return res.redirect('/api/auth/home')
 
   } catch (error) {
     console.error("Login error:", error);

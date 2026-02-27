@@ -4,7 +4,6 @@ const verifyOTP = async (req, res) => {
   try {
     const { otp1, otp2, otp3, otp4, otp5, otp6 } = req.body;
 
-    // 1️⃣ Validate all digits entered
     if (!otp1 || !otp2 || !otp3 || !otp4 || !otp5 || !otp6) {
       return res.render("user/verify", {
         error: "Please enter complete OTP"
@@ -21,31 +20,31 @@ const verifyOTP = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (!user || !user.resetOTP) {
+    if (!user || !user.resetOtp) {
       return res.redirect("/api/auth/forgotpassword");
     }
-
-    // 2️⃣ Check expiry
-    if (user.resetOTPExpiry < Date.now()) {
+    // Check expiry
+    if (user.resetOtpExpiry < Date.now()) {
       return res.render("user/verify", {
         error: "OTP expired"
       });
     }
 
-    // 3️⃣ Check match
-    if (user.resetOTP !== enteredOTP) {
+    // Check match
+    if (user.resetOtp !== enteredOTP) {
       return res.render("user/verify", {
         error: "Invalid OTP"
       });
     }
 
-    // 4️⃣ Clear OTP after success
-    user.resetOTP = null;
-    user.resetOTPExpiry = null;
+    // Clear OTP after success
+    user.resetOtp = null;
+    user.resetOtpExpiry = null;
     await user.save();
 
-    // 5️⃣ Redirect to reset password page
-    res.redirect("/api/auth/reset-password");
+    req.session.otpVerified = true;
+
+    res.redirect("/api/auth/resetpassword");
 
   } catch (err) {
     console.error(err);
@@ -55,4 +54,4 @@ const verifyOTP = async (req, res) => {
   }
 };
 
-export default verifyOTP;
+export default verifyOTP

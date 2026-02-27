@@ -9,6 +9,7 @@ import loginRouter  from "../routes/user/login.route.js";
 import forgotpassrouter from "../routes/user/forgot-pass.route.js";
 import verifyotp from "../routes/user/verify-otp.route.js";
 import resetpassword from "../routes/user/reset-pass.route.js";
+import homepage from "../routes/user/home.route.js";
 
 const app = express();
 
@@ -29,8 +30,9 @@ app.use(passport.session());
 app.use("/api/auth", adminAuthrouter);
 app.use('/api/auth',signupRouter)
 app.use('/api/auth',loginRouter)
-app.use('/api/auth/',forgotpassrouter)
+app.use('/api/auth',forgotpassrouter)
 app.use('/api/auth',verifyotp)
 app.use('/api/auth',resetpassword)
+app.use('/api/auth/',homepage)
 
 export default app;
