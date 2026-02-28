@@ -10,6 +10,8 @@ import forgotpassrouter from "../routes/user/forgot-pass.route.js";
 import verifyotp from "../routes/user/verify-otp.route.js";
 import resetpassword from "../routes/user/reset-pass.route.js";
 import homepage from "../routes/user/home.route.js";
+import usermanagement from "../routes/admin/usermanagement.route.js";
+import blockunblock from "../routes/admin/block-unblockrouter.js";
 
 const app = express();
 
@@ -27,7 +29,11 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
-app.use("/api/auth", adminAuthrouter);
+//admin
+app.use('/api/admin',adminAuthrouter);
+app.use('/api/admin',usermanagement)
+app.use('/api/admin',blockunblock)
+//user
 app.use('/api/auth',signupRouter)
 app.use('/api/auth',loginRouter)
 app.use('/api/auth',forgotpassrouter)

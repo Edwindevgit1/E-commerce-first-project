@@ -3,7 +3,7 @@ import bcrpyt from "bcrypt"
 
 export const adminlogin = async(req,res)=>{
   try{
-    const {email,passport}=req.body
+    const {email,password}=req.body
     if(!email||!password){
       return res.render('admin/adminlogin',{
         error:'All fields are required'
@@ -21,7 +21,7 @@ export const adminlogin = async(req,res)=>{
         error:'Access denied'
       })
     }
-    if(!user.provider=='local'){
+    if(user.provider!=='local'){
       return res.render('admin/adminlogin',{
         error:'Admin must login through the email and password'
       })
@@ -37,7 +37,7 @@ export const adminlogin = async(req,res)=>{
       email:user.email,
       role:user.role
     }
-    return res.redirect('/')
+    return res.redirect('/api/admin/adminusermanagement')
   }catch(error){
     console.log('Admin log in error',error)
     return res.render('admin/adminlogin',{
@@ -47,5 +47,5 @@ export const adminlogin = async(req,res)=>{
 }
 export const adminLogout=async(req,res)=>{
   req.session.admin=null
-  return res.redirect('/api/auth/admin')
+  return res.redirect('/api/admin/admin')
 }
