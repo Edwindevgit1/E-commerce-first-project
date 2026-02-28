@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema(
     },
 
     password: {
-      type: String,
+      type: String
     },
 
     googleId: {
@@ -45,12 +45,58 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
-    resetOtp:{
-      type:String
+
+    resetOtp: {
+      type: String
     },
-    resetOtpExpiry:{
-      type:Date
-    }
+
+    resetOtpExpiry: {
+      type: Date
+    },
+
+    profileImage: {
+      type: String,
+      default: "/images/avatar.png"
+    },
+    addresses: [
+      {
+        type: {
+          type: String,
+          required: true,
+          trim: true
+        },
+
+        street: {
+          type: String,
+          required: true,
+          trim: true
+        },
+
+        city: {
+          type: String,
+          required: true,
+          trim: true
+        },
+
+        state: {
+          type: String,
+          required: true,
+          trim: true
+        },
+
+        pincode: {
+          type: String,
+          required: true,
+          trim: true
+        },
+
+        isDefault: {
+          type: Boolean,
+          default: false
+        }
+      }
+    ]
+
   },
   {
     timestamps: true

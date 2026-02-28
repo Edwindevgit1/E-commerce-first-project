@@ -1,0 +1,148 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  background: #f3f3f3;
+}
+
+/* NAVBAR */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px 60px;
+  background: white;
+  border-bottom: 1px solid #ddd;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 22px;
+}
+
+.navbar nav a {
+  margin: 0 15px;
+  text-decoration: none;
+  color: black;
+}
+
+/* LAYOUT */
+.profile-container {
+  display: flex;
+  padding: 0 60px;   /* remove top padding */
+  min-height: calc(100vh - 80px); /* full height minus navbar */
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 260px;
+  padding: 40px 30px 40px 0; /* add vertical spacing inside instead */
+  border-right: 2px solid #666;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-avatar img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin-bottom: 30px;
+}
+
+.sidebar ul {
+  list-style: none;
+}
+
+.sidebar ul li {
+  height: 45px;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar ul li a {
+  text-decoration: none;
+  color: black;
+  width: 100%;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.sidebar ul li.active a {
+  font-weight: bold;
+}
+
+.logout-btn {
+  margin-top: 40px;
+  padding: 10px 20px;
+  background: black;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+/* MAIN */
+.profile-main {
+  flex: 1;
+  padding: 40px 0 40px 60px;
+}
+
+.avatar-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.big-avatar {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+}
+
+.delete-avatar-btn {
+  margin-top: 15px;
+  background: white;
+  border: 1px solid #999;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+/* FORM */
+.form-section {
+  max-width: 400px;
+  margin: auto;
+}
+
+.form-group {
+  margin-bottom: 25px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #eee;
+}
+
+.button-group button {
+  padding: 10px 20px;
+  background: black;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+.error {
+  color: red;
+  text-align: center;
+  margin-bottom: 15px;
+}

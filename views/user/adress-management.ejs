@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Address Management</title>
+  <link rel="stylesheet" href="/css/adressmanagement.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="logo">NIKE</div>
+  <nav>
+    <a href="#">Men</a>
+    <a href="#">Women</a>
+    <a href="#">Shoe</a>
+    <a href="#">Hot deals</a>
+  </nav>
+</header>
+
+<div class="profile-container">
+
+  <!-- ================= SIDEBAR ================= -->
+  <div class="sidebar">
+
+    <div class="sidebar-avatar">
+      <img 
+        src="<%= user && user.profileImage ? user.profileImage : '/images/avatar.png' %>" 
+        alt="avatar"
+      >
+    </div>
+
+    <ul>
+      <li><a href="/api/user/profile">Account information</a></li>
+      <li><a href="#">My orders</a></li>
+      <li class="active"><a href="/api/user/adress">Address management</a></li>
+      <li><a href="/api/user/change-password">Change password</a></li>
+    </ul>
+
+    <form action="/api/auth/logout" method="POST">
+      <button class="logout-btn">Logout</button>
+    </form>
+
+  </div>
+
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <div class="address-main">
+
+    <h1>Address Management</h1>
+
+    <% if (addresses && addresses.length > 0) { %>
+
+      <% addresses.forEach(address => { %>
+
+        <div class="address-card">
+
+          <!-- ========== VIEW MODE ========== -->
+          <div id="view-<%= address._id %>" class="address-content">
+
+            <div class="address-left">
+              <h3>
+                <%= address.type %>
+                <% if (address.isDefault) { %>
+                  <span class="default-badge">Default</span>
+                <% } %>
+              </h3>
+
+              <p><%= address.street %></p>
+              <p><%= address.city %>, <%= address.state %></p>
+              <p><%= address.pincode %></p>
+            </div>
+
+            <div class="address-actions">
+
+              <% if (!address.isDefault) { %>
+                <form action="/api/user/set-default/<%= address._id %>" method="POST">
+                  <button type="submit">Set as default</button>
+                </form>
+              <% } %>
+
+              <form action="/api/user/delete-address/<%= address._id %>" 
+                    method="POST"
+                    onsubmit="return confirm('Remove this address?')">
+                <button type="submit">Remove</button>
+              </form>
+
+              <button type="button"
+                      onclick="enableEdit('<%= address._id %>')">
+                Edit
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <!-- ========== EDIT MODE ========== -->
+          <div id="edit-<%= address._id %>" 
+               class="address-edit"
+               style="display:none;">
+
+            <form action="/api/user/update-address/<%= address._id %>" 
+                  method="POST"
+                  class="edit-form">
+
+              <input type="text" name="type" value="<%= address.type %>" required>
+              <input type="text" name="street" value="<%= address.street %>" required>
+              <input type="text" name="city" value="<%= address.city %>" required>
+              <input type="text" name="state" value="<%= address.state %>" required>
+              <input type="text" name="pincode" value="<%= address.pincode %>" required>
+
+              <div class="edit-buttons">
+                <button type="submit">Save</button>
+                <button type="button"
+                        onclick="cancelEdit('<%= address._id %>')">
+                  Cancel
+                </button>
+              </div>
+
+            </form>
+
+          </div>
+
+        </div>
+
+      <% }) %>
+
+    <% } else { %>
+
+      <p class="empty-msg">No addresses added yet.</p>
+
+    <% } %>
+
+
+    <!-- ================= ADD NEW ADDRESS ================= -->
+    <div class="add-new">
+
+      <h3>Add New Address</h3>
+
+      <form action="/api/user/add-address" method="POST" class="add-form">
+
+        <input type="text" name="type" placeholder="Home / Office" required>
+        <input type="text" name="street" placeholder="Street" required>
+        <input type="text" name="city" placeholder="City" required>
+        <input type="text" name="state" placeholder="State" required>
+        <input type="text" name="pincode" placeholder="Pincode" required>
+
+        <button type="submit">Add Address</button>
+
+      </form>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- ================= EDIT TOGGLE SCRIPT ================= -->
+<script>
+  function enableEdit(id) {
+    document.getElementById('view-' + id).style.display = "none";
+    document.getElementById('edit-' + id).style.display = "block";
+  }
+
+  function cancelEdit(id) {
+    document.getElementById('view-' + id).style.display = "flex";
+    document.getElementById('edit-' + id).style.display = "none";
+  }
+</script>
+
+</body>
+</html>
