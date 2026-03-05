@@ -5,11 +5,11 @@ const signupUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Trim values
+
     const trimmedName = name?.trim();
     const trimmedEmail = email?.trim();
 
-    // Required field validation
+
     if (!trimmedName || !trimmedEmail || !password) {
       return res.render("user/signup", {
         error: "All fields are required",
@@ -18,7 +18,7 @@ const signupUser = async (req, res) => {
       });
     }
 
-    // Enforce lowercase email (your chosen rule)
+
     if (/[A-Z]/.test(trimmedEmail)) {
       return res.render("user/signup", {
         error: "Email must be in lowercase only",
@@ -27,7 +27,7 @@ const signupUser = async (req, res) => {
       });
     }
 
-    // Password validation
+
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\W).{8,}$/;
 
     if (!passwordRegex.test(password)) {
@@ -38,7 +38,7 @@ const signupUser = async (req, res) => {
       });
     }
 
-    // Check if user already exists
+
     const existingUser = await User.findOne({ email: trimmedEmail });
 
     if (existingUser) {
@@ -57,10 +57,10 @@ const signupUser = async (req, res) => {
       });
     }
 
-    // Hash password
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user
+
     await User.create({
       name: trimmedName,
       email: trimmedEmail,

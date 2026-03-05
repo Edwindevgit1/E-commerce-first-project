@@ -19,7 +19,6 @@ router.get("/google",
   })
 );
 
-// GOOGLE CALLBACK
 router.get("/google/callback",
   passport.authenticate("google", {
     failureRedirect: "/register"

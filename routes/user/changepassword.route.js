@@ -42,7 +42,7 @@ router.post('/change-password', async (req, res) => {
       return res.redirect('/api/auth/login')
     }
 
-    // 1️⃣ Check if user uses local login
+
     if (user.provider !== "local") {
       return res.render('user/change-password', {
         user,
@@ -50,7 +50,7 @@ router.post('/change-password', async (req, res) => {
       })
     }
 
-    // 2️⃣ Validate current password
+
     const isMatch = await bcrypt.compare(currentPassword, user.password)
 
     if (!isMatch) {
@@ -60,7 +60,7 @@ router.post('/change-password', async (req, res) => {
       })
     }
 
-    // 3️⃣ Validate new password length
+
     if (newPassword.length < 8) {
       return res.render('user/change-password', {
         user,
@@ -68,7 +68,7 @@ router.post('/change-password', async (req, res) => {
       })
     }
 
-    // 4️⃣ Confirm password match
+
     if (newPassword !== confirmPassword) {
       return res.render('user/change-password', {
         user,
@@ -76,7 +76,7 @@ router.post('/change-password', async (req, res) => {
       })
     }
 
-    // 5️⃣ Prevent same password reuse
+
     const isSamePassword = await bcrypt.compare(newPassword, user.password)
 
     if (isSamePassword) {
@@ -86,7 +86,7 @@ router.post('/change-password', async (req, res) => {
       })
     }
 
-    // 6️⃣ Hash new password
+
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
     user.password = hashedPassword

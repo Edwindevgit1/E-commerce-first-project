@@ -4,7 +4,7 @@ import { blockUser,unblockUser } from '../../controllers/block-unblockController
 
 const router=express.Router()
 
-// Block / Unblock (Protected)
+
 router.post('/adminusermanagement/block/:id', adminMiddleware, blockUser);
 router.post('/adminusermanagement/unblock/:id', adminMiddleware, unblockUser);
 

@@ -4,12 +4,12 @@ import adminMiddleware from "../../middleware/adminauthmiddleware.js";
 
 const router=express.Router()
 
-// User Management (Search + Clear + Sort)
+
 router.get('/adminusermanagement',adminMiddleware, async (req, res) => {
   try {
     const search = req.query.search?.trim() || "";
-    const page = parseInt(req.query.page) || 1;   // current page
-    const limit = 5;                              // users per page
+    const page = parseInt(req.query.page) || 1;   
+    const limit = 5;                              
     const skip = (page - 1) * limit;
 
     let query = { role: "user" };

@@ -18,7 +18,7 @@
 
 <div class="profile-container">
 
-  <!-- ================= SIDEBAR ================= -->
+
   <div class="sidebar">
 
     <div class="sidebar-avatar">
@@ -42,7 +42,7 @@
   </div>
 
 
-  <!-- ================= MAIN CONTENT ================= -->
+
   <div class="address-main">
 
     <h1>Address Management</h1>
@@ -53,7 +53,7 @@
 
         <div class="address-card">
 
-          <!-- ========== VIEW MODE ========== -->
+
           <div id="view-<%= address._id %>" class="address-content">
 
             <div class="address-left">
@@ -93,7 +93,7 @@
           </div>
 
 
-          <!-- ========== EDIT MODE ========== -->
+
           <div id="edit-<%= address._id %>" 
                class="address-edit"
                style="display:none;">
@@ -131,7 +131,7 @@
     <% } %>
 
 
-    <!-- ================= ADD NEW ADDRESS ================= -->
+
     <div class="add-new">
 
       <h3>Add New Address</h3>
@@ -155,7 +155,7 @@
 </div>
 
 
-<!-- ================= EDIT TOGGLE SCRIPT ================= -->
+
 <script>
   function enableEdit(id) {
     document.getElementById('view-' + id).style.display = "none";

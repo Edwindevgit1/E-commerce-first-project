@@ -4,7 +4,7 @@ import adminMiddleware from "../../middleware/adminauthmiddleware.js";
 
 const router = express.Router();
 
-// Admin Login Page
+
 router.get('/admin', (req, res) => {
   res.render("admin/adminlogin");
 });

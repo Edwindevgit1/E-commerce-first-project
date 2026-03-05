@@ -6,9 +6,6 @@ import path from 'path'
 
 const router = express.Router()
 
-/* ===============================
-   PROFILE PAGE
-================================ */
 router.get('/profile', async (req, res) => {
 
   if (!req.session.user) {
@@ -32,10 +29,6 @@ router.get('/profile', async (req, res) => {
 })
 
 
-
-/* ===============================
-   UPDATE PROFILE
-================================ */
 router.post(
   '/update-profile',
   upload.single('profileImage'),
@@ -55,7 +48,7 @@ router.post(
       const newName = req.body.name?.trim()
       const newEmail = req.body.email?.trim().toLowerCase()
 
-      /* ---------- EMAIL DUPLICATE CHECK ---------- */
+      
       if (newEmail && newEmail !== user.email) {
 
         const existingUser = await User.findOne({ email: newEmail })
@@ -70,15 +63,12 @@ router.post(
         user.email = newEmail
       }
 
-      /* ---------- UPDATE NAME ---------- */
       if (newName) {
         user.name = newName
       }
 
-      /* ---------- UPDATE IMAGE ---------- */
       if (req.file) {
 
-        // delete old image if exists
         if (user.profileImage) {
 
           const oldImagePath = path.join(
@@ -97,7 +87,6 @@ router.post(
 
       await user.save()
 
-      /* ---------- UPDATE SESSION ---------- */
       req.session.user.name = user.name
       req.session.user.email = user.email
 
@@ -112,9 +101,6 @@ router.post(
 
 
 
-/* ===============================
-   DELETE AVATAR
-================================ */
 router.post('/delete-avatar', async (req, res) => {
 
   if (!req.session.user) {

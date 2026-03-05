@@ -18,7 +18,7 @@
 
 <div class="profile-container">
 
-  <!-- SIDEBAR -->
+
   <div class="sidebar">
 
     <div class="sidebar-avatar">
@@ -46,16 +46,16 @@
       </li>
     </ul>
 
-    <form action="/api/auth/logout" method="POST">
+    <form action="/api/user/logout" method="POST">
       <button class="logout-btn">Logout</button>
     </form>
 
   </div>
 
-  <!-- MAIN CONTENT -->
+
   <div class="profile-main">
 
-    <!-- AVATAR SECTION -->
+
     <div class="avatar-section">
       <img 
         src="<%= user.profileImage ? user.profileImage : '/images/avatar.png' %>" 
@@ -80,7 +80,7 @@
       <p class="error"><%= error %></p>
     <% } %>
 
-    <!-- PROFILE FORM -->
+
     <div class="form-section">
       <form 
         action="/api/user/update-profile" 
@@ -128,7 +128,7 @@
 
 </div>
 
-<!-- IMAGE PREVIEW -->
+
 <script>
   const input = document.getElementById("imageInput");
   const preview = document.getElementById("avatarPreview");
@@ -146,7 +146,7 @@
   });
 </script>
 
-<!-- EDIT MODE -->
+
 <script>
   const editBtn = document.getElementById("editBtn");
   const saveBtn = document.getElementById("saveBtn");

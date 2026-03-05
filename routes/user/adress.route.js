@@ -3,9 +3,7 @@ import User from '../../models/User.js'
 
 const router = express.Router()
 
-/* ============================
-   ADDRESS PAGE
-============================ */
+
 router.get('/adress', async (req, res) => {
 
   if (!req.session.user) {
@@ -32,9 +30,6 @@ router.get('/adress', async (req, res) => {
 })
 
 
-/* ============================
-   ADD ADDRESS
-============================ */
 router.post('/add-address', async (req, res) => {
 
   if (!req.session.user) {
@@ -69,9 +64,6 @@ router.post('/add-address', async (req, res) => {
 })
 
 
-/* ============================
-   DELETE ADDRESS
-============================ */
 router.post('/delete-address/:id', async (req, res) => {
 
   if (!req.session.user) {

@@ -23,21 +23,21 @@ const verifyOTP = async (req, res) => {
     if (!user || !user.resetOtp) {
       return res.redirect("/api/auth/forgotpassword");
     }
-    // Check expiry
+
     if (user.resetOtpExpiry < Date.now()) {
       return res.render("user/verify", {
         error: "OTP expired"
       });
     }
 
-    // Check match
+
     if (user.resetOtp !== enteredOTP) {
       return res.render("user/verify", {
         error: "Invalid OTP"
       });
     }
 
-    // Clear OTP after success
+
     user.resetOtp = null;
     user.resetOtpExpiry = null;
     await user.save();

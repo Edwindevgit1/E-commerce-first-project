@@ -31,16 +31,16 @@ const sendOtp = async (req, res) => {
         error: "This account uses Google login. Please login using Google."
       });
     }
-    // Generate 6-digit OTP
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Store OTP and expiry (10 minutes)
+
     user.resetOtp = otp;
     user.resetOtpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
     await user.save();
 
-    // Send email
+
     await transporter.sendMail({
       from: `"Your App" <${process.env.EMAIL_USER}>`,
       to: user.email,
@@ -48,7 +48,7 @@ const sendOtp = async (req, res) => {
       text: `Your OTP is: ${otp}`
     });
 
-    // Save email in session for next step
+
     req.session.resetEmail = user.email;
 
     res.redirect("/api/auth/verify");

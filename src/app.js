@@ -15,6 +15,8 @@ import blockunblock from "../routes/admin/block-unblockrouter.js";
 import userprofile from "../routes/user/profile.route.js";
 import adressrouter from "../routes/user/adress.route.js";
 import changepassword from "../routes/user/changepassword.route.js";
+import logout from "../routes/user/logout.route.js";
+
 
 const app = express();
 
@@ -47,5 +49,6 @@ app.use('/api/auth/',homepage)
 app.use('/api/user',userprofile)
 app.use('/api/user',adressrouter)
 app.use('/api/user',changepassword)
+app.use('/api/user',logout)
 
 export default app;
