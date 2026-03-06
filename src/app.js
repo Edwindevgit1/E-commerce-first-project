@@ -16,6 +16,7 @@ import userprofile from "../routes/user/profile.route.js";
 import adressrouter from "../routes/user/adress.route.js";
 import changepassword from "../routes/user/changepassword.route.js";
 import logout from "../routes/user/logout.route.js";
+import signupotp from "../routes/user/signupotp.route.js";
 
 
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/admin',usermanagement)
 app.use('/api/admin',blockunblock)
 //user
 app.use('/api/auth',signupRouter)
+app.use('/api/auth',signupotp)
 app.use('/api/auth',loginRouter)
 app.use('/api/auth',forgotpassrouter)
 app.use('/api/auth',verifyotp)

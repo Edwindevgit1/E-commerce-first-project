@@ -1,212 +1,394 @@
+:root {
+  --bg: #d7e1ef;
+  --card: #e8eef8;
+  --ink: #0e1323;
+  --muted: #4e5f7c;
+  --navy: #05163f;
+  --field: #071b4d;
+  --line: #c8d4e7;
+  --soft-shadow: 14px 14px 30px rgba(91, 117, 152, 0.28), -12px -12px 26px rgba(255, 255, 255, 0.85);
+  --inner-shadow: inset 5px 5px 12px rgba(126, 149, 178, 0.2), inset -5px -5px 10px rgba(255, 255, 255, 0.8);
+}
+
 * {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
-  font-family: 'Inter', sans-serif;
 }
 
 body {
-  background: #f5f5f5;
-}
-.error-message {
-  background: #ffe5e5;
-  color: #d60000;
-  padding: 10px;
-  border-radius: 6px;
-  margin-bottom: 15px;
-  font-size: 14px;
-}
-/* ================= NAVBAR ================= */
-.navbar {
-  height: 70px;
-  background: #fff;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: center;
+  min-height: 100vh;
+  font-family: "Sora", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(circle at 50% 12%, #f2f5fb 0%, var(--bg) 62%);
 }
 
-.nav-container {
-  width: 100%;
-  max-width: 1200px;
-  padding: 0 40px;
+.neo-scene {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 36px 18px;
+}
+
+.neo-card {
+  width: min(980px, 100%);
+  border-radius: 34px;
+  background: linear-gradient(165deg, #ebf1fa, #dfe8f5);
+  box-shadow: var(--soft-shadow);
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.top-strip {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 30px;
 }
 
-.logo {
-  font-weight: 800;
-  font-size: 20px;
-}
-
-.nav-links {
+.chip-row {
+  flex: 1;
+  border-radius: 999px;
+  background: #edf3fc;
+  box-shadow: var(--inner-shadow);
+  padding: 8px;
   display: flex;
-  gap: 30px;
+  gap: 10px;
 }
 
-.nav-links a {
+.chip {
+  min-height: 46px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: #edf3fc;
+  color: #15203a;
   text-decoration: none;
-  color: #000;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.nav-icons {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 15px;
-}
-
-.nav-icons input {
-  padding: 6px 14px;
-  border-radius: 20px;
-  border: 1px solid #ccc;
-}
-
-/* ================= MAIN ================= */
-.main-container {
-  display: flex;
-  height: calc(100vh - 70px);
-}
-
-/* ================= LEFT SIDE ================= */
-.left-panel {
-  width: 50%;
-  display: flex;
   justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 4px 4px 10px rgba(127, 149, 179, 0.26), -3px -3px 10px rgba(255, 255, 255, 0.72);
+}
+.chip:not(.chip-dark):hover {
+  background: linear-gradient(165deg, #0a2052, #06143a);
+  color: #eef4ff;
+  box-shadow: 0 10px 18px rgba(5, 20, 56, 0.34);
 }
 
-/* GREY BACKGROUND */
-.left-bg {
+.chip-dark {
+  background: linear-gradient(165deg, #0a2052, #06143a);
+  color: #eef4ff;
+  box-shadow: 0 10px 18px rgba(5, 20, 56, 0.34);
+}
+
+.profile-chip {
+  margin-top: 7px;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(165deg, #edf3fc, #e1e9f6);
+  color: #0e1a38;
+  box-shadow: var(--inner-shadow);
+  display: grid;
+  place-items: center;
+}
+
+.title-block {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.title-block h1 {
+  font-size: clamp(32px, 4vw, 46px);
+  letter-spacing: -0.6px;
+}
+
+.title-block p {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.message-slot {
+  width: min(640px, 100%);
+  min-height: 44px;
+  margin: 0 auto 12px;
+}
+
+.error-message {
+  margin: 0;
   width: 100%;
-  height: 100%;
-  background-color: #e6e6e6;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: 20px;
-}
-
-/* ================= SIGNUP CARD ================= */
-.signup-box {
-  width: 420px;
-  max-width: 90%;
-  background: #fff;
-  padding: 18px 22px; /* reduced further */
   border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+  border: 1px solid #eab2b2;
+  background: #fdeeee;
+  color: #b41e1e;
+  font-size: 14px;
+  padding: 10px 14px;
 }
 
-.signup-box h1 {
-  font-size: 24px;
-  margin-bottom: 4px;
-}
-
-.subtitle {
-  font-size: 13px;
-  color: #555;
-  margin-bottom: 10px;
-}
-
-/* ================= FORM ================= */
-form {
+.signup-form {
+  width: min(640px, 100%);
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
+  gap: 12px;
 }
 
-label {
-  margin-top: 6px;
-  margin-bottom: 2px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-input {
-  height: 36px;
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 13px;
-}
-
-/* PASSWORD RULES (gap fixed here) */
-.password-rules {
-  font-size: 11px;
-  margin-top: 4px;
-  margin-bottom: 6px;
-  line-height: 1.2;
-  color: #444;
-}
-
-.password-rules p {
-  margin: 0; /* 🔥 removes hidden gap */
-}
-
-.password-rules ul {
-  padding-left: 16px;
-  margin-top: 4px;
-}
-
-/* BUTTON */
-  button {
-    width: 100%;            /* 🔥 important */
-    margin-top: 10px;
-    height: 38px;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-  }
-  .signup-button {
-    background-color: #000;
-    color: #fff;
-    border: none;
-  }
-
-
-/* GOOGLE BUTTON */
-.google-btn {
-  width: 100%;
-  margin-top: 8px;
-  height: 38px;
-  border-radius: 6px;
-  background: #fff;
-  border: 1px solid #ddd;
-
+.field {
+  border-radius: 999px;
+  min-height: 56px;
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 8px;
-
-  font-size: 14px;
-  cursor: pointer;
-
-  text-decoration: none;   /* 🔥 important */
-  color: #000;             /* 🔥 important */
+  gap: 10px;
+  padding: 0 18px;
 }
 
-.google-btn img {
-  width: 30px;
+.field-dark {
+  background: linear-gradient(165deg, var(--field), var(--navy));
+  color: #eef4ff;
+  box-shadow: 0 14px 24px rgba(5, 18, 50, 0.28);
 }
 
-/* SIGN IN TEXT */
-.signin-text {
-  margin-top: 6px;
-  font-size: 13px;
+.field input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: inherit;
+  font-family: inherit;
+  font-size: 15px;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-.signin-text a {
+/* keep dark style even when focused */
+.field input:focus {
+  background: transparent !important;
+  outline: none;
+  box-shadow: none !important;
+}
+
+/* prevent Chrome autofill white background */
+.field input:-webkit-autofill,
+.field input:-webkit-autofill:hover,
+.field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #eef4ff;
+  -webkit-box-shadow: 0 0 0 1000px #071b4d inset !important;
+  box-shadow: 0 0 0 1000px #071b4d inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.field input::placeholder {
+  color: rgba(228, 238, 255, 0.86);
+}
+
+.password-field .toggle-password {
+  border: 0;
+  background: transparent;
+  color: #d8e6ff;
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 8px;
+}
+
+.password-field .toggle-password:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.primary-btn {
+  margin-top: 8px;
+  min-height: 56px;
+  border: 0;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: #f0f5ff;
+  background: linear-gradient(165deg, #0a2052, #05163f);
+  box-shadow: 0 14px 24px rgba(5, 18, 50, 0.32);
+  cursor: pointer;
+}
+
+.google-btn {
+  margin-top: 2px;
+  min-height: 54px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #edf3fc;
   text-decoration: none;
-  color: #000;
+  color: #172642;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 4px 4px 10px rgba(126, 151, 184, 0.25), -4px -4px 10px rgba(255, 255, 255, 0.75);
 }
 
-/* ================= RIGHT SIDE ================= */
-.right-panel {
-  width: 50%;
+.google-mark {
+  display: inline-flex;
+  align-items: center;
 }
 
-.right-panel img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.bottom-chips {
+  margin-top: 26px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
 }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+@media (max-width: 760px) {
+  .neo-card {
+    border-radius: 24px;
+    padding: 16px;
+  }
+
+  .top-strip {
+    flex-direction: column;
+  }
+
+  .chip-row {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .chip {
+    min-height: 42px;
+    padding: 10px 18px;
+    font-size: 14px;
+  }
+
+  .profile-chip {
+    align-self: flex-end;
+    margin-top: 0;
+  }
+
+  .title-block h1 {
+    font-size: clamp(28px, 9vw, 38px);
+  }
+
+  .field,
+  .primary-btn,
+  .google-btn {
+    min-height: 50px;
+  }
+}
+
+/* 13-inch laptop optimization */
+@media (max-width: 1280px) {
+  .neo-scene {
+    padding: 14px 12px;
+  }
+
+  .neo-card {
+    width: min(760px, 100%);
+    border-radius: 20px;
+    padding: 16px;
+  }
+
+  .top-strip {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .chip-row {
+    padding: 6px;
+    gap: 8px;
+  }
+
+  .chip {
+    min-height: 34px;
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
+  .profile-chip {
+    margin-top: 7px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .title-block {
+    margin-bottom: 12px;
+  }
+
+  .title-block h1 {
+    font-size: clamp(22px, 2.4vw, 30px);
+    line-height: 1.1;
+  }
+
+  .title-block p {
+    margin-top: 5px;
+    font-size: 11px;
+  }
+
+  .message-slot {
+    width: min(500px, 100%);
+    min-height: 38px;
+    margin-bottom: 10px;
+  }
+
+  .error-message {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+
+  .signup-form {
+    width: min(500px, 100%);
+    gap: 8px;
+  }
+
+  .field,
+  .primary-btn,
+  .google-btn {
+    min-height: 40px;
+  }
+
+  .field {
+    padding: 0 14px;
+    gap: 8px;
+  }
+
+  .field input,
+  .primary-btn,
+  .google-btn {
+    font-size: 12px;
+  }
+
+  .field svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .google-mark svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .bottom-chips {
+    margin-top: 12px;
+    gap: 8px;
+  }
+}
+
