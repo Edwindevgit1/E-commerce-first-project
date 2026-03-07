@@ -1,177 +1,164 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <title>My Profile</title>
-  <link rel="stylesheet" href="/css/userprofile.css">
-</head>
-<body>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Profile</title>
+    <link rel="stylesheet" href="/css/userprofile.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="neo-scene">
+      <section class="neo-card">
+        <header class="top-strip">
+          <div class="chip-row">
+            <a href="/" class="chip">Home</a>
+            <a href="/api/user/profile" class="chip chip-dark">Account information</a>
+            <a href="#" class="chip">My orders</a>
+            <a href="/api/user/adress" class="chip">Address management</a>
+            <a href="/api/user/change-password" class="chip">Change password</a>
+          </div>
 
-<header class="navbar">
-  <div class="logo">NIKE</div>
-  <nav>
-    <a href="#">Men</a>
-    <a href="#">Women</a>
-    <a href="#">Shoe</a>
-    <a href="#">Hot deals</a>
-  </nav>
-</header>
+          <form action="/api/user/logout" method="POST">
+            <button class="logout-pill" type="submit">Logout</button>
+          </form>
+        </header>
 
-<div class="profile-container">
+        <section class="profile-main">
+          <div class="hero">
+            <div class="avatar-wrap">
+              <img
+                src="<%= user.profileImage ? user.profileImage : '/images/avatar.png' %>"
+                class="big-avatar"
+                id="avatarPreview"
+                alt="avatar"
+              />
+            </div>
 
+            <div class="hero-text">
+              <h1>My Profile</h1>
+              <p>Manage your account details and profile picture</p>
+            </div>
 
-  <div class="sidebar">
+            <div class="photo-actions">
+              <% if (user.profileImage && user.profileImage !== '/images/avatar.png') { %>
+                <form
+                  action="/api/user/delete-avatar"
+                  method="POST"
+                  onsubmit="return confirm('Remove profile picture?')"
+                >
+                  <button type="submit" class="delete-avatar-btn">Remove Photo</button>
+                </form>
+              <% } %>
 
-    <div class="sidebar-avatar">
-      <img 
-        src="<%= user.profileImage ? user.profileImage : '/images/avatar.png' %>" 
-        alt="avatar"
-      >
-    </div>
+              <div class="button-group top-actions">
+                <button type="button" id="editBtn" class="btn btn-light">Edit</button>
+                <button type="submit" form="profileForm" id="saveBtn" class="btn btn-dark" style="display:none;">Save</button>
+                <button type="button" id="cancelBtn" class="btn btn-light" style="display:none;">Cancel</button>
+              </div>
+            </div>
+          </div>
 
-    <ul>
-      <li class="active">
-        <a href="/api/user/profile">Account information</a>
-      </li>
+          <div class="message-slot">
+            <% if (typeof error !== "undefined" && error) { %>
+              <div id="errorBox" class="error-message"><%= error %></div>
+            <% } else { %>
+              <div class="error-placeholder"></div>
+            <% } %>
+          </div>
 
-      <li>
-        <a href="#">My orders</a>
-      </li>
-
-      <li>
-        <a href="/api/user/adress">Address management</a>
-      </li>
-
-      <li>
-        <a href="/api/user/change-password">Change password</a>
-      </li>
-    </ul>
-
-    <form action="/api/user/logout" method="POST">
-      <button class="logout-btn">Logout</button>
-    </form>
-
-  </div>
-
-
-  <div class="profile-main">
-
-
-    <div class="avatar-section">
-      <img 
-        src="<%= user.profileImage ? user.profileImage : '/images/avatar.png' %>" 
-        class="big-avatar"
-        id="avatarPreview"
-      >
-
-      <% if (user.profileImage && user.profileImage !== '/images/avatar.png') { %>
-        <form 
-          action="/api/user/delete-avatar" 
-          method="POST"
-          onsubmit="return confirm('Remove profile picture?')"
-        >
-          <button type="submit" class="delete-avatar-btn">
-            Remove Photo
-          </button>
-        </form>
-      <% } %>
-    </div>
-
-    <% if (typeof error !== 'undefined') { %>
-      <p class="error"><%= error %></p>
-    <% } %>
-
-
-    <div class="form-section">
-      <form 
-        action="/api/user/update-profile" 
-        method="POST" 
-        enctype="multipart/form-data"
-      >
-
-        <div class="form-group">
-          <label>Profile Image</label>
-          <input type="file" name="profileImage" id="imageInput">
-        </div>
-
-        <div class="form-group">
-          <label>Full Name</label>
-          <input 
-            type="text" 
-            name="name"
-            value="<%= user.name %>" 
-            id="nameInput"
-            disabled
+          <form
+            id="profileForm"
+            action="/api/user/update-profile"
+            method="POST"
+            enctype="multipart/form-data"
+            class="profile-form"
           >
-        </div>
+            <div class="field-wrap">
+              <label>Profile Image</label>
+              <div class="field field-light">
+                <input type="file" name="profileImage" id="imageInput" accept="image/*" disabled/>
+              </div>
+            </div>
 
-        <div class="form-group">
-          <label>Email</label>
-          <input 
-            type="email" 
-            name="email"
-            value="<%= user.email %>" 
-            id="emailInput"
-            disabled
-          >
-        </div>
+            <div class="field-wrap">
+              <label>Full Name</label>
+              <div class="field field-dark">
+                <input
+                  type="text"
+                  name="name"
+                  value="<%= user.name %>"
+                  id="nameInput"
+                  disabled
+                />
+              </div>
+            </div>
 
-        <div class="button-group">
-          <button type="button" id="editBtn">Edit</button>
-          <button type="submit" id="saveBtn" style="display:none;">Save</button>
-          <button type="button" id="cancelBtn" style="display:none;">Cancel</button>
-        </div>
+            <div class="field-wrap">
+              <label>Email</label>
+              <div class="field field-dark">
+                <input
+                  type="email"
+                  name="email"
+                  value="<%= user.email %>"
+                  id="emailInput"
+                  disabled
+                />
+              </div>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
 
-      </form>
-    </div>
+    <script>
+      const input = document.getElementById("imageInput");
+      const preview = document.getElementById("avatarPreview");
+      const imageInput = document.getElementById("imageInput");
 
-  </div>
+      input?.addEventListener("change", function () {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          preview.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
 
-</div>
+      const editBtn = document.getElementById("editBtn");
+      const saveBtn = document.getElementById("saveBtn");
+      const cancelBtn = document.getElementById("cancelBtn");
+      const nameInput = document.getElementById("nameInput");
+      const emailInput = document.getElementById("emailInput");
 
+        editBtn?.addEventListener("click", function () {
+        nameInput.disabled = false;
+        emailInput.disabled = false;
+        imageInput.disabled = false;
 
-<script>
-  const input = document.getElementById("imageInput");
-  const preview = document.getElementById("avatarPreview");
+        editBtn.style.display = "none";
+        saveBtn.style.display = "inline-flex";
+        cancelBtn.style.display = "inline-flex";
+      });
 
-  input.addEventListener("change", function () {
-    const file = this.files[0];
+      cancelBtn?.addEventListener("click", function () {
+        nameInput.disabled = true;
+        emailInput.disabled = true;
+        editBtn.style.display = "inline-flex";
+        saveBtn.style.display = "none";
+        cancelBtn.style.display = "none";
+      });
 
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        preview.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-</script>
-
-
-<script>
-  const editBtn = document.getElementById("editBtn");
-  const saveBtn = document.getElementById("saveBtn");
-  const cancelBtn = document.getElementById("cancelBtn");
-  const nameInput = document.getElementById("nameInput");
-  const emailInput = document.getElementById("emailInput");
-
-  editBtn.addEventListener("click", function () {
-    nameInput.disabled = false;
-    emailInput.disabled = false;
-
-    editBtn.style.display = "none";
-    saveBtn.style.display = "inline-block";
-    cancelBtn.style.display = "inline-block";
-  });
-
-  cancelBtn.addEventListener("click", function () {
-    nameInput.disabled = true;
-    emailInput.disabled = true;
-
-    editBtn.style.display = "inline-block";
-    saveBtn.style.display = "none";
-    cancelBtn.style.display = "none";
-  });
-</script>
-
-</body>
+      setTimeout(() => {
+        const errorBox = document.getElementById("errorBox");
+        if (errorBox) errorBox.style.display = "none";
+      }, 3000);
+    </script>
+  </body>
 </html>

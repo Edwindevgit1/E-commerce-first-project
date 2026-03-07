@@ -1,88 +1,108 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Login</title>
-  <link rel="stylesheet" href="/css/userlogin.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-</head>
-<body>
-
-<header class="navbar">
-  <div class="nav-container">
-    <div class="logo">NIKE</div>
-
-    <nav class="nav-links">
-      <a href="#">Men</a>
-      <a href="#">Women</a>
-      <a href="#">Shoe</a>
-      <a href="#">Hot deals</a>
-    </nav>
-
-    <div class="nav-icons">
-      <input type="text" placeholder="Search">
-      <span>👤</span>
-      <span>♡</span>
-      <span>🛒</span>
-    </div>
-  </div>
-</header>
-
-<div class="main-container">
-
-
-  <div class="left-panel">
-    <div class="left-bg">
-      <div class="login-box">
-
-        <h1>Welcome back</h1>
-        <p class="subtitle">sign into continue to your account</p>
-        <% if (typeof error !== "undefined" && error) { %>
-          <div id="errorBox" class="error-message">
-            <%= error %>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <link rel="stylesheet" href="/css/userlogin.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="neo-scene">
+      <section class="neo-card">
+        <header class="top-strip">
+          <div class="chip-row">
+            <a href="/api/auth/register" class="chip">Sign up</a>
+            <a href="/api/auth/login" class="chip chip-dark">Login</a>
           </div>
-        <% } %>
-        <form action="/api/auth/login" method="POST">
+          <button type="button" class="profile-chip" aria-label="Profile menu">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2.25c-4.15 0-7.5 2.03-7.5 4.5V20h15v-1.25c0-2.47-3.35-4.5-7.5-4.5Z"
+              />
+            </svg>
+          </button>
+        </header>
 
-          <label>Email</label>
-          <input type="email" name="email">
-
-          <div class="password-row">
-            <label>Password</label>
-            <a href="/api/auth/forgotpassword" class="forgot">Forgot password ?</a>
-          </div>
-
-          <input type="password" name="password">
-
-          <button type="submit" class="login-button">Sign in</button>
-
-        </form>
-
-        <p class="signup-text">
-          Dont have an account ? <a href="/api/auth/register">Sign up</a>
-        </p>
-
-        <div class="divider">
-          <span></span>
-          <p>or</p>
-          <span></span>
+        <div class="title-block">
+          <h1>Welcome Back</h1>
+          <p>Login to continue your journey</p>
         </div>
 
-        <a href="/api/auth/google" class="google-btn">
-          <img src="/images/Google.png" alt="Google">
-          Sign in with Google
-        </a>
+        <div class="message-slot">
+          <% if (typeof error !== "undefined" && error) { %>
+            <div id="errorBox" class="error-message"><%= error %></div>
+          <% } else { %>
+            <div class="error-placeholder"></div>
+          <% } %>
+        </div>
 
-      </div>
-    </div>
-  </div>
+        <form action="/api/auth/login" method="POST" class="login-form">
+          <label for="email" class="sr-only">Email</label>
+          <div class="field field-dark">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M4 6.75A1.75 1.75 0 0 1 5.75 5h12.5A1.75 1.75 0 0 1 20 6.75v10.5A1.75 1.75 0 0 1 18.25 19H5.75A1.75 1.75 0 0 1 4 17.25V6.75Zm1.73-.25 6.27 5.02 6.27-5.02H5.73Zm12.77 1.9-5.73 4.59a1.2 1.2 0 0 1-1.54 0L5.5 8.4v8.85c0 .14.11.25.25.25h12.5a.25.25 0 0 0 .25-.25V8.4Z"
+              />
+            </svg>
+            <input id="email" name="email" type="email" placeholder="Email address" />
+          </div>
 
+          <label for="password" class="sr-only">Password</label>
+          <div class="field field-dark password-field">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M12 2.5A4.5 4.5 0 0 0 7.5 7v2h-1A2.5 2.5 0 0 0 4 11.5v8A2.5 2.5 0 0 0 6.5 22h11a2.5 2.5 0 0 0 2.5-2.5v-8A2.5 2.5 0 0 0 17.5 9h-1V7A4.5 4.5 0 0 0 12 2.5Zm3 6.5h-6V7a3 3 0 0 1 6 0v2Z"
+              />
+            </svg>
+            <input id="password" name="password" type="password" placeholder="Password" />
+            <button type="button" class="toggle-password" data-target="password">Show</button>
+          </div>
 
-  <div class="right-panel">
-    <img src="/images/authbackground.png" alt="Login Background">
-  </div>
+          <a href="/api/auth/forgotpassword" class="forgot-link">Forgot password?</a>
 
-</div>
-<script src="/script/signup.js"></script>
-</body>
+          <button type="submit" class="primary-btn">Login</button>
+
+          <a href="/api/auth/google" class="google-btn">
+            <span class="google-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path fill="#EA4335" d="M12 10.2v3.96h5.5c-.24 1.27-.96 2.34-2.04 3.06l3.3 2.56c1.92-1.77 3.03-4.38 3.03-7.48 0-.72-.06-1.42-.19-2.1H12z"/>
+                <path fill="#34A853" d="M12 22c2.75 0 5.05-.91 6.73-2.47l-3.3-2.56c-.91.61-2.08.97-3.43.97-2.63 0-4.85-1.78-5.64-4.18l-3.42 2.64A9.99 9.99 0 0 0 12 22z"/>
+                <path fill="#4A90E2" d="M6.36 13.76A5.98 5.98 0 0 1 6.04 12c0-.61.11-1.2.32-1.76l-3.42-2.64A10.02 10.02 0 0 0 2 12c0 1.62.39 3.16 1.08 4.4l3.28-2.64z"/>
+                <path fill="#FBBC05" d="M12 6.06c1.5 0 2.84.52 3.89 1.52l2.92-2.92C17.04 2.98 14.74 2 12 2A10 10 0 0 0 2.94 7.6l3.42 2.64c.79-2.4 3.01-4.18 5.64-4.18z"/>
+              </svg>
+            </span>
+            <span>Continue with Google</span>
+          </a>
+
+          <p class="footer-text">Don’t have an account? <a href="/api/auth/register">Sign up</a></p>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      document.querySelectorAll(".toggle-password").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const input = document.getElementById(btn.dataset.target);
+          if (!input) return;
+          const isPassword = input.type === "password";
+          input.type = isPassword ? "text" : "password";
+          btn.textContent = isPassword ? "Hide" : "Show";
+        });
+      });
+
+      setTimeout(() => {
+        const errorBox = document.getElementById("errorBox");
+        if (errorBox) errorBox.style.display = "none";
+      }, 3000);
+    </script>
+  </body>
 </html>

@@ -156,8 +156,6 @@ body {
   background: linear-gradient(165deg, var(--field), var(--navy)) !important;
   box-shadow: 0 14px 24px rgba(5, 18, 50, 0.28);
   outline: none;
-  appearance: none;
-  -webkit-appearance: none;
 }
 
 .otp-input:focus {
@@ -215,24 +213,7 @@ body {
   .top-strip { flex-direction: column; }
   .chip-row { overflow-x: auto; white-space: nowrap; }
 
-  .message-slot {
-    min-height: 42px;
-    margin-bottom: 6px;
-  }
-
-  .error-placeholder {
-    height: 34px;
-  }
-
-  .error-message {
-    font-size: 12px;
-    padding: 8px 10px;
-  }
-
-  .otp-row {
-    max-width: 100%;
-    gap: 8px;
-  }
+  .otp-row { max-width: 100%; gap: 8px; }
 
   .otp-input {
     width: 46px !important;

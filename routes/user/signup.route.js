@@ -1,12 +1,10 @@
 import express from "express";
 import passport from "passport";
-import signupUser from "../../controllers/signupController.js";
+import signupUser, { getSignupPage } from "../../controllers/signupController.js";
 
 const router = express.Router();
 
-router.get("/register", (req, res) => {
-  res.render("user/signup");
-});
+router.get("/register",getSignupPage);
 
 router.post("/register",(req,res,next)=>{
 console.log(req.body)

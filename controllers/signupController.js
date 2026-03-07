@@ -14,7 +14,12 @@ const transporter = nodemailer.createTransport({
 });
 
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
-
+export const getSignupPage=(req,res)=>{
+  if(req.session.signupData){
+    return res.redirect('/api/auth/signupotp')
+  }
+  res.render('user/signup')
+}
 const signupUser = async (req, res) => {
   try {
     const { name, email, password, confirmPassword } = req.body;
@@ -215,6 +220,18 @@ export const verifySignupOtp = async (req, res) => {
     });
   }
 };
+export const cancelSignup=(req,res)=>{
+  try{
+  delete req.session.signupOtp
+  delete req.session.signupOtpExpiry
+  delete req.session.otpLastSentAt
+  delete req.session.signupData
 
+  return res.redirect('/api/auth/register')
+  }catch(error){
+    console.log(error,'cancel singup error in the otp page')
+    return res.redirect('/api/auth/register')
+  }
+}
 
 export default signupUser;
