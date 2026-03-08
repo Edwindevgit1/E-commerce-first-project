@@ -1,109 +1,106 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <title>User Management</title>
-  <link rel="stylesheet" href="/css/admin-usermanagement.css">
-</head>
-<body>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Management</title>
+    <link rel="stylesheet" href="/css/admin-usermanagement.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="neo-scene">
+      <section class="neo-card">
+        <header class="top-strip">
+          <div class="chip-row">
+            <a href="/api/admin/dashboard" class="chip">Dashboard</a>
+            <a href="/api/admin/products" class="chip">Products</a>
+            <a href="/api/admin/categories" class="chip">Categories</a>
+            <a href="/api/admin/orders" class="chip">Orders</a>
+            <a href="/api/admin/adminusermanagement" class="chip chip-dark">Users</a>
+          </div>
+          <a href="/api/admin/adminlogout" class="logout-pill">Logout</a>
+        </header>
 
-<header class="admin-header">
-  <div class="logo">NIKE</div>
-  <nav>
-    <a href="/api/admin/dashboard">Dashboard</a>
-    <a href="/api/admin/products">Products</a>
-    <a href="/api/admin/categories">Categories</a>
-    <a href="/api/admin/orders">Orders</a>
-    <a href="/api/admin/adminusermanagement">Users</a>
-    <a href="/api/admin/adminlogout">Logout</a>
-  </nav>
-</header>
+        <section class="panel">
+          <div class="panel-head">
+            <h1>User Management</h1>
+            <p>Search and manage customer accounts</p>
+          </div>
 
-<div class="container">
-
-  <h1>User Management</h1>
-
-  
-  <form method="GET" action="/api/admin/adminusermanagement" class="search-section">
-    <input 
-      type="text" 
-      name="search" 
-      placeholder="Search"
-      value="<%= search || '' %>"
-    >
-
-    <button type="submit">Apply</button>
-
-    <% if (search) { %>
-      <a href="/api/admin/adminusermanagement" class="clear-btn">Clear</a>
-    <% } %>
-  </form>
-
- 
-  <table class="user-table">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Status</th>
-        <th>Total</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-
-    <tbody>
-
-      <% if (users.length === 0) { %>
-        <tr>
-          <td colspan="5" style="text-align:center;">No users found</td>
-        </tr>
-      <% } %>
-
-      <% users.forEach(user => { %>
-        <tr>
-          <td><%= user.name %></td>
-          <td><%= user.email %></td>
-
-          <td>
-            <% if (!user.isBlocked) { %>
-              <span class="status active">Active</span>
-            <% } else { %>
-              <span class="status blocked">Blocked</span>
+          <form method="GET" action="/api/admin/adminusermanagement" class="search-section">
+            <input
+              type="text"
+              name="search"
+              placeholder="Search by name or email"
+              value="<%= search || '' %>"
+            />
+            <button type="submit" class="btn btn-dark">Apply</button>
+            <% if (search) { %>
+              <a href="/api/admin/adminusermanagement" class="btn btn-light">Clear</a>
             <% } %>
-          </td>
+          </form>
 
-          <td>0</td>
+          <div class="table-wrap">
+            <table class="user-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (users.length === 0) { %>
+                  <tr>
+                    <td colspan="5" class="empty-cell">No users found</td>
+                  </tr>
+                <% } %>
 
-          <td>
-            <% if (!user.isBlocked) { %>
-
-              <form 
-                action="/api/admin/adminusermanagement/block/<%= user._id %>" 
-                method="POST"
-                onsubmit="return confirm('Are you sure you want to block this user?')"
-              >
-                <button type="submit" class="btn block">Block</button>
-              </form>
-
-            <% } else { %>
-
-              <form 
-                action="/api/admin/adminusermanagement/unblock/<%= user._id %>" 
-                method="POST"
-                onsubmit="return confirm('Are you sure you want to unblock this user?')"
-              >
-                <button type="submit" class="btn unblock">Unblock</button>
-              </form>
-
-            <% } %>
-          </td>
-
-        </tr>
-      <% }) %>
-
-    </tbody>
-  </table>
-
-</div>
-
-</body>
+                <% users.forEach(user => { %>
+                  <tr>
+                    <td><%= user.name %></td>
+                    <td><%= user.email %></td>
+                    <td>
+                      <% if (!user.isBlocked) { %>
+                        <span class="status active">Active</span>
+                      <% } else { %>
+                        <span class="status blocked">Blocked</span>
+                      <% } %>
+                    </td>
+                    <td>0</td>
+                    <td>
+                      <% if (!user.isBlocked) { %>
+                        <form
+                          action="/api/admin/adminusermanagement/block/<%= user._id %>"
+                          method="POST"
+                          onsubmit="return confirm('Are you sure you want to block this user?')"
+                        >
+                          <button type="submit" class="btn btn-danger">Block</button>
+                        </form>
+                      <% } else { %>
+                        <form
+                          action="/api/admin/adminusermanagement/unblock/<%= user._id %>"
+                          method="POST"
+                          onsubmit="return confirm('Are you sure you want to unblock this user?')"
+                        >
+                          <button type="submit" class="btn btn-success">Unblock</button>
+                        </form>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
 </html>

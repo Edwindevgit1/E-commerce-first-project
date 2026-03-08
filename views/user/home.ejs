@@ -1,122 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Home</title>
-  <link rel="stylesheet" href="/css/home.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home</title>
+    <link rel="stylesheet" href="/css/home.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
 
-<!-- NAVBAR -->
-<header class="navbar">
-  <div class="nav-container">
-    <div class="logo">NIKE</div>
+    <header class="navbar glass">
+      <div class="nav-container">
+        <div class="logo">NIKE</div>
 
-    <nav class="nav-links">
-      <a href="#">Men</a>
-      <a href="#">Women</a>
-      <a href="#">Shoe</a>
-      <a href="#">Hot deals</a>
-    </nav>
+        <nav class="nav-links">
+          <a href="#">Men</a>
+          <a href="#">Women</a>
+          <a href="#">Shoe</a>
+          <a href="#">Hot deals</a>
+        </nav>
 
-    <div class="nav-icons">
-      <input type="text" placeholder="Search">
-      <a href="/api/user/profile">👤</a>
-      <span>♡</span>
-      <span>🛒</span>
-    </div>
-  </div>
-</header>
+        <div class="nav-icons">
+          <input type="text" placeholder="Search" />
+          <a href="/api/user/profile" class="icon-btn">👤</a>
+          <button class="icon-btn" type="button">♡</button>
+          <button class="icon-btn" type="button">🛒</button>
+        </div>
+      </div>
+    </header>
 
+    <main class="page-wrap">
+      <section class="hero glass">
+        <img src="/images/bannerimg.jpg.png" alt="Hero" />
+        <div class="hero-text glass-inner">
+          <h1>SUMMER IS HERE, AND IT'S TIME TO GET OUT AND ENJOY THE SUN!</h1>
+          <p>The best way to beat the heat is to buy new clothes.</p>
+          <button>Hot Deals</button>
+        </div>
+      </section>
 
-<section class="hero">
-  <img src="/images/bannerimg.jpg.png" alt="Hero">
-  <div class="hero-text">
-    <h1>SUMMER IS HERE, AND IT'S TIME TO GET OUT AND ENJOY THE SUN!</h1>
-    <p>The best way to beat the heat is to buy new clothes.</p>
-    <button>Hot Deals</button>
-  </div>
-</section>
+      <section class="featured glass section-card">
+        <h2>Featured</h2>
+        <div class="featured-grid">
+          <article class="card glass-inner">
+            <img src="/images/shoe.png" alt="Shoe" />
+            <p>Exclusive Nike Shoes</p>
+            <button>Shoes</button>
+          </article>
 
+          <article class="card glass-inner">
+            <img src="/images/jacket.png" alt="Jacket" />
+            <p>Best of outfits</p>
+            <button>Shop</button>
+          </article>
+        </div>
+      </section>
 
-<section class="featured">
-  <h2>Featured</h2>
+      <section class="summer-banner glass">
+        <img src="/images/secondbanner.png" alt="Summer banner" />
+        <div class="banner-text glass-inner">
+          <h1>SUMMER POSSIBILITIES</h1>
+          <button>Hot Deals</button>
+        </div>
+      </section>
 
-  <div class="featured-grid">
-    <div class="card">
-      <img src="/images/shoe.png" alt="">
-      <p>Exclusive Nike Shoes</p>
-      <button>Shoes</button>
-    </div>
+      <section class="workout glass section-card">
+        <h2>Work-Out Outfits</h2>
+        <div class="workout-grid">
+          <article class="card glass-inner">
+            <img src="/images/mens.png" alt="Mens" />
+            <button>Shop Men's</button>
+          </article>
 
-    <div class="card">
-      <img src="/images/jacket.png" alt="">
-      <p>Best of outfits</p>
-      <button>Shop</button>
-    </div>
-  </div>
-</section>
+          <article class="card glass-inner">
+            <img src="/images/womens.png" alt="Womens" />
+            <button>Shop Women's</button>
+          </article>
 
+          <article class="card glass-inner">
+            <img src="/images/kids.png" alt="Kids" />
+            <button>Shoes</button>
+          </article>
+        </div>
+      </section>
+    </main>
 
-<section class="summer-banner">
-  <img src="/images/secondbanner.png" alt="">
-  <div class="banner-text">
-    <h1>SUMMER POSSIBILITIES</h1>
-    <button>Hot Deals</button>
-  </div>
-</section>
-
-
-<section class="workout">
-  <h2>Work-Out Outfits</h2>
-
-  <div class="workout-grid">
-    <div class="card">
-      <img src="/images/mens.png">
-      <button>Shop Men's</button>
-    </div>
-
-    <div class="card">
-      <img src="/images/womens.png">
-      <button>Shop Women's</button>
-    </div>
-
-    <div class="card">
-      <img src="/images/kids.png">
-      <button>Shoes</button>
-    </div>
-  </div>
-</section>
-
-
-<footer class="footer">
-  <div class="footer-grid">
-    <div>
-      <h4>Iconic</h4>
-      <p>Air Force 1</p>
-      <p>Air Max 90</p>
-    </div>
-
-    <div>
-      <h4>Shoes</h4>
-      <p>All Shoes</p>
-      <p>Nike Shoes</p>
-    </div>
-
-    <div>
-      <h4>Clothing</h4>
-      <p>All Clothing</p>
-      <p>Hoodies & Pullovers</p>
-    </div>
-
-    <div>
-      <h4>Kids</h4>
-      <p>Infant Shoes</p>
-      <p>Kids Shoes</p>
-    </div>
-  </div>
-</footer>
-
-</body>
+    <footer class="footer glass">
+      <div class="footer-grid">
+        <div>
+          <h4>Iconic</h4>
+          <p>Air Force 1</p>
+          <p>Air Max 90</p>
+        </div>
+        <div>
+          <h4>Shoes</h4>
+          <p>All Shoes</p>
+          <p>Nike Shoes</p>
+        </div>
+        <div>
+          <h4>Clothing</h4>
+          <p>All Clothing</p>
+          <p>Hoodies & Pullovers</p>
+        </div>
+        <div>
+          <h4>Kids</h4>
+          <p>Infant Shoes</p>
+          <p>Kids Shoes</p>
+        </div>
+      </div>
+    </footer>
+  </body>
 </html>

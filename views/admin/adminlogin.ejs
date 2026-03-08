@@ -1,49 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Login</title>
-    <link rel="stylesheet" href="/css/adminlogin.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-</head>
-<body>
+    <link rel="stylesheet" href="/css/adminlogin.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="neo-scene">
+      <section class="neo-card">
+        <header class="top-strip">
+          <div class="chip-row">
+            <span class="chip chip-dark">Admin Login</span>
+            <a href="/" class="chip">Home</a>
+          </div>
 
-   
-    <header class="top-header">
-        <h2>NIKE</h2>
-    </header>
+          <div class="brand-pill">NIKE</div>
+        </header>
 
-    
-    <div class="main-container">
-
-        <!-- LEFT LOGIN PANEL -->
-        <div class="left-panel">
-            <div class="login-box">
-
-                <h1>Admin login page</h1>
-                <p class="subtitle">sign into continue to your account</p>
-
-                <form action="/api/admin/admin" method="POST">
-
-                    <label>Email</label>
-                    <input type="email" name="email">
-
-                    <label>Password</label>
-                    <input type="password" name="password">
-
-                    <button type="submit">Sign in</button>
-
-                </form>
-
-            </div>
+        <div class="title-block">
+          <h1>Admin Portal</h1>
+          <p>Sign in to continue to dashboard</p>
         </div>
 
-        <!-- RIGHT IMAGE PANEL -->
-        <div class="right-panel">
-            <img src="/images/authbackground.png" alt="Login Background">
+        <div class="message-slot">
+          <% if (typeof error !== "undefined" && error) { %>
+            <div id="errorBox" class="error-message"><%= error %></div>
+          <% } else { %>
+            <div class="error-placeholder"></div>
+          <% } %>
         </div>
 
-    </div>
+        <form action="/api/admin/admin" method="POST" class="login-form">
+          <label for="email" class="sr-only">Email</label>
+          <div class="field field-dark">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M4 6.75A1.75 1.75 0 0 1 5.75 5h12.5A1.75 1.75 0 0 1 20 6.75v10.5A1.75 1.75 0 0 1 18.25 19H5.75A1.75 1.75 0 0 1 4 17.25V6.75Zm1.73-.25 6.27 5.02 6.27-5.02H5.73Zm12.77 1.9-5.73 4.59a1.2 1.2 0 0 1-1.54 0L5.5 8.4v8.85c0 .14.11.25.25.25h12.5a.25.25 0 0 0 .25-.25V8.4Z"
+              />
+            </svg>
+            <input id="email" type="email" name="email" placeholder="Admin email" />
+          </div>
 
-</body>
+          <label for="password" class="sr-only">Password</label>
+          <div class="field field-dark password-field">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M12 2.5A4.5 4.5 0 0 0 7.5 7v2h-1A2.5 2.5 0 0 0 4 11.5v8A2.5 2.5 0 0 0 6.5 22h11a2.5 2.5 0 0 0 2.5-2.5v-8A2.5 2.5 0 0 0 17.5 9h-1V7A4.5 4.5 0 0 0 12 2.5Zm3 6.5h-6V7a3 3 0 0 1 6 0v2Z"
+              />
+            </svg>
+            <input id="password" type="password" name="password" placeholder="Password" />
+            <button type="button" class="toggle-password" data-target="password">Show</button>
+          </div>
+
+          <button type="submit" class="primary-btn">Sign in</button>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      document.querySelectorAll(".toggle-password").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const input = document.getElementById(btn.dataset.target);
+          if (!input) return;
+          const isPassword = input.type === "password";
+          input.type = isPassword ? "text" : "password";
+          btn.textContent = isPassword ? "Hide" : "Show";
+        });
+      });
+
+      setTimeout(() => {
+        const errorBox = document.getElementById("errorBox");
+        if (errorBox) errorBox.style.display = "none";
+      }, 3000);
+    </script>
+  </body>
 </html>

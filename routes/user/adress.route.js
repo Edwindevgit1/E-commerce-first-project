@@ -29,7 +29,6 @@ router.get('/adress', async (req, res) => {
   }
 })
 
-
 router.post('/add-address', async (req, res) => {
 
   if (!req.session.user) {
@@ -63,7 +62,6 @@ router.post('/add-address', async (req, res) => {
   }
 })
 
-
 router.post('/delete-address/:id', async (req, res) => {
 
   if (!req.session.user) {
@@ -74,9 +72,25 @@ router.post('/delete-address/:id', async (req, res) => {
     const user = await User.findById(req.session.user.id)
     if (!user) return res.redirect('/api/auth/login')
 
+    const addressId = req.params.id
+
+    // find the address being deleted
+    const addressToDelete = user.addresses.id(addressId)
+    if (!addressToDelete) {
+      return res.redirect('/api/user/adress')
+    }
+
+    const wasDefault = addressToDelete.isDefault
+
+    // remove address
     user.addresses = user.addresses.filter(
-      addr => addr._id.toString() !== req.params.id
+      addr => addr._id.toString() !== addressId
     )
+
+    // if deleted address was default
+    if (wasDefault && user.addresses.length > 0) {
+      user.addresses[0].isDefault = true
+    }
 
     await user.save()
 
@@ -87,7 +101,6 @@ router.post('/delete-address/:id', async (req, res) => {
     res.redirect('/api/user/adress')
   }
 })
-
 
 /* ============================
    SET DEFAULT ADDRESS

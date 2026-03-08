@@ -1,148 +1,276 @@
+:root {
+  --bg: #d7e1ef;
+  --ink: #0e1323;
+  --muted: #4e5f7c;
+  --glass: rgba(237, 243, 252, 0.55);
+  --glass-strong: rgba(237, 243, 252, 0.75);
+  --line: rgba(255, 255, 255, 0.45);
+  --navy: #05163f;
+  --shadow: 0 14px 40px rgba(59, 85, 125, 0.24);
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Inter', sans-serif;
 }
 
 body {
-  background: #f5f5f5;
+  font-family: "Sora", sans-serif;
+  background: radial-gradient(circle at 50% 12%, #f2f5fb 0%, var(--bg) 62%);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding: 16px;
 }
 
-/* NAVBAR */
+.bg-orb {
+  position: fixed;
+  border-radius: 999px;
+  filter: blur(60px);
+  z-index: -1;
+}
+.orb-1 {
+  width: 240px;
+  height: 240px;
+  background: rgba(157, 191, 255, 0.35);
+  top: -40px;
+  left: -40px;
+}
+.orb-2 {
+  width: 280px;
+  height: 280px;
+  background: rgba(93, 144, 255, 0.22);
+  right: -70px;
+  top: 140px;
+}
+.orb-3 {
+  width: 220px;
+  height: 220px;
+  background: rgba(255, 255, 255, 0.38);
+  left: 35%;
+  bottom: -80px;
+}
+
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+  border-radius: 20px;
+}
+
+.glass-inner {
+  background: var(--glass-strong);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 .navbar {
-  background: #fff;
-  padding: 15px 40px;
-  border-bottom: 1px solid #ddd;
+  position: sticky;
+  top: 12px;
+  z-index: 10;
 }
 
 .nav-container {
-  display: flex;
-  justify-content: space-between;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
+  gap: 12px;
 }
 
+.logo {
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+}
+
+.nav-links {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+}
 .nav-links a {
-  margin: 0 15px;
   text-decoration: none;
-  color: black;
-  font-weight: 500;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
 }
 
+.nav-icons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .nav-icons input {
-  padding: 6px 10px;
-  border-radius: 20px;
-  border: 1px solid #ccc;
+  height: 34px;
+  width: 140px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 0 12px;
+  outline: none;
+  font-size: 12px;
+}
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  color: var(--ink);
+  cursor: pointer;
 }
 
-/* HERO */
+.page-wrap {
+  max-width: 1180px;
+  margin: 16px auto 0;
+  display: grid;
+  gap: 16px;
+}
+
 .hero {
   position: relative;
-  text-align: center;
+  overflow: hidden;
 }
-
 .hero img {
   width: 100%;
-  height: 500px;
+  height: 380px;
   object-fit: cover;
+  border-radius: 20px;
+  display: block;
 }
-
 .hero-text {
   position: absolute;
-  top: 35%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: black;
-  max-width: 700px;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  padding: 16px;
 }
-
 .hero-text h1 {
-  font-size: 28px;
-  font-weight: 800;
+  font-size: clamp(18px, 2.2vw, 34px);
+  line-height: 1.2;
+}
+.hero-text p {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.hero-text button,
+.card button,
+.banner-text button {
+  margin-top: 10px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(165deg, #0a2052, #06143a);
+  color: #eef4ff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.hero-text button {
-  margin-top: 20px;
-  padding: 10px 25px;
-  border: none;
-  background: black;
-  color: white;
-  border-radius: 20px;
+.section-card {
+  padding: 14px;
 }
-
-/* FEATURED */
-.featured {
-  padding: 50px 40px;
+.section-card h2 {
+  font-size: 20px;
+  margin-bottom: 10px;
 }
 
 .featured-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 30px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
-
-.card img {
-  width: 100%;
-  border-radius: 10px;
-}
-
-.card button {
-  margin-top: 10px;
-  padding: 8px 18px;
-  border-radius: 20px;
-  border: none;
-  background: black;
-  color: white;
-}
-
-/* SUMMER BANNER */
-.summer-banner {
-  position: relative;
-  margin: 50px 0;
-}
-
-.summer-banner img {
-  width: 100%;
-  height: 400px;
-  object-fit: cover;
-}
-
-.banner-text {
-  position: absolute;
-  bottom: 40px;
-  left: 40px;
-  color: white;
-}
-
-.banner-text h1 {
-  font-size: 40px;
-  font-weight: 800;
-}
-
-/* WORKOUT */
-.workout {
-  padding: 50px 40px;
-}
-
 .workout-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 30px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
-/* FOOTER */
+.card {
+  padding: 12px;
+}
+.card img {
+  width: 100%;
+  height: 170px;
+  object-fit: cover;
+  border-radius: 12px;
+  display: block;
+}
+.card p {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.summer-banner {
+  position: relative;
+  overflow: hidden;
+}
+.summer-banner img {
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  border-radius: 20px;
+  display: block;
+}
+.banner-text {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  padding: 14px;
+}
+.banner-text h1 {
+  font-size: clamp(18px, 2.2vw, 30px);
+}
+
 .footer {
-  background: black;
-  color: white;
-  padding: 50px;
+  max-width: 1180px;
+  margin: 16px auto 0;
+  padding: 14px;
 }
-
 .footer-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 30px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.footer-grid h4 {
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.footer-grid p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
 }
 
-.footer h4 {
-  margin-bottom: 10px;
+@media (max-width: 900px) {
+  .nav-container {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .nav-links {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .nav-icons {
+    justify-content: flex-start;
+  }
+  .featured-grid,
+  .workout-grid,
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
 }
