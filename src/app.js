@@ -17,6 +17,7 @@ import adressrouter from "../routes/user/adress.route.js";
 import changepassword from "../routes/user/changepassword.route.js";
 import logout from "../routes/user/logout.route.js";
 import signupotp from "../routes/user/signupotp.route.js";
+import profileemailverify from "../routes/user/profile-email-otp.route.js";
 
 
 const app = express();
@@ -58,5 +59,6 @@ app.use('/api/user',userprofile)
 app.use('/api/user',adressrouter)
 app.use('/api/user',changepassword)
 app.use('/api/user',logout)
+app.use('/api/user/',profileemailverify)
 
 export default app;

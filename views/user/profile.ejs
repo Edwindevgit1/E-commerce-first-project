@@ -74,7 +74,7 @@
 
           <form
             id="profileForm"
-            action="/api/user/update-profile"
+            action="/api/user/verify-email-otp"
             method="POST"
             enctype="multipart/form-data"
             class="profile-form"
@@ -120,6 +120,8 @@
       const input = document.getElementById("imageInput");
       const preview = document.getElementById("avatarPreview");
       const imageInput = document.getElementById("imageInput");
+      const form=document.getElementById('profileForm')
+      const originalAvatar=preview.src;
 
       input?.addEventListener("change", function () {
         const file = this.files[0];
@@ -147,9 +149,19 @@
         cancelBtn.style.display = "inline-flex";
       });
 
-      cancelBtn?.addEventListener("click", function () {
+      cancelBtn?.addEventListener("click", function (e) {
+        e.preventDefault()
+        console.log(e.target)
+        console.log(e.type)
+        console.log(e.clientX)
+
+        form.reset()
+        preview.src=originalAvatar
+
         nameInput.disabled = true;
         emailInput.disabled = true;
+        imageInput.disabled=true;
+
         editBtn.style.display = "inline-flex";
         saveBtn.style.display = "none";
         cancelBtn.style.display = "none";

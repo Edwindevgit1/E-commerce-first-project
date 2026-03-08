@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verify New Email</title>
+    <link rel="stylesheet" href="/css/profile-email-otp.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="neo-scene">
+      <section class="neo-card">
+        <header class="top-strip">
+          <div class="chip-row">
+            <a href="/api/user/profile" class="chip">Profile</a>
+            <span class="chip chip-dark">Verify Email OTP</span>
+          </div>
+
+          <a href="/api/user/profile" class="logout-pill">Back</a>
+        </header>
+
+        <div class="title-block">
+          <h1>Verify New Email</h1>
+          <p>Enter the 6-digit OTP sent to <strong><%= pendingEmail || "your new email" %></strong></p>
+        </div>
+
+        <div class="message-slot">
+          <% if (typeof error !== "undefined" && error) { %>
+            <div id="errorBox" class="error-message"><%= error %></div>
+          <% } else { %>
+            <div class="error-placeholder"></div>
+          <% } %>
+        </div>
+
+        <form action="/api/user/verify-email-otp" method="POST" class="otp-form" id="otpForm">
+          <div class="otp-row">
+            <input class="otp-input" type="text" inputmode="numeric" maxlength="1" />
+            <input class="otp-input" type="text" inputmode="numeric" maxlength="1" />
+            <input class="otp-input" type="text" inputmode="numeric" maxlength="1" />
+            <input class="otp-input" type="text" inputmode="numeric" maxlength="1" />
+            <input class="otp-input" type="text" inputmode="numeric" maxlength="1" />
+            <input class="otp-input" type="text" inputmode="numeric" maxlength="1" />
+          </div>
+
+          <input type="hidden" name="otp" id="otpValue" />
+
+          <button type="submit" class="primary-btn">Verify Email</button>
+
+          <div class="links">
+            <button type="button" id="resendBtn" class="resend-btn" disabled>
+              Resend OTP (<span id="timerText">00:30</span>)
+            </button>
+            <a href="/api/user/profile">Cancel</a>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      const RESEND_WAIT = 30;
+let remaining = RESEND_WAIT;
+let intervalId = null;
+
+const inputs = Array.from(document.querySelectorAll(".otp-input"));
+const otpValue = document.getElementById("otpValue");
+const form = document.getElementById("otpForm");
+const resendBtn = document.getElementById("resendBtn");
+const timerText = document.getElementById("timerText");
+
+function formatTime(sec) {
+  return `00:${String(sec).padStart(2, "0")}`;
+}
+
+function updateResendUI() {
+  timerText.textContent = formatTime(remaining);
+  resendBtn.disabled = remaining > 0;
+  resendBtn.classList.toggle("enabled", remaining === 0);
+}
+
+function startCountdown() {
+  clearInterval(intervalId);
+  updateResendUI();
+
+  intervalId = setInterval(() => {
+    if (remaining > 0) {
+      remaining -= 1;
+      updateResendUI();
+      return;
+    }
+    clearInterval(intervalId);
+  }, 1000);
+}
+
+inputs[0]?.focus();
+
+inputs.forEach((input, i) => {
+  input.addEventListener("input", (e) => {
+    const value = e.target.value.replace(/\D/g, "");
+    e.target.value = value;
+    if (value && i < inputs.length - 1) inputs[i + 1].focus();
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Backspace" && !input.value && i > 0) {
+      inputs[i - 1].focus();
+    }
+  });
+
+  input.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const pasted = (e.clipboardData.getData("text") || "").replace(/\D/g, "").slice(0, 6);
+    pasted.split("").forEach((digit, idx) => {
+      if (inputs[idx]) inputs[idx].value = digit;
+    });
+    inputs[Math.min(pasted.length, inputs.length - 1)]?.focus();
+  });
+});
+
+form?.addEventListener("submit", () => {
+  otpValue.value = inputs.map((i) => i.value).join("").trim();
+});
+
+resendBtn?.addEventListener("click", async () => {
+  if (remaining > 0) return;
+
+  try {
+    const res = await fetch("/api/user/resend-email-otp", { method: "POST" });
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (res.status === 429 && data.retryAfter) {
+        remaining = data.retryAfter;
+        startCountdown();
+      }
+      return;
+    }
+
+    remaining = RESEND_WAIT;
+    startCountdown();
+  } catch (err) {
+    console.error("Resend OTP failed:", err);
+  }
+});
+
+setTimeout(() => {
+  const errorBox = document.getElementById("errorBox");
+  if (errorBox) errorBox.style.display = "none";
+}, 3000);
+
+startCountdown();
+
+    </script>
+  </body>
+</html>
