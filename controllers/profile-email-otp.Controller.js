@@ -7,7 +7,7 @@ const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString()
 
 export const updateProfile = async (req,res) => {
  try{
-    const userId=req.session.user?._id;
+    const userId=req.session.user?.id;
     if(!userId) return res.redirect('/api/auth/login');
 
     const user = await User.findById(userId)
@@ -26,7 +26,7 @@ export const updateProfile = async (req,res) => {
       return res.redirect('/api/user/profile')
     }
 
-    const emailTaken = await User.findOne({email:newEmail,_id:{$ne:userId}})
+    const emailTaken = await User.findOne({email:newEmail,id:{$ne:userId}})
     if(emailTaken){
       return res.render('user/profile',{
         user,
@@ -59,7 +59,7 @@ export const getVerifyEmailOtpPage = (req,res)=>{
 
 export const verifyEmailOtp = async (req,res)=>{
   try{
-    const userId = req.session.user?._id
+    const userId = req.session.user?.id
     if(!userId){
       return res.redirect('/api/auth/login')
     }

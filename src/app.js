@@ -12,7 +12,7 @@ import resetpassword from "../routes/user/reset-pass.route.js";
 import homepage from "../routes/user/home.route.js";
 import usermanagement from "../routes/admin/usermanagement.route.js";
 import blockunblock from "../routes/admin/block-unblockrouter.js";
-import userprofile from "../routes/user/profile.route.js";
+import usersprof from "../routes/user/profile.route.js";
 import adressrouter from "../routes/user/adress.route.js";
 import changepassword from "../routes/user/changepassword.route.js";
 import logout from "../routes/user/logout.route.js";
@@ -55,7 +55,7 @@ app.use('/api/auth',verifyotp)
 app.use('/api/auth',resetpassword)
 app.use('/api/auth/',homepage)
 //user profile
-app.use('/api/user',userprofile)
+app.use('/api/user',usersprof)
 app.use('/api/user',adressrouter)
 app.use('/api/user',changepassword)
 app.use('/api/user',logout)

@@ -1,6 +1,5 @@
 import express from 'express'
 import User from '../../models/User.js'
-import upload from '../../middleware/user/uploadimage.js'
 import fs from 'fs'
 import path from 'path'
 
@@ -27,78 +26,6 @@ router.get('/profile', async (req, res) => {
     res.redirect('/api/auth/login')
   }
 })
-
-
-router.post(
-  '/update-profile',
-  upload.single('profileImage'),
-  async (req, res) => {
-
-    if (!req.session.user) {
-      return res.redirect('/api/auth/login')
-    }
-
-    try {
-      const user = await User.findById(req.session.user.id)
-
-      if (!user) {
-        return res.redirect('/api/auth/login')
-      }
-
-      const newName = req.body.name?.trim()
-      const newEmail = req.body.email?.trim().toLowerCase()
-
-      
-      if (newEmail && newEmail !== user.email) {
-
-        const existingUser = await User.findOne({ email: newEmail })
-
-        if (existingUser) {
-          return res.render('user/profile', {
-            user,
-            error: "Email already in use"
-          })
-        }
-
-        user.email = newEmail
-      }
-
-      if (newName) {
-        user.name = newName
-      }
-
-      if (req.file) {
-
-        if (user.profileImage) {
-
-          const oldImagePath = path.join(
-            process.cwd(),
-            'public',
-            user.profileImage
-          )
-
-          if (fs.existsSync(oldImagePath)) {
-            fs.unlinkSync(oldImagePath)
-          }
-        }
-
-        user.profileImage = "/uploads/" + req.file.filename
-      }
-
-      await user.save()
-
-      req.session.user.name = user.name
-      req.session.user.email = user.email
-
-      res.redirect('/api/user/profile')
-
-    } catch (error) {
-      console.log("Update profile error:", error)
-      res.redirect('/api/user/profile')
-    }
-  }
-)
-
 
 
 router.post('/delete-avatar', async (req, res) => {
