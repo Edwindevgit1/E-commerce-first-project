@@ -1,6 +1,6 @@
 import express from "express";
 import passport from "passport";
-import signupUser, { getSignupPage } from "../../controllers/signupController.js";
+import signupUser, { getSignupPage , googleAuthCallback} from "../../controllers/signupController.js";
 
 const router = express.Router();
 
@@ -17,13 +17,13 @@ router.get("/google",
   })
 );
 
-router.get("/google/callback",
+router.get(
+  "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: "/register"
+    failureRedirect: "/register",
+    session: false
   }),
-  (req, res) => {
-    res.redirect("/");
-  }
+  googleAuthCallback
 );
 
 export default router;

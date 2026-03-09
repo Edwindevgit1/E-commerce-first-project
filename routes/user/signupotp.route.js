@@ -1,12 +1,12 @@
 import express from "express";
-import signupUser, { resendSignupOtp, verifySignupOtp ,cancelSignup} from "../../controllers/signupController.js";
+import signupUser, { resendSignupOtp, verifySignupOtp ,cancelSignup, getSignupPage} from "../../controllers/signupController.js";
 
 
 const router = express.Router();
 
 router.get("/signupotp", (req, res) => {
   res.render("user/signupotp");
-});
+},getSignupPage);
 
 router.get('/cancel-singup',cancelSignup)
 router.post("/signupotp", signupUser);      

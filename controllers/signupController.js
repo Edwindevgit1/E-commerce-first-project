@@ -14,18 +14,16 @@ const transporter = nodemailer.createTransport({
 });
 
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
-export const getSignupPage=(req,res)=>{
-  if(req.session.signupData){
-    return res.redirect('/api/auth/signupotp')
-  }
-  res.render('user/signup')
-}
+
 const signupUser = async (req, res) => {
   try {
     const { name, email, password, confirmPassword } = req.body;
 
     const trimmedName = name?.trim();
     const trimmedEmail = email?.trim();
+    if(req.session.signupData){
+      return res.redirect('/api/auth/signupotp')
+    }
 
     if (!trimmedName || !trimmedEmail || !password || !confirmPassword) {
       return res.render("user/signup", {
@@ -83,6 +81,7 @@ const signupUser = async (req, res) => {
     req.session.signupOtp = otp;
     req.session.signupOtpExpiry = Date.now() + OTP_EXPIRY_MS;
     req.session.otpLastSentAt = Date.now(); // start 30s cooldown immediately
+    console.log('Signup otp',otp)
     req.session.signupData = {
       name: trimmedName,
       email: trimmedEmail,
@@ -103,6 +102,12 @@ const signupUser = async (req, res) => {
     return res.render("user/signup", { error: "Registration failed" });
   }
 };
+export const getSignupPage=(req,res)=>{
+  if(req.session.signupData){
+    return res.redirect('/api/auth/signupotp')
+  }
+  res.render('user/signup')
+}
 
 export const resendSignupOtp = async (req, res) => {
   try {
@@ -233,5 +238,58 @@ export const cancelSignup=(req,res)=>{
     return res.redirect('/api/auth/register')
   }
 }
+export const googleAuthCallback = async (req, res) => {
+  try {
+    const googleUser = req.user;
+
+    if (!googleUser?.email) {
+      return res.redirect("/api/auth/register");
+    }
+
+    const email = googleUser.email.toLowerCase();
+    const name = googleUser.name;
+
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      req.session.user = {
+        id: existingUser._id,
+        email: existingUser.email,
+        name: existingUser.name,
+      };
+
+      return res.redirect("/api/auth/register");
+    }
+
+    // Generate OTP
+    const otp = generateOtp();
+
+    req.session.signupOtp = otp;
+    req.session.signupOtpExpiry = Date.now() + OTP_EXPIRY_MS;
+    req.session.otpLastSentAt = Date.now();
+
+    req.session.signupData = {
+      name,
+      email,
+      password: null,
+      provider: "google",
+    };
+
+    console.log("Google Signup OTP:", otp);
+
+    await transporter.sendMail({
+      from: `Your app <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Email verification OTP",
+      text: `Your OTP is: ${otp}`,
+    });
+
+    return res.redirect("/api/auth/signupotp");
+
+  } catch (error) {
+    console.log("Google auth error", error);
+    return res.redirect("/api/auth/register");
+  }
+};
 
 export default signupUser;
