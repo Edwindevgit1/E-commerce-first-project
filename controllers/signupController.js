@@ -89,11 +89,12 @@ const signupUser = async (req, res) => {
     req.session.signupOtp = otp;
     req.session.signupOtpExpiry = Date.now() + OTP_EXPIRY_MS;
     req.session.otpLastSentAt = Date.now(); // start 30s cooldown immediately
-    console.log('Signup otp',otp)
+    console.log('Signup OTP',otp)
     req.session.signupData = {
       name: trimmedName,
       email: trimmedEmail,
       password: hashedPassword,
+      provider:"local"
     };
 
     await transporter.sendMail({
@@ -102,8 +103,6 @@ const signupUser = async (req, res) => {
       subject: "Email verification OTP",
       text: `Your OTP for account verification is: ${otp}`,
     });
-
-    console.log("Signup OTP:", otp);
     return res.redirect("/api/auth/signupotp");
   } catch (error) {
     console.error(error, "signup error");
@@ -200,7 +199,7 @@ export const verifySignupOtp = async (req, res) => {
     }
 
     // Create user only after OTP is valid
-    const { name, email, password } = req.session.signupData;
+    const { name, email, password ,provider} = req.session.signupData;
 
     const existing = await User.findOne({ email });
     if (existing) {
@@ -215,7 +214,7 @@ export const verifySignupOtp = async (req, res) => {
       name,
       email,
       password, // already hashed in signupUser
-      provider: "local",
+      provider,
       isVerified: true,
     });
 

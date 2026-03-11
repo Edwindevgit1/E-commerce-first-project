@@ -12,7 +12,7 @@ router.post('/logout', (req, res) => {
     }
 
     res.clearCookie('connect.sid')   
-    res.redirect('/api/auth/login')  
+    return res.redirect('/api/auth/login')  
 
   })
 

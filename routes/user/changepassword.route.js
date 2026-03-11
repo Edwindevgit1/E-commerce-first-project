@@ -24,8 +24,8 @@ router.get('/change-password', async (req, res) => {
     console.log("Change password load error:", error)
     res.redirect('/api/auth/login')
   }
-
 })
+
 router.post('/change-password', async (req, res) => {
 
   if (!req.session.user) {
@@ -33,6 +33,7 @@ router.post('/change-password', async (req, res) => {
   }
 
   try {
+
     const { currentPassword, newPassword, confirmPassword } = req.body
 
     const user = await User.findById(req.session.user.id)
@@ -42,14 +43,36 @@ router.post('/change-password', async (req, res) => {
       return res.redirect('/api/auth/login')
     }
 
+    /* FIRST TIME PASSWORD SET (GOOGLE USERS) */
 
-    if (user.provider !== "local") {
+    if (!user.password) {
+
+      if (!newPassword || !confirmPassword) {
+        return res.render('user/change-password', {
+          user,
+          error: "Please enter a new password."
+        })
+      }
+
+      if (newPassword !== confirmPassword) {
+        return res.render('user/change-password', {
+          user,
+          error: "Passwords do not match."
+        })
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10)
+
+      user.password = hashedPassword
+      await user.save()
+
       return res.render('user/change-password', {
         user,
-        error: "Google users cannot change password here."
+        success: "Password set successfully."
       })
     }
 
+    /* NORMAL PASSWORD CHANGE */
 
     const isMatch = await bcrypt.compare(currentPassword, user.password)
 
@@ -60,22 +83,12 @@ router.post('/change-password', async (req, res) => {
       })
     }
 
-
-    if (newPassword.length < 8) {
-      return res.render('user/change-password', {
-        user,
-        error: "New password must be at least 8 characters long."
-      })
-    }
-
-
     if (newPassword !== confirmPassword) {
       return res.render('user/change-password', {
         user,
         error: "Passwords do not match."
       })
     }
-
 
     const isSamePassword = await bcrypt.compare(newPassword, user.password)
 
@@ -85,7 +98,6 @@ router.post('/change-password', async (req, res) => {
         error: "New password cannot be same as old password."
       })
     }
-
 
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
@@ -98,16 +110,17 @@ router.post('/change-password', async (req, res) => {
     })
 
   } catch (error) {
+
     console.log("Change password error:", error)
 
     const user = await User.findById(req.session.user.id)
-  
+
     return res.render('user/change-password', {
       user,
       error: "Something went wrong."
     })
   }
-
 })
+
 
 export default router

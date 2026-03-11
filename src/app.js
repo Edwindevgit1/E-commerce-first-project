@@ -55,12 +55,12 @@ app.use('/api/auth',loginRouter)
 app.use('/api/auth',forgotpassrouter)
 app.use('/api/auth',verifyotp)
 app.use('/api/auth',resetpassword)
-app.use('/api/auth/',homepage)
+app.use('/api/auth',homepage)
 //user profile
 app.use('/api/user',usersprof)
 app.use('/api/user',adressrouter)
 app.use('/api/user',changepassword)
 app.use('/api/user',logout)
-app.use('/api/user/',profileemailverify)
+app.use('/api/user',profileemailverify)
 
 export default app;
