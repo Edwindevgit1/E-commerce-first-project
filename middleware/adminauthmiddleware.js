@@ -10,13 +10,13 @@ const adminMiddleware=async(req,res,next)=>{
       req.session.admin=null
       return res.redirect('/api/admin/admin')
     }
-    if(admin.role!=='admin'){
+    if(admin.role!=='admin' && admin.role !=='superadmin'){
       req.session.admin=null
       return res.redirect('/api/admin/admin')
     }
     if(admin.isBlocked){
       req.session.admin=null
-      return res.redirect('api/admin/admin')
+      return res.redirect('/api/admin/admin')
     }
     req.admin=admin
     next()

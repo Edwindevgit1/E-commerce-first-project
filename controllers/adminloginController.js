@@ -1,6 +1,13 @@
 import User from '../models/User.js'
 import bcrpyt from "bcrypt"
 
+export const getAdminLoginPage = (req,res)=>{
+  if(req.session.admin){
+    return res.redirect('/api/admin/adminusermanagement')
+  }
+  res.render("admin/adminlogin");
+}
+
 export const adminlogin = async(req,res)=>{
   try{
     const {email,password}=req.body
@@ -16,7 +23,7 @@ export const adminlogin = async(req,res)=>{
         error:'Invalid email or password'
       })
     }
-    if(user.role!=='admin'){
+    if(user.role!=='admin' && user.role!=='superadmin'){
       return res.render('admin/adminlogin',{
         error:'Access denied'
       })
@@ -25,6 +32,11 @@ export const adminlogin = async(req,res)=>{
       return res.render('admin/adminlogin',{
         error:'Admin must login through the email and password'
       })
+    }
+    if (user.isBlocked) {
+      return res.render("admin/adminlogin", {
+        error: "Your account has been blocked. Contact super admin.",
+      });
     }
     const isMatch=await bcrpyt.compare(password,user.password)
     if(!isMatch){
@@ -39,13 +51,15 @@ export const adminlogin = async(req,res)=>{
     }
     return res.redirect('/api/admin/adminusermanagement')
   }catch(error){
-    console.log('Admin log in error',error)
+    console.log(error,'Admin login error')
     return res.render('admin/adminlogin',{
       error:'Something went wrong'
     })
   }
 }
+
 export const adminLogout=async(req,res)=>{
-  req.session.admin=null
-  return res.redirect('/api/admin/admin')
-}
+  req.session.destroy(()=>{
+    return res.redirect('/api/admin/admin')
+  })
+  }

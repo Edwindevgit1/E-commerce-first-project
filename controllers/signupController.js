@@ -59,7 +59,15 @@ const signupUser = async (req, res) => {
     }
 
     const existingUser = await User.findOne({ email: trimmedEmail });
+    
     if (existingUser) {
+      if (existingUser.isBlocked && (existingUser.role === "user" || existingUser.role === "admin")) {
+        return res.render("user/signup", {
+          error: "This account is blocked. You cannot sign up with this email.",
+          name: trimmedName,
+          email: trimmedEmail,
+        });
+      }
       if (existingUser.provider === "google") {
         return res.render("user/signup", {
           error: "Account exists. Please login using Google.",

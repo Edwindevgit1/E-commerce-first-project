@@ -1,109 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>User Management</title>
-    <link rel="stylesheet" href="/css/admin-usermanagement.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <main class="neo-scene">
-      <section class="neo-card">
-        <header class="top-strip">
-          <div class="chip-row">
-            <a href="/api/admin/dashboard" class="chip">Dashboard</a>
-            <a href="/api/admin/products" class="chip">Products</a>
-            <a href="/api/admin/categories" class="chip">Categories</a>
-            <a href="/api/admin/orders" class="chip">Orders</a>
-            <a href="/api/admin/adminusermanagement" class="chip chip-dark">Users</a>
-          </div>
-          <a href="/api/admin/adminlogout" class="logout-pill">Logout</a>
-        </header>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Management</title>
+<link rel="stylesheet" href="/css/admin-usermanagement.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
 
-        <section class="panel">
-          <div class="panel-head">
-            <h1>User Management</h1>
-            <p>Search and manage customer accounts</p>
-          </div>
+<body>
 
-          <form method="GET" action="/api/admin/adminusermanagement" class="search-section">
-            <input type="text" name="search" placeholder="Search by name or email" value="<%= search || '' %>" />
-            <button type="submit" class="btn btn-dark">Apply</button>
-            <% if (search) { %>
-              <a href="/api/admin/adminusermanagement" class="btn btn-light">Clear</a>
-            <% } %>
-          </form>
+<main class="neo-scene">
+<section class="neo-card">
 
-          <div class="table-wrap">
-            <table class="user-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Status</th>
-                  <th>Total</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% if (users.length === 0) { %>
-                  <tr>
-                    <td colspan="5" class="empty-cell">No users found</td>
-                  </tr>
-                <% } %>
+<header class="top-strip">
 
-                <% users.forEach(user => { %>
-                  <tr>
-                    <td><%= user.name %></td>
-                    <td><%= user.email %></td>
-                    <td>
-                      <% if (!user.isBlocked) { %>
-                        <span class="status active">Active</span>
-                      <% } else { %>
-                        <span class="status blocked">Blocked</span>
-                      <% } %>
-                    </td>
-                    <td>₹0</td>
-                    <td>
-                      <% if (!user.isBlocked) { %>
-                        <form action="/api/admin/adminusermanagement/block/<%= user._id %>" method="POST" onsubmit="return confirm('Are you sure you want to block this user?')">
-                          <button type="submit" class="btn btn-danger">Block</button>
-                        </form>
-                      <% } else { %>
-                        <form action="/api/admin/adminusermanagement/unblock/<%= user._id %>" method="POST" onsubmit="return confirm('Are you sure you want to unblock this user?')">
-                          <button type="submit" class="btn btn-success">Unblock</button>
-                        </form>
-                      <% } %>
-                    </td>
-                  </tr>
-                <% }) %>
-              </tbody>
-            </table>
-          </div>
+<div class="chip-row">
+<a href="/api/admin/dashboard" class="chip">Dashboard</a>
+<a href="/api/admin/products" class="chip">Products</a>
+<a href="/api/admin/categories" class="chip">Categories</a>
+<a href="/api/admin/orders" class="chip">Orders</a>
+<a href="/api/admin/adminusermanagement" class="chip chip-dark">Users</a>
+</div>
 
-          <% if (typeof totalPages !== "undefined" && totalPages > 1) { %>
-            <div class="pagination">
-              <% if (currentPage > 1) { %>
-                <a class="page-btn" href="/api/admin/adminusermanagement?page=<%= currentPage - 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %>">Prev</a>
-              <% } %>
+<form action="/api/admin/adminlogout" method="POST">
+<button type="submit" class="logout-pill">Logout</button>
+</form>
 
-              <% for (let i = 1; i <= totalPages; i++) { %>
-                <a class="page-btn <%= i === currentPage ? 'active' : '' %>" href="/api/admin/adminusermanagement?page=<%= i %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"><%= i %></a>
-              <% } %>
+</header>
 
-              <% if (currentPage < totalPages) { %>
-                <a class="page-btn" href="/api/admin/adminusermanagement?page=<%= currentPage + 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %>">Next</a>
-              <% } %>
-            </div>
-          <% } %>
-        </section>
-      </section>
-    </main>
-  </body>
+<section class="panel">
+
+<div class="panel-head">
+<h1>User Management</h1>
+<p>Search and manage customer accounts</p>
+</div>
+
+<form method="GET" action="/api/admin/adminusermanagement" class="search-section">
+<input
+type="text"
+name="search"
+placeholder="Search by name or email"
+value="<%= search || '' %>"
+>
+<button type="submit" class="btn btn-dark">Apply</button>
+
+<% if (search) { %>
+<a href="/api/admin/adminusermanagement" class="btn btn-light">Clear</a>
+<% } %>
+</form>
+
+<div class="table-wrap">
+
+<table class="user-table">
+
+<thead>
+<tr>
+<th>Name</th>
+<th>Email</th>
+<th>Status</th>
+
+<% if (admin && admin.role === "superadmin") { %>
+<th>Role</th>
+<% } %>
+
+<th>Total</th>
+<th>Actions</th>
+</tr>
+</thead>
+
+<tbody>
+
+<% if (users.length === 0) { %>
+<tr>
+<td colspan="<%= admin && admin.role === 'superadmin' ? 6 : 5 %>" class="empty-cell">No users found</td>
+</tr>
+<% } %>
+
+<% users.forEach(user => { %>
+<tr>
+
+<td><%= user.name %></td>
+<td><%= user.email %></td>
+
+<td>
+<% if (!user.isBlocked) { %>
+<span class="status active">Active</span>
+<% } else { %>
+<span class="status blocked">Blocked</span>
+<% } %>
+</td>
+
+<% if (admin && admin.role === "superadmin") { %>
+<td><%= user.role %></td>
+<% } %>
+
+<td>₹0</td>
+
+<td>
+<div class="action-row">
+
+  <% if (admin && (admin.role === "admin" || admin.role === "superadmin")) { %>
+    <% if (!user.isBlocked) { %>
+      <form action="/api/admin/adminusermanagement/block/<%= user._id %>" method="POST" onsubmit="return confirm('Block this user?')">
+        <button class="btn btn-danger" type="submit">Block</button>
+      </form>
+    <% } else { %>
+      <form action="/api/admin/adminusermanagement/unblock/<%= user._id %>" method="POST" onsubmit="return confirm('Unblock this user?')">
+        <button class="btn btn-success" type="submit">Unblock</button>
+      </form>
+    <% } %>
+  <% } %>
+
+  <% if (admin && admin.role === "superadmin") { %>
+    <% if (user.role === "user") { %>
+      <form action="/api/admin/makeadmin/<%= user._id %>" method="POST" onsubmit="return confirm('Promote this user to admin?')">
+        <button class="btn btn-dark" type="submit">Make Admin</button>
+      </form>
+    <% } %>
+
+    <% if (user.role === "admin") { %>
+      <form action="/api/admin/removeadmin/<%= user._id %>" method="POST" onsubmit="return confirm('Remove admin privileges?')">
+        <button class="btn btn-light" type="submit">Remove Admin</button>
+      </form>
+    <% } %>
+  <% } %>
+
+</div>
+</td>
+
+</tr>
+<% }) %>
+
+</tbody>
+
+</table>
+
+</div>
+
+<% if (typeof totalPages !== "undefined" && totalPages > 1) { %>
+<div class="pagination">
+
+<% if (currentPage > 1) { %>
+<a
+class="page-btn"
+href="/api/admin/adminusermanagement?page=<%= currentPage - 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
+>Prev</a>
+<% } %>
+
+<% for (let i = 1; i <= totalPages; i++) { %>
+<a
+class="page-btn <%= i === currentPage ? 'active' : '' %>"
+href="/api/admin/adminusermanagement?page=<%= i %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
+><%= i %></a>
+<% } %>
+
+<% if (currentPage < totalPages) { %>
+<a
+class="page-btn"
+href="/api/admin/adminusermanagement?page=<%= currentPage + 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
+>Next</a>
+<% } %>
+
+</div>
+<% } %>
+
+</section>
+</section>
+</main>
+
+<script>
+window.addEventListener("pageshow", function (e) {
+  if (e.persisted) {
+    location.reload();
+  }
+});
+</script>
+
+</body>
 </html>

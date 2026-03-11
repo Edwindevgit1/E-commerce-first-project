@@ -18,6 +18,7 @@ import changepassword from "../routes/user/changepassword.route.js";
 import logout from "../routes/user/logout.route.js";
 import signupotp from "../routes/user/signupotp.route.js";
 import profileemailverify from "../routes/user/profile-email-otp.route.js";
+import promotedemoteAdmin from "../routes/admin/promotedemoteAdmin.route.js";
 
 
 const app = express();
@@ -45,6 +46,7 @@ app.use(passport.session());
 //admin
 app.use('/api/admin',adminAuthrouter);
 app.use('/api/admin',usermanagement)
+app.use('/api/admin',promotedemoteAdmin)
 app.use('/api/admin',blockunblock)
 //user
 app.use('/api/auth',signupRouter)

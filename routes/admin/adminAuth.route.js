@@ -1,15 +1,12 @@
 import express from "express";
-import { adminlogin, adminLogout } from "../../controllers/adminloginController.js";
-import adminMiddleware from "../../middleware/adminauthmiddleware.js";
+import { adminlogin, adminLogout, getAdminLoginPage } from "../../controllers/adminloginController.js";
+import noCache from "../../middleware/noCacheMiddleware.js";
 
 const router = express.Router();
 
 
-router.get('/admin', (req, res) => {
-  res.render("admin/adminlogin");
-});
-
-router.post('/admin', adminlogin);
+router.get('/admin',noCache,getAdminLoginPage)
+router.post('/admin' ,adminlogin);
 router.post('/adminlogout', adminLogout);
 
 

@@ -21,6 +21,11 @@ const loginUser = async (req, res) => {
         error: "Please login using Google"
       });
     }
+    if ((user.role === "user" || user.role === "admin") && user.isBlocked) {
+      return res.render("user/login", {
+        error: "Your account has been blocked. Contact support.",
+      });
+    }
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
