@@ -19,6 +19,7 @@ import logout from "../routes/user/logout.route.js";
 import signupotp from "../routes/user/signupotp.route.js";
 import profileemailverify from "../routes/user/profile-email-otp.route.js";
 import promotedemoteAdmin from "../routes/admin/promotedemoteAdmin.route.js";
+import userAuth from "../middleware/user/userauth.middleware.js";
 
 
 const app = express();
@@ -57,10 +58,10 @@ app.use('/api/auth',verifyotp)
 app.use('/api/auth',resetpassword)
 app.use('/api/auth',homepage)
 //user profile
-app.use('/api/user',usersprof)
-app.use('/api/user',adressrouter)
-app.use('/api/user',changepassword)
-app.use('/api/user',logout)
-app.use('/api/user',profileemailverify)
+app.use('/api/user',userAuth,usersprof)
+app.use('/api/user',userAuth,adressrouter)
+app.use('/api/user',userAuth,changepassword)
+app.use('/api/user',userAuth,logout)
+app.use('/api/user',userAuth,profileemailverify)
 
 export default app;
