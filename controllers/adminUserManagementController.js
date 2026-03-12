@@ -1,11 +1,21 @@
 import User from "../models/User.js";
 
+const buildPagination = (currentPage, totalPages) => {
+  const items = [];
+  const startPage = Math.max(1, currentPage - 1);
+  const endPage = Math.min(totalPages, currentPage + 1);
+
+  for (let page = startPage; page <= endPage; page += 1) {
+    items.push(page);
+  }
+
+  return items;
+};
+
 export const getUserManagement = async (req, res) => {
   try {
     const search = req.query.search?.trim() || "";
-    const page = parseInt(req.query.page, 10) || 1;
     const limit = 5;
-    const skip = (page - 1) * limit;
 
     const query = {};
 
@@ -25,20 +35,25 @@ export const getUserManagement = async (req, res) => {
     }
 
     const totalUsers = await User.countDocuments(query);
+    const totalPages = Math.ceil(totalUsers / limit) || 1;
+    const currentPage = Math.min(
+      Math.max(parseInt(req.query.page, 10) || 1, 1),
+      totalPages
+    );
+    const skip = (currentPage - 1) * limit;
 
     const users = await User.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const totalPages = Math.ceil(totalUsers / limit) || 1;
-
     res.render("admin/usermanagement", {
       users,
       admin: req.admin,
       search,
-      currentPage: page,
+      currentPage,
       totalPages,
+      paginationItems: buildPagination(currentPage, totalPages),
     });
   } catch (error) {
     console.log(error, "pagination error in the admin usermanagement controller");

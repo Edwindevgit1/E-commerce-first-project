@@ -150,12 +150,12 @@ href="/api/admin/adminusermanagement?page=<%= currentPage - 1 %><%= search ? '&s
 >Prev</a>
 <% } %>
 
-<% for (let i = 1; i <= totalPages; i++) { %>
+<% paginationItems.forEach(i => { %>
 <a
 class="page-btn <%= i === currentPage ? 'active' : '' %>"
 href="/api/admin/adminusermanagement?page=<%= i %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
 ><%= i %></a>
-<% } %>
+<% }) %>
 
 <% if (currentPage < totalPages) { %>
 <a
