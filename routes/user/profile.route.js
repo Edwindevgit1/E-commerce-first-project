@@ -10,7 +10,9 @@ router.get('/profile', async (req, res) => {
   if (!req.session.user) {
     return res.redirect('/api/auth/login')
   }
-
+  if(req.session.user.isBlocked) {
+    return res.redirect('/api/auth/login')
+  }
   try {
     const user = await User.findById(req.session.user.id)
 

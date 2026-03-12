@@ -34,7 +34,7 @@ const sendOtp = async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-
+    console.log("Forgot password OTP:",otp)
     user.resetOtp = otp;
     user.resetOtpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 

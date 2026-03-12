@@ -1,15 +1,30 @@
 import express from "express";
-import signupUser, { resendSignupOtp, verifySignupOtp ,cancelSignup, getSignupPage} from "../../controllers/signupController.js";
-
+import signupUser, {
+  resendSignupOtp,
+  verifySignupOtp,
+  cancelSignup,
+  getSignupPage,
+  getSignupOtpPage
+} from "../../controllers/signupController.js";
 
 const router = express.Router();
 
-router.get("/signupotp", (req, res) => {
-  res.render("user/signupotp");
-},getSignupPage);
+// signup page
+router.get("/register", getSignupPage);
 
-router.get('/cancel-singup',cancelSignup)
-router.post("/signupotp", signupUser);      
+// OTP page
+router.get("/signupotp", getSignupOtpPage);
+
+// cancel signup
+router.get("/cancel-signup", cancelSignup);
+
+// submit signup form
+router.post("/signupotp", signupUser);
+
+// resend OTP
 router.post("/resend-otp", resendSignupOtp);
-router.post('/signupverify-otp',verifySignupOtp)
+
+// verify OTP
+router.post("/signupverify-otp", verifySignupOtp);
+
 export default router;

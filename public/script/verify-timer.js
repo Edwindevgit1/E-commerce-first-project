@@ -1,4 +1,3 @@
-// public/script/forgot-otp.js
 const RESEND_WAIT = 30;
 let remaining = RESEND_WAIT;
 let intervalId = null;
@@ -92,3 +91,8 @@ setTimeout(() => {
 }, 3000);
 
 startCountdown();
+window.addEventListener("pageshow", function (event) {
+  if (event.persisted) {
+  window.location.reload();
+  }
+  });

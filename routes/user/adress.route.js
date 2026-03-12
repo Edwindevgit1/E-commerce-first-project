@@ -74,7 +74,6 @@ router.post('/delete-address/:id', async (req, res) => {
 
     const addressId = req.params.id
 
-    // find the address being deleted
     const addressToDelete = user.addresses.id(addressId)
     if (!addressToDelete) {
       return res.redirect('/api/user/adress')
@@ -82,12 +81,11 @@ router.post('/delete-address/:id', async (req, res) => {
 
     const wasDefault = addressToDelete.isDefault
 
-    // remove address
     user.addresses = user.addresses.filter(
       addr => addr._id.toString() !== addressId
     )
 
-    // if deleted address was default
+
     if (wasDefault && user.addresses.length > 0) {
       user.addresses[0].isDefault = true
     }
@@ -102,9 +100,6 @@ router.post('/delete-address/:id', async (req, res) => {
   }
 })
 
-/* ============================
-   SET DEFAULT ADDRESS
-============================ */
 router.post('/set-default/:id', async (req, res) => {
 
   if (!req.session.user) {
@@ -129,10 +124,6 @@ router.post('/set-default/:id', async (req, res) => {
   }
 })
 
-
-/* ============================
-   LOAD EDIT PAGE
-============================ */
 router.get('/edit-address/:id', async (req, res) => {
 
   if (!req.session.user) {
@@ -152,9 +143,6 @@ router.get('/edit-address/:id', async (req, res) => {
 })
 
 
-/* ============================
-   UPDATE ADDRESS
-============================ */
 router.post('/update-address/:id', async (req, res) => {
 
   if (!req.session.user) {

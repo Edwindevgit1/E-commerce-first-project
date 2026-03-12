@@ -8,6 +8,12 @@ document.querySelectorAll(".toggle-password").forEach((btn) => {
     btn.setAttribute("aria-label", isPassword ? "Hide password" : "Show password");
   });
 });
+window.addEventListener("pageshow", function () {
+  const form = document.querySelector("form");
+  if (form) {
+    form.reset();
+  }
+});
 setTimeout(() => {
   const errorBox = document.getElementById("errorBox");
   if (errorBox) {

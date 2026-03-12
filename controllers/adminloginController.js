@@ -58,8 +58,7 @@ export const adminlogin = async(req,res)=>{
   }
 }
 
-export const adminLogout=async(req,res)=>{
-  req.session.destroy(()=>{
-    return res.redirect('/api/admin/admin')
-  })
+export const adminLogout=(req,res)=>{
+  delete req.session.admin;
+  return res.redirect('/api/admin/admin')
   }

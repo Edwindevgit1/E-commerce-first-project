@@ -4,6 +4,8 @@ import bcrypt from 'bcrypt'
 
 const router = express.Router()
 
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\W).{8,}$/
+
 router.get('/change-password', async (req, res) => {
 
   if (!req.session.user) {
@@ -11,6 +13,7 @@ router.get('/change-password', async (req, res) => {
   }
 
   try {
+
     const user = await User.findById(req.session.user.id)
 
     if (!user) {
@@ -21,10 +24,14 @@ router.get('/change-password', async (req, res) => {
     res.render('user/change-password', { user })
 
   } catch (error) {
+
     console.log("Change password load error:", error)
-    res.redirect('/api/auth/login')
+    return res.redirect('/api/auth/login')
+
   }
+
 })
+
 
 router.post('/change-password', async (req, res) => {
 
@@ -43,8 +50,8 @@ router.post('/change-password', async (req, res) => {
       return res.redirect('/api/auth/login')
     }
 
-    /* FIRST TIME PASSWORD SET (GOOGLE USERS) */
 
+    // USER REGISTERED THROUGH GOOGLE (NO PASSWORD YET)
     if (!user.password) {
 
       if (!newPassword || !confirmPassword) {
@@ -61,6 +68,13 @@ router.post('/change-password', async (req, res) => {
         })
       }
 
+      if (!passwordRegex.test(newPassword)) {
+        return res.render('user/change-password', {
+          user,
+          error: "Password must contain 8 characters, uppercase, lowercase, and special character."
+        })
+      }
+
       const hashedPassword = await bcrypt.hash(newPassword, 10)
 
       user.password = hashedPassword
@@ -70,9 +84,18 @@ router.post('/change-password', async (req, res) => {
         user,
         success: "Password set successfully."
       })
+
     }
 
-    /* NORMAL PASSWORD CHANGE */
+
+    // NORMAL USER (HAS PASSWORD)
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.render('user/change-password', {
+        user,
+        error: "All fields are required."
+      })
+    }
 
     const isMatch = await bcrypt.compare(currentPassword, user.password)
 
@@ -87,6 +110,13 @@ router.post('/change-password', async (req, res) => {
       return res.render('user/change-password', {
         user,
         error: "Passwords do not match."
+      })
+    }
+
+    if (!passwordRegex.test(newPassword)) {
+      return res.render('user/change-password', {
+        user,
+        error: "Password must contain 8 characters, uppercase, lowercase, and special character."
       })
     }
 
@@ -113,14 +143,19 @@ router.post('/change-password', async (req, res) => {
 
     console.log("Change password error:", error)
 
-    const user = await User.findById(req.session.user.id)
+    let user = null
+
+    if (req.session?.user?.id) {
+      user = await User.findById(req.session.user.id)
+    }
 
     return res.render('user/change-password', {
       user,
       error: "Something went wrong."
     })
-  }
-})
 
+  }
+
+})
 
 export default router

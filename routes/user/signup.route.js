@@ -2,10 +2,11 @@ import express from "express";
 import passport from "passport";
 import signupUser, { getSignupPage , googleAuthCallback} from "../../controllers/signupController.js";
 import blockAuthPages from "../../middleware/user/blockAuth.middleware.js";
+import noCache from "../../middleware/noCacheMiddleware.js";
 
 const router = express.Router();
 
-router.get("/register",blockAuthPages,getSignupPage);
+router.get("/register",noCache,blockAuthPages,getSignupPage);
 
 router.post("/register",(req,res,next)=>{
 console.log(req.body)

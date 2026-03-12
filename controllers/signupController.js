@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
 
 const OTP_COOLDOWN_SECONDS = 30;
-const OTP_EXPIRY_MS = 10 * 60 * 1000;
+const OTP_EXPIRY_MS = 2 * 60 * 1000;
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -88,7 +88,7 @@ const signupUser = async (req, res) => {
 
     req.session.signupOtp = otp;
     req.session.signupOtpExpiry = Date.now() + OTP_EXPIRY_MS;
-    req.session.otpLastSentAt = Date.now(); // start 30s cooldown immediately
+    req.session.otpLastSentAt = Date.now(); 
     console.log('Signup OTP',otp)
     req.session.signupData = {
       name: trimmedName,
@@ -157,8 +157,6 @@ export const resendSignupOtp = async (req, res) => {
 export const verifySignupOtp = async (req, res) => {
   try {
     const rawOtp = String(req.body?.otp || "").trim();
-
-    // Backend validation (required even if frontend validation exists)
     if (!rawOtp) {
       return res.status(400).render("user/signupotp", {
         error: "OTP is required.",
@@ -176,29 +174,21 @@ export const verifySignupOtp = async (req, res) => {
         error: "OTP must be 6 digits.",
       });
     }
-
-    // Session checks
     if (!req.session.signupOtp || !req.session.signupOtpExpiry || !req.session.signupData) {
       return res.status(400).render("user/signupotp", {
         error: "Session expired. Please sign up again.",
       });
     }
-
-    // Expiry check
     if (Date.now() > req.session.signupOtpExpiry) {
       return res.status(400).render("user/signupotp", {
         error: "OTP expired. Please resend OTP.",
       });
     }
-
-    // OTP match check
     if (rawOtp !== req.session.signupOtp) {
       return res.status(400).render("user/signupotp", {
         error: "Invalid OTP.",
       });
     }
-
-    // Create user only after OTP is valid
     const { name, email, password ,provider} = req.session.signupData;
 
     const existing = await User.findOne({ email });
@@ -213,12 +203,10 @@ export const verifySignupOtp = async (req, res) => {
     await User.create({
       name,
       email,
-      password, // already hashed in signupUser
+      password, 
       provider,
       isVerified: true,
     });
-
-    // Cleanup temp session data
     delete req.session.signupOtp;
     delete req.session.signupOtpExpiry;
     delete req.session.otpLastSentAt;
@@ -267,8 +255,6 @@ export const googleAuthCallback = async (req, res) => {
 
       return res.redirect("/api/auth/register");
     }
-
-    // Generate OTP
     const otp = generateOtp();
 
     req.session.signupOtp = otp;
@@ -298,5 +284,14 @@ export const googleAuthCallback = async (req, res) => {
     return res.redirect("/api/auth/register");
   }
 };
+export const getSignupOtpPage = (req, res) => {
 
+  if (!req.session.signupData) {
+    return res.redirect("/api/auth/register");
+  }
+
+  res.set("Cache-Control", "no-store");
+
+  res.render("user/signupotp");
+};
 export default signupUser;
