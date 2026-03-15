@@ -20,6 +20,7 @@ import signupotp from "../routes/user/signupotp.route.js";
 import profileemailverify from "../routes/user/profile-email-otp.route.js";
 import promotedemoteAdmin from "../routes/admin/promotedemoteAdmin.route.js";
 import userAuth from "../middleware/user/userauth.middleware.js";
+import categoryRoutes from "../routes/admin/categoryRoute.js";
 
 
 const app = express();
@@ -49,6 +50,7 @@ app.use('/api/admin',adminAuthrouter);
 app.use('/api/admin',usermanagement)
 app.use('/api/admin',promotedemoteAdmin)
 app.use('/api/admin',blockunblock)
+app.use('/api/admin',categoryRoutes)
 //user
 app.use('/api/auth',signupRouter)
 app.use('/api/auth',signupotp)

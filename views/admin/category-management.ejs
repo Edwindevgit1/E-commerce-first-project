@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Category Management</title>
+    <link rel="stylesheet" href="/css/category-management.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="neo-scene">
+      <section class="neo-card">
+        <header class="top-strip">
+          <div class="chip-row">
+            <a href="/api/admin/dashboard" class="chip">Dashboard</a>
+            <a href="/api/admin/products" class="chip">Products</a>
+            <a href="/api/admin/categories" class="chip chip-dark">Categories</a>
+            <a href="/api/admin/orders" class="chip">Orders</a>
+            <a href="/api/admin/adminusermanagement" class="chip">Users</a>
+          </div>
+
+          <form action="/api/admin/adminlogout" method="POST">
+            <button type="submit" class="logout-pill">Logout</button>
+          </form>
+        </header>
+
+        <section class="hero-panel">
+          <div class="hero-copy">
+            <h1>Category Management</h1>
+            <p>Manage category records with compact dashboard controls for search, sort, edit, and soft delete.</p>
+          </div>
+
+          <div class="hero-stats">
+            <article class="stat-card">
+              <span>Total Categories</span>
+              <strong><%= totalCategories %></strong>
+            </article>
+            <article class="stat-card">
+              <span>Current Page</span>
+              <strong><%= currentPage %></strong>
+            </article>
+          </div>
+        </section>
+
+        <section class="content-grid">
+          <section class="form-panel glass-panel">
+            <div class="panel-head">
+              <h2>Add Category</h2>
+              <p>Create a category with a status and short note.</p>
+            </div>
+
+            <% if (error) { %>
+              <p id="errorMessage" class="feedback error"><%= error %></p>
+            <% } %>
+
+            <form action="/api/admin/add-category" method="POST" class="category-form">
+              <label class="field">
+                <span>Name</span>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Running Shoes"
+                />
+              </label>
+
+              <label class="field">
+                <span>Status</span>
+                <select name="status">
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Description</span>
+                <textarea
+                  name="description"
+                  rows="4"
+                  placeholder="Short description for this category"
+                ></textarea>
+              </label>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn-dark">Save Category</button>
+                <button type="reset" class="btn btn-light">Reset</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="table-panel glass-panel">
+            <div class="table-head">
+              <div class="panel-head">
+                <h2>Category List</h2>
+                <p>Search categories first, then use the sort control below to refine the table order.</p>
+              </div>
+            </div>
+
+            <div class="controls-form">
+              <form method="GET" action="/api/admin/category" class="search-bar">
+                <input
+                  type="text"
+                  name="search"
+                  placeholder="Search category name"
+                  value="<%= search || '' %>"
+                />
+                <input type="hidden" name="sort" value="<%= sort || 'newest' %>" />
+                <button type="submit" class="btn btn-dark">Search</button>
+                <% if (search) { %>
+                  <a href="/api/admin/category?sort=<%= sort || 'newest' %>" class="btn btn-light">Clear</a>
+                <% } %>
+              </form>
+
+              <form method="GET" action="/api/admin/category" class="sort-row">
+                <label for="sortSelect">Sort by</label>
+                <input type="hidden" name="search" value="<%= search || '' %>" />
+                <select id="sortSelect" name="sort" class="sort-select">
+                  <option value="newest" <%= sort === "newest" ? "selected" : "" %>>
+                    Newest First
+                  </option>
+                  <option value="oldest" <%= sort === "oldest" ? "selected" : "" %>>
+                    Oldest First
+                  </option>
+                  <option value="az" <%= sort === "az" ? "selected" : "" %>>
+                    A → Z
+                  </option>
+                  <option value="za" <%= sort === "za" ? "selected" : "" %>>
+                    Z → A
+                  </option>
+                </select>
+                <button type="submit" class="btn btn-light">Apply Sort</button>
+              </form>
+            </div>
+
+            <div class="table-wrap">
+              <table class="category-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <% if (!categories || categories.length === 0) { %>
+                    <tr>
+                      <td colspan="5" class="empty-cell">
+                        No categories yet. Once you wire the backend listing, they will appear here.
+                      </td>
+                    </tr>
+                  <% } else { %>
+                    <% categories.forEach((category, index) => { %>
+                      <tr>
+                        <td><%= (currentPage - 1) * 5 + index + 1 %></td>
+                        <td>
+                          <div class="category-name">
+                            <strong><%= category.name %></strong>
+                            <span><%= category.description || "" %></span>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="status-badge <%= category.status === 'active' ? 'active' : 'inactive' %>">
+                            <%= category.status %>
+                          </span>
+                        </td>
+                        <td>
+                          <%= category.createdAt ? new Date(category.createdAt).toLocaleDateString('en-IN') : '--' %>
+                        </td>
+                        <td>
+                          <div class="action-row">
+                            <button
+                              type="button"
+                              class="icon-btn edit-btn open-edit-modal"
+                              data-id="<%= category._id %>"
+                              data-name="<%= category.name %>"
+                              data-status="<%= category.status %>"
+                              data-description="<%= category.description || '' %>"
+                              title="Edit"
+                            >
+                              ✏
+                            </button>
+
+                            <button
+                              type="button"
+                              class="icon-btn delete-btn open-delete-modal"
+                              data-id="<%= category._id %>"
+                              data-name="<%= category.name %>"
+                              title="Soft Delete"
+                            >
+                              🗑
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    <% }) %>
+                  <% } %>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination">
+
+              <% if (currentPage > 1) { %>
+                <a href="/api/admin/category?page=<%= currentPage - 1 %>&search=<%= search %>&sort=<%= sort %>"
+                   class="page-btn">Prev</a>
+              <% } %>
+            
+              <% for(let i = 1; i <= totalPages; i++) { %>
+                <a href="/api/admin/category?page=<%= i %>&search=<%= search %>&sort=<%= sort %>"
+                   class="page-btn <%= i === currentPage ? 'active' : '' %>">
+                   <%= i %>
+                </a>
+              <% } %>
+            
+              <% if (currentPage < totalPages) { %>
+                <a href="/api/admin/category?page=<%= currentPage + 1 %>&search=<%= search %>&sort=<%= sort %>"
+                   class="page-btn">Next</a>
+              <% } %>
+            
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="editModal">
+      <div class="modal-box">
+        <h3>Edit Category</h3>
+
+        <form id="editCategoryForm" method="POST" class="category-form modal-form">
+          <label class="field">
+            <span>Name</span>
+            <input type="text" name="name" id="editCategoryName" required />
+          </label>
+
+          <label class="field">
+            <span>Status</span>
+            <select name="status" id="editCategoryStatus">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Description</span>
+            <textarea name="description" id="editCategoryDescription" rows="4"></textarea>
+          </label>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-light close-edit-modal">Cancel</button>
+            <button type="submit" class="btn btn-dark">Update</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="deleteModal">
+      <div class="modal-box">
+        <h3>Soft Delete Category</h3>
+        <p id="deleteModalText">Are you sure you want to soft delete this category?</p>
+
+        <form id="deleteCategoryForm" method="POST">
+          <div class="modal-actions">
+            <button type="button" class="btn btn-light close-delete-modal">Cancel</button>
+            <button type="submit" class="btn btn-danger">OK, Delete</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      const editModal = document.getElementById("editModal");
+      const deleteModal = document.getElementById("deleteModal");
+      const errorMessage = document.getElementById("errorMessage")
+
+      const editCategoryForm = document.getElementById("editCategoryForm");
+      const editCategoryName = document.getElementById("editCategoryName");
+      const editCategoryStatus = document.getElementById("editCategoryStatus");
+      const editCategoryDescription = document.getElementById("editCategoryDescription");
+
+      const deleteCategoryForm = document.getElementById("deleteCategoryForm");
+      const deleteModalText = document.getElementById("deleteModalText");
+
+      document.querySelectorAll(".open-edit-modal").forEach((button) => {
+        button.addEventListener("click", () => {
+          const id = button.dataset.id;
+          const name = button.dataset.name;
+          const status = button.dataset.status;
+          const description = button.dataset.description;
+
+          editCategoryForm.action = `/api/admin/edit-category/${id}`;
+          editCategoryName.value = name;
+          editCategoryStatus.value = status;
+          editCategoryDescription.value = description;
+
+          editModal.classList.add("show");
+        });
+      });
+
+      document.querySelectorAll(".close-edit-modal").forEach((button) => {
+        button.addEventListener("click", () => {
+          editModal.classList.remove("show");
+        });
+      });
+
+      document.querySelectorAll(".open-delete-modal").forEach((button) => {
+        button.addEventListener("click", () => {
+          const id = button.dataset.id;
+          const name = button.dataset.name;
+
+          deleteCategoryForm.action = `/api/admin/delete-category/${id}`;
+          deleteModalText.textContent = `Are you sure you want to soft delete "${name}"?`;
+
+          deleteModal.classList.add("show");
+        });
+      });
+
+      document.querySelectorAll(".close-delete-modal").forEach((button) => {
+        button.addEventListener("click", () => {
+          deleteModal.classList.remove("show");
+        });
+      });
+
+      editModal.addEventListener("click", (event) => {
+        if (event.target === editModal) {
+          editModal.classList.remove("show");
+        }
+      });
+
+      deleteModal.addEventListener("click", (event) => {
+        if (event.target === deleteModal) {
+          deleteModal.classList.remove("show");
+        }
+      });
+      if (errorMessage) {
+      setTimeout(() => {
+      errorMessage.style.display = "none";
+      }, 3000);
+      }
+    </script>
+  </body>
+</html>
