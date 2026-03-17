@@ -102,13 +102,13 @@ required
 <option value="">Select category</option>
 
 <% if(Array.isArray(categories) && categories.length > 0){ %>
-<% categories.forEach((category) => { %>
+<% categories.forEach((category)=>{ %>
 
 <option
 value="<%= category._id %>"
 <%= String(product?.category?._id || product?.category || "") === String(category._id) ? "selected" : "" %>
 >
-<%- category.name %>
+<%= category.name %>
 </option>
 
 <% }) %>
@@ -192,6 +192,7 @@ placeholder="Write a short description"
 
 
 <input
+id="imageInput"
 type="file"
 name="images"
 multiple
@@ -199,19 +200,25 @@ accept="image/jpeg,image/jpg,image/png"
 />
 
 
-<div class="image-preview-row">
+<div class="image-preview-row" id="imagePreviewRow">
 
 <% if(product && product.images && product.images.length){ %>
 
 <% product.images.forEach((img,index)=>{ %>
 
-<div class="image-box" data-index="<%= index %>" style="display:inline-block;position:relative;margin-right:10px">
+<div class="image-box existing-image" data-index="<%= index %>">
 
 <img
 src="<%= img %>"
-style="width:120px;height:100px;object-fit:cover;border-radius:6px"
+class="product-image-preview"
 />
-
+<button
+type="button"
+data-index="<%= index %>"
+class="remove-btn"
+>
+✕
+</button>
 </div>
 
 <% }) %>
@@ -243,39 +250,138 @@ Cancel
 </section>
 </main>
 
-
 <script>
 
 const errorMessage = document.getElementById("errorMessage");
+const imageInput = document.getElementById("imageInput");
+const imagePreviewRow = document.getElementById("imagePreviewRow");
+let selectedFiles = [];
+  
+  if (errorMessage) {
+    setTimeout(() => {
+      errorMessage.style.display = "none";
+    }, 3000);
+  }
+  
+  
+  /* attach click event to all remove buttons */
+  
+  document.querySelectorAll(".remove-btn").forEach(btn => {
+  
+    btn.addEventListener("click", function(){
+  
+      const index = this.dataset.index;
+  
+      removeImage(index);
+  
+    });
+  
+  });
 
-if (errorMessage) {
-setTimeout(() => {
-errorMessage.style.display = "none";
-}, 3000);
-}
+  if (imageInput) {
+    imageInput.addEventListener("change", function (event) {
+      selectedFiles = Array.from(event.target.files || []);
+      updateFileInputFiles();
+      renderNewImagePreviews();
+      updateRemoveButtonsState();
+    });
+  }
+  
+  
+  function removeImage(index){
 
+    if (getTotalImagesCount() <= 3) {
+      return;
+    }
+  
+    const input = document.getElementById("removeImages");
+  
+    let arr = input.value ? input.value.split(",") : [];
+  
+    if(!arr.includes(String(index))){
+      arr.push(String(index));
+    }
+  
+    input.value = arr.join(",");
+  
+    const imgBox = document.querySelector(`[data-index="${index}"]`);
+  
+    if(imgBox){
+      imgBox.classList.add("removed-existing");
+    }
 
-function removeImage(index) {
+    updateRemoveButtonsState();
+  
+  }
 
-const input = document.getElementById("removeImages");
+  function renderNewImagePreviews() {
+    document.querySelectorAll(".new-image").forEach((node) => node.remove());
 
-let arr = input.value ? input.value.split(",") : [];
+    selectedFiles.forEach((file, index) => {
+      const reader = new FileReader();
 
-if (!arr.includes(String(index))) {
-arr.push(String(index));
-}
+      reader.onload = function (loadEvent) {
+        const imageBox = document.createElement("div");
+        imageBox.className = "image-box new-image";
 
-input.value = arr.join(",");
+        const image = document.createElement("img");
+        image.src = loadEvent.target.result;
+        image.alt = file.name;
+        image.className = "product-image-preview";
 
-const imgBox = document.querySelector(`[data-index="${index}"]`);
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "remove-btn";
+        removeButton.textContent = "✕";
+        removeButton.addEventListener("click", function () {
+          removeSelectedFile(index);
+        });
 
-if (imgBox) {
-imgBox.style.display = "none";
-}
+        imageBox.appendChild(image);
+        imageBox.appendChild(removeButton);
+        imagePreviewRow.appendChild(imageBox);
+        updateRemoveButtonsState();
+      };
 
-}
+      reader.readAsDataURL(file);
+    });
+  }
 
-</script>
+  function removeSelectedFile(index) {
+    if (getTotalImagesCount() <= 3) {
+      return;
+    }
 
+    selectedFiles = selectedFiles.filter((_, fileIndex) => fileIndex !== index);
+    updateFileInputFiles();
+    renderNewImagePreviews();
+    updateRemoveButtonsState();
+  }
+
+  function updateFileInputFiles() {
+    const dataTransfer = new DataTransfer();
+    selectedFiles.forEach((file) => dataTransfer.items.add(file));
+    imageInput.files = dataTransfer.files;
+  }
+
+  function getRemainingExistingCount() {
+    return document.querySelectorAll(".existing-image:not(.removed-existing)").length;
+  }
+
+  function getTotalImagesCount() {
+    return getRemainingExistingCount() + selectedFiles.length;
+  }
+
+  function updateRemoveButtonsState() {
+    const canRemove = getTotalImagesCount() > 3;
+    document.querySelectorAll(".remove-btn").forEach((button) => {
+      button.disabled = !canRemove;
+      button.classList.toggle("remove-btn-disabled", !canRemove);
+    });
+  }
+
+  updateRemoveButtonsState();
+  
+  </script>
 </body>
 </html>
