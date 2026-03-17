@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title><%= pageTitle %></title>
+
+<link rel="stylesheet" href="/css/product-management.css" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+<link
+href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+rel="stylesheet"
+/>
+</head>
+
+<body>
+
+<main class="dashboard-scene">
+<section class="dashboard-card">
+
+<header class="top-strip">
+
+<div class="chip-row">
+<a href="/api/admin/dashboard" class="chip">Dashboard</a>
+<a href="/api/admin/products" class="chip chip-dark">Products</a>
+<a href="/api/admin/categories" class="chip">Categories</a>
+<a href="/api/admin/orders" class="chip">Orders</a>
+<a href="/api/admin/adminusermanagement" class="chip">Users</a>
+</div>
+
+<form action="/api/admin/adminlogout" method="POST">
+<button type="submit" class="logout-pill">Logout</button>
+</form>
+
+</header>
+
+
+<section class="hero-panel add-hero">
+
+<div class="hero-copy">
+<h1><%= formTitle %></h1>
+<p>Manage product details, variants and image uploads.</p>
+</div>
+
+<div class="hero-actions">
+<a href="/api/admin/products" class="btn btn-light">
+Back to List
+</a>
+</div>
+
+</section>
+
+
+<section class="content-panel">
+
+<% if (typeof error !== "undefined" && error) { %>
+<p id="errorMessage" class="feedback error"><%= error %></p>
+<% } %>
+
+
+<form
+class="product-form"
+method="POST"
+action="<%= formAction %>"
+enctype="multipart/form-data"
+>
+
+<input type="hidden" id="removeImages" name="removeImages" value="">
+
+<div class="panel-head">
+<div>
+<h2>Product Details</h2>
+<p>Fill the basic information for the product.</p>
+</div>
+</div>
+
+
+<div class="form-grid">
+
+<label class="field">
+<span>Product Name</span>
+
+<input
+type="text"
+name="productName"
+placeholder="Nike Air 212"
+value="<%= product?.productName || '' %>"
+required
+/>
+
+</label>
+
+
+<label class="field">
+<span>Category</span>
+
+<select name="category" required>
+
+<option value="">Select category</option>
+
+<% if(Array.isArray(categories) && categories.length > 0){ %>
+<% categories.forEach((category) => { %>
+
+<option
+value="<%= category._id %>"
+<%= String(product?.category?._id || product?.category || "") === String(category._id) ? "selected" : "" %>
+>
+<%- category.name %>
+</option>
+
+<% }) %>
+<% } %>
+
+</select>
+
+</label>
+
+
+<label class="field">
+<span>Price</span>
+
+<input
+type="number"
+name="price"
+placeholder="3695"
+value="<%= product?.price ?? '' %>"
+required
+/>
+
+</label>
+
+
+<label class="field">
+<span>Stock</span>
+
+<input
+type="number"
+name="stock"
+placeholder="60"
+value="<%= product?.stock ?? '' %>"
+required
+/>
+
+</label>
+
+
+<label class="field">
+<span>Status</span>
+
+<select name="status">
+
+<option value="active" <%= product?.status === "active" || !product ? "selected" : "" %>>
+Active
+</option>
+
+<option value="inactive" <%= product?.status === "inactive" ? "selected" : "" %>>
+Inactive
+</option>
+
+</select>
+
+</label>
+
+
+<label class="field field-wide">
+
+<span>Description</span>
+
+<textarea
+name="description"
+rows="5"
+placeholder="Write a short description"
+><%= product?.description || '' %></textarea>
+
+</label>
+
+</div>
+
+
+
+<section class="inner-panel">
+
+<div class="panel-head">
+<div>
+<h2>Images</h2>
+<p>Upload minimum 3 images (JPG or PNG)</p>
+</div>
+</div>
+
+
+<input
+type="file"
+name="images"
+multiple
+accept="image/jpeg,image/jpg,image/png"
+/>
+
+
+<div class="image-preview-row">
+
+<% if(product && product.images && product.images.length){ %>
+
+<% product.images.forEach((img,index)=>{ %>
+
+<div class="image-box" data-index="<%= index %>" style="display:inline-block;position:relative;margin-right:10px">
+
+<img
+src="<%= img %>"
+style="width:120px;height:100px;object-fit:cover;border-radius:6px"
+/>
+
+</div>
+
+<% }) %>
+
+<% } %>
+
+</div>
+
+</section>
+
+
+
+<div class="form-actions end-actions">
+
+<a href="/api/admin/products" class="btn btn-light">
+Cancel
+</a>
+
+<button type="submit" class="btn btn-dark">
+<%= submitLabel %>
+</button>
+
+</div>
+
+</form>
+
+</section>
+
+</section>
+</main>
+
+
+<script>
+
+const errorMessage = document.getElementById("errorMessage");
+
+if (errorMessage) {
+setTimeout(() => {
+errorMessage.style.display = "none";
+}, 3000);
+}
+
+
+function removeImage(index) {
+
+const input = document.getElementById("removeImages");
+
+let arr = input.value ? input.value.split(",") : [];
+
+if (!arr.includes(String(index))) {
+arr.push(String(index));
+}
+
+input.value = arr.join(",");
+
+const imgBox = document.querySelector(`[data-index="${index}"]`);
+
+if (imgBox) {
+imgBox.style.display = "none";
+}
+
+}
+
+</script>
+
+</body>
+</html>

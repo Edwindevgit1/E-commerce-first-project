@@ -21,6 +21,7 @@ import profileemailverify from "../routes/user/profile-email-otp.route.js";
 import promotedemoteAdmin from "../routes/admin/promotedemoteAdmin.route.js";
 import userAuth from "../middleware/user/userauth.middleware.js";
 import categoryRoutes from "../routes/admin/categoryRoute.js";
+import productRoutes from "../routes/admin/productRoute.js";
 
 
 const app = express();
@@ -51,6 +52,7 @@ app.use('/api/admin',usermanagement)
 app.use('/api/admin',promotedemoteAdmin)
 app.use('/api/admin',blockunblock)
 app.use('/api/admin',categoryRoutes)
+app.use('/api/admin',productRoutes)
 //user
 app.use('/api/auth',signupRouter)
 app.use('/api/auth',signupotp)

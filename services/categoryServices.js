@@ -24,25 +24,31 @@ export const getCategoryService = async (search,page,limit,sort) => {
     const totalPages = Math.ceil(totalCategories / limit);
   return {categories , totalPages ,totalCategories};
 }
+export const addCategoryService = async (data) => {
 
-export const addCategoryService = async(data)=>{
+  const name = data.name?.trim();
+
+  if (!name) {
+    throw new Error("Name is required");
+  }
+
   const existing = await Category.findOne({
-   name: { $regex: `^${data.name}$`, $options: "i" }
-  })
-  if(!data.name){
-    throw new Error("Name is required")
-  }
-  if(existing){
-    throw new Error("Category already exists")
-  }
-  const category = new Category({
-    name:data.name,
-    status:data.status,
-    description:data.description
-  })
-  return category.save()
-}
+    name: { $regex: `^${name}$`, $options: "i" },
+    isDeleted: false
+  });
 
+  if (existing) {
+    throw new Error("Category already exists");
+  }
+
+  const category = new Category({
+    name: name,
+    status: data.status,
+    description: data.description
+  });
+
+  return category.save();
+};
 export const editCategoryService = async (id,data)=>{
   const name = data.name?.trim()
   if(!name){
