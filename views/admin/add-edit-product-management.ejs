@@ -6,10 +6,10 @@
 <title><%= pageTitle %></title>
 
 <link rel="stylesheet" href="/css/product-management.css" />
+<link rel="stylesheet" href="/vendor/cropper/cropper.min.css" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
 <link
 href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
 rel="stylesheet"
@@ -206,11 +206,11 @@ accept="image/jpeg,image/jpg,image/png"
 
 <% product.images.forEach((img,index)=>{ %>
 
-<div class="image-box existing-image" data-index="<%= index %>">
+<div class="image-box existing-image" data-index="<%= index %>" data-original-src="<%= img %>">
 
 <img
 src="<%= img %>"
-class="product-image-preview"
+class="product-image-preview recrop-image"
 />
 <button
 type="button"
@@ -226,6 +226,8 @@ class="remove-btn"
 <% } %>
 
 </div>
+
+<p id="imageValidationMessage" class="image-validation-message"></p>
 
 </section>
 
@@ -249,13 +251,43 @@ Cancel
 
 </section>
 </main>
+<div class="crop-modal-backdrop" id="cropModal">
+  <div class="crop-modal-box">
+    <div class="crop-modal-head">
+      <h3>Crop Product Image</h3>
+      <p>Crop the image to a square. Minimum size is 800 x 800.</p>
+    </div>
 
+    <div class="crop-image-wrap">
+      <img id="cropImage" alt="Crop preview" />
+    </div>
+
+    <div class="crop-modal-actions">
+      <button type="button" class="btn btn-light" id="cancelCropBtn">Cancel</button>
+      <button type="button" class="btn btn-dark" id="confirmCropBtn">Crop Image</button>
+    </div>
+</div>
+</div>
+<script src="/vendor/cropper/cropper.min.js"></script>
 <script>
-
-const errorMessage = document.getElementById("errorMessage");
+  const errorMessage = document.getElementById("errorMessage");
+  const productForm = document.querySelector(".product-form");
 const imageInput = document.getElementById("imageInput");
 const imagePreviewRow = document.getElementById("imagePreviewRow");
-let selectedFiles = [];
+const removeImagesInput = document.getElementById("removeImages");
+const imageValidationMessage = document.getElementById("imageValidationMessage");
+  
+  const cropModal = document.getElementById("cropModal");
+  const cropImage = document.getElementById("cropImage");
+  const cancelCropBtn = document.getElementById("cancelCropBtn");
+  const confirmCropBtn = document.getElementById("confirmCropBtn");
+  
+  let selectedFiles = [];
+  let pendingFiles = [];
+  let cropper = null;
+  let currentSourceFile = null;
+  let currentReplaceIndex = null;
+  let currentFileName = "";
   
   if (errorMessage) {
     setTimeout(() => {
@@ -263,125 +295,343 @@ let selectedFiles = [];
     }, 3000);
   }
   
-  
-  /* attach click event to all remove buttons */
-  
-  document.querySelectorAll(".remove-btn").forEach(btn => {
-  
-    btn.addEventListener("click", function(){
-  
+  document.querySelectorAll(".remove-btn").forEach((btn) => {
+    btn.addEventListener("click", function () {
       const index = this.dataset.index;
-  
       removeImage(index);
-  
     });
-  
   });
 
+  document.querySelectorAll(".existing-image .recrop-image").forEach((image) => {
+    image.addEventListener("click", function () {
+      const imageBox = this.closest(".existing-image");
+      if (!imageBox || imageBox.classList.contains("removed-existing")) return;
+
+      openExistingImageForCrop(imageBox.dataset.index, imageBox.dataset.originalSrc);
+    });
+  });
+  
   if (imageInput) {
-    imageInput.addEventListener("change", function (event) {
-      selectedFiles = Array.from(event.target.files || []);
-      updateFileInputFiles();
-      renderNewImagePreviews();
-      updateRemoveButtonsState();
+    imageInput.addEventListener("change", handleImageSelection);
+  }
+  
+  if (cancelCropBtn) {
+    cancelCropBtn.addEventListener("click", closeCropModal);
+  }
+  
+  if (confirmCropBtn) {
+    confirmCropBtn.addEventListener("click", cropCurrentImage);
+  }
+  
+  if (productForm) {
+    productForm.addEventListener("submit", (event) => {
+      if (getTotalImagesCount() < 3) {
+        event.preventDefault();
+        showImageValidation("Minimum 3 images are required.");
+      }
     });
   }
   
+  function handleImageSelection(event) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
   
-  function removeImage(index){
-
-    if (getTotalImagesCount() <= 3) {
+    pendingFiles = files;
+    showImageValidation("");
+    openNextCrop();
+  }
+  
+  function openNextCrop() {
+    if (!pendingFiles.length) {
+      rebuildFileInput();
+      renderNewImagePreviews();
+      closeCropModal();
       return;
     }
   
-    const input = document.getElementById("removeImages");
+    currentSourceFile = pendingFiles.shift();
+    currentReplaceIndex = null;
+    currentFileName = currentSourceFile.name;
   
-    let arr = input.value ? input.value.split(",") : [];
+    const tempImage = new Image();
+    const fileUrl = URL.createObjectURL(currentSourceFile);
   
-    if(!arr.includes(String(index))){
-      arr.push(String(index));
-    }
-  
-    input.value = arr.join(",");
-  
-    const imgBox = document.querySelector(`[data-index="${index}"]`);
-  
-    if(imgBox){
-      imgBox.classList.add("removed-existing");
-    }
+    tempImage.onload = () => {
+      if (tempImage.width < 800 || tempImage.height < 800) {
+        URL.revokeObjectURL(fileUrl);
+        showImageValidation(`${currentSourceFile.name} must be at least 800 x 800 pixels.`);
+        openNextCrop();
+        return;
+      }
 
-    updateRemoveButtonsState();
+      cropModal.classList.add("show");
+
+      if (cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+
+      cropImage.onload = () => {
+        if (typeof Cropper === "undefined") {
+          showImageValidation("Cropper did not load. Restart the server and try again.");
+          return;
+        }
+
+        cropper = new Cropper(cropImage, {
+          aspectRatio: 1,
+          viewMode: 1,
+          dragMode: "move",
+          autoCropArea: 1,
+          responsive: true,
+          background: false
+        });
+      };
+
+      cropImage.src = fileUrl;
+      cropImage.dataset.objectUrl = fileUrl;
+    };
   
+    tempImage.src = fileUrl;
   }
 
+  function openExistingImageForCrop(index, imageUrl) {
+    currentSourceFile = null;
+    currentReplaceIndex = Number(index);
+    currentFileName = `recrop-${index}.jpg`;
+    showImageValidation("");
+
+    cropModal.classList.add("show");
+
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+
+    cropImage.onload = () => {
+      if (typeof Cropper === "undefined") {
+        showImageValidation("Cropper did not load. Restart the server and try again.");
+        return;
+      }
+
+      cropper = new Cropper(cropImage, {
+        aspectRatio: 1,
+        viewMode: 1,
+        dragMode: "move",
+        autoCropArea: 1,
+        responsive: true,
+        background: false
+      });
+    };
+
+    cropImage.src = imageUrl;
+    cropImage.dataset.objectUrl = "";
+  }
+  
+  function cropCurrentImage() {
+    if (!cropper) return;
+  
+    const canvas = cropper.getCroppedCanvas({
+      width: 800,
+      height: 800,
+      imageSmoothingEnabled: true,
+      imageSmoothingQuality: "high"
+    });
+  
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+  
+      const croppedFile = new File(
+        [blob],
+        `${Date.now()}-${currentFileName.replace(/\s+/g, "-")}.jpg`,
+        { type: "image/jpeg" }
+      );
+  
+      if (currentReplaceIndex !== null) {
+        selectedFiles = selectedFiles.filter((file) => file.replaceIndex !== currentReplaceIndex);
+        croppedFile.replaceIndex = currentReplaceIndex;
+        forceRemoveExisting(currentReplaceIndex);
+        currentReplaceIndex = null;
+      }
+
+      selectedFiles.push(croppedFile);
+  
+      if (cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+
+      if (cropImage.dataset.objectUrl) {
+        URL.revokeObjectURL(cropImage.dataset.objectUrl);
+        cropImage.dataset.objectUrl = "";
+      }
+  
+      openNextCrop();
+    }, "image/jpeg", 0.9);
+  }
+  
+  function closeCropModal() {
+    cropModal.classList.remove("show");
+  
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+  
+    cropImage.onload = null;
+    cropImage.src = "";
+    currentSourceFile = null;
+    currentReplaceIndex = null;
+    currentFileName = "";
+    pendingFiles = [];
+    rebuildFileInput();
+    updateRemoveButtonsState();
+  }
+  
+  function rebuildFileInput() {
+    const dataTransfer = new DataTransfer();
+  
+    selectedFiles.forEach((file) => {
+      dataTransfer.items.add(file);
+    });
+  
+    imageInput.files = dataTransfer.files;
+  }
+  
   function renderNewImagePreviews() {
     document.querySelectorAll(".new-image").forEach((node) => node.remove());
-
+  
     selectedFiles.forEach((file, index) => {
       const reader = new FileReader();
-
-      reader.onload = function (loadEvent) {
+  
+      reader.onload = (event) => {
         const imageBox = document.createElement("div");
         imageBox.className = "image-box new-image";
-
+  
         const image = document.createElement("img");
-        image.src = loadEvent.target.result;
-        image.alt = file.name;
+        image.src = event.target.result;
         image.className = "product-image-preview";
-
+        image.alt = file.name;
+  
         const removeButton = document.createElement("button");
         removeButton.type = "button";
         removeButton.className = "remove-btn";
-        removeButton.textContent = "✕";
-        removeButton.addEventListener("click", function () {
-          removeSelectedFile(index);
-        });
+        removeButton.textContent = file.replaceIndex !== undefined ? "↺" : "✕";
+        removeButton.title = file.replaceIndex !== undefined ? "Restore original image" : "Remove image";
+        removeButton.addEventListener("click", () => removeSelectedFile(index));
+
+        if (file.replaceIndex !== undefined) {
+          image.classList.add("recrop-image");
+          image.addEventListener("click", () => {
+            const originalSrc = getOriginalExistingSrc(file.replaceIndex);
+            if (originalSrc) {
+              openExistingImageForCrop(file.replaceIndex, originalSrc);
+            }
+          });
+        }
+
+        if (file.replaceIndex !== undefined) {
+          const badge = document.createElement("span");
+          badge.className = "replacement-badge";
+          badge.textContent = "Recropped";
+          imageBox.appendChild(badge);
+        }
 
         imageBox.appendChild(image);
         imageBox.appendChild(removeButton);
         imagePreviewRow.appendChild(imageBox);
         updateRemoveButtonsState();
       };
-
+  
       reader.readAsDataURL(file);
     });
   }
-
+  
   function removeSelectedFile(index) {
     if (getTotalImagesCount() <= 3) {
+      showImageValidation("Keep at least 3 images before saving.");
       return;
     }
 
+    const fileToRemove = selectedFiles[index];
+
+    if (fileToRemove && fileToRemove.replaceIndex !== undefined) {
+      restoreExisting(fileToRemove.replaceIndex);
+    }
+
     selectedFiles = selectedFiles.filter((_, fileIndex) => fileIndex !== index);
-    updateFileInputFiles();
+    rebuildFileInput();
     renderNewImagePreviews();
     updateRemoveButtonsState();
   }
+  
+  function removeImage(index) {
+    if (getTotalImagesCount() <= 3) {
+      showImageValidation("Keep at least 3 images before saving.");
+      return;
+    }
 
-  function updateFileInputFiles() {
-    const dataTransfer = new DataTransfer();
-    selectedFiles.forEach((file) => dataTransfer.items.add(file));
-    imageInput.files = dataTransfer.files;
+    forceRemoveExisting(index);
+    updateRemoveButtonsState();
   }
 
+  function forceRemoveExisting(index) {
+  
+    let removed = removeImagesInput.value ? removeImagesInput.value.split(",") : [];
+  
+    if (!removed.includes(String(index))) {
+      removed.push(String(index));
+    }
+  
+    removeImagesInput.value = removed.join(",");
+  
+    const imgBox = document.querySelector(`.existing-image[data-index="${index}"]`);
+    if (imgBox) {
+      imgBox.style.display = "none";
+      imgBox.classList.add("removed-existing");
+    }
+  }
+
+  function restoreExisting(index) {
+    let removed = removeImagesInput.value ? removeImagesInput.value.split(",") : [];
+    removed = removed.filter((value) => value !== String(index));
+    removeImagesInput.value = removed.join(",");
+
+    const imgBox = document.querySelector(`.existing-image[data-index="${index}"]`);
+    if (imgBox) {
+      imgBox.style.display = "";
+      imgBox.classList.remove("removed-existing");
+    }
+  }
+  
   function getRemainingExistingCount() {
     return document.querySelectorAll(".existing-image:not(.removed-existing)").length;
   }
-
+  
   function getTotalImagesCount() {
     return getRemainingExistingCount() + selectedFiles.length;
   }
 
+  function getOriginalExistingSrc(index) {
+    const existingBox = document.querySelector(`.existing-image[data-index="${index}"]`);
+    return existingBox ? existingBox.dataset.originalSrc : "";
+  }
+
   function updateRemoveButtonsState() {
     const canRemove = getTotalImagesCount() > 3;
+
     document.querySelectorAll(".remove-btn").forEach((button) => {
       button.disabled = !canRemove;
       button.classList.toggle("remove-btn-disabled", !canRemove);
     });
   }
 
+  function showImageValidation(message) {
+    if (!imageValidationMessage) return;
+    imageValidationMessage.textContent = message;
+  }
+
   updateRemoveButtonsState();
-  
   </script>
+  
 </body>
 </html>

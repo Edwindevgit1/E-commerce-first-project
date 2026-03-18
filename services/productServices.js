@@ -1,6 +1,21 @@
 import Product from "../models/Product.js";
 import Category from "../models/Category.js";
 
+const parseListField = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
 
 /* ==============================
    GET PRODUCTS
@@ -56,6 +71,8 @@ export const addProductService = async (data) => {
     stock,
     status,
     description,
+    sizes,
+    colors,
     images
   } = data;
 
@@ -72,6 +89,8 @@ export const addProductService = async (data) => {
     category,
     price,
     stock,
+    sizes: parseListField(sizes),
+    colors: parseListField(colors),
     status,
     description,
     images
@@ -121,6 +140,8 @@ export const editProductService = async (id, data) => {
   }
   product.price = data.price || product.price;
   product.stock = data.stock || product.stock;
+  product.sizes = parseListField(data.sizes);
+  product.colors = parseListField(data.colors);
   product.status = data.status || product.status;
   product.description = data.description || product.description;
 
