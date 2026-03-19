@@ -40,6 +40,10 @@ const productSchema = new mongoose.Schema({
       "Minimum 3 images required"
     ]
   },
+  mainImageIndex:{
+    type:Number,
+    default:0
+  },
   status:{
     type:String,
     enum:["active","inactive"],

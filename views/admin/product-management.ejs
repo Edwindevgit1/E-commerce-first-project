@@ -187,7 +187,7 @@ No products found yet.
 <div class="thumb-shell">
 
 <img
-src="<%= product.images && product.images.length ? product.images[0] : 'https://placehold.co/90x64?text=Item' %>"
+src="<%= product.images && product.images.length ? product.images[product.mainImageIndex || 0] || product.images[0] : 'https://placehold.co/90x64?text=Item' %>"
 alt="<%= product.productName %>"
 class="product-thumb"
 />

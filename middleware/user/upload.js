@@ -3,9 +3,9 @@ import multer from "multer";
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-  const allowed = ["image/jpeg", "image/png"];
+  const allowed = ["image/jpeg", "image/jpg", "image/png"];
   if (allowed.includes(file.mimetype)) cb(null, true);
-  else cb(new Error("Only JPG and PNG images allowed"), false);
+  else cb(new Error("Only JPEG and PNG images allowed"), false);
 };
 
 const upload = multer({

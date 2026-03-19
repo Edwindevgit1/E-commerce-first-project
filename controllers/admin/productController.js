@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import cloudinary from "../../config/cloudinary.js";
 import Category from "../../models/Category.js";
 
@@ -9,13 +10,20 @@ import {
   deleteProductService
 } from "../../services/productServices.js";
 
+const processProductImage = async (file) => {
+  const metadata = await sharp(file.buffer).metadata();
 
-/* =================================
-   PRODUCT LIST PAGE
-================================= */
+  if (!metadata.width || !metadata.height) {
+    throw new Error("Invalid image file");
+  }
+
+  return await sharp(file.buffer)
+    .resize(800, 800, { fit: "cover" })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+};
 
 export const getProductController = async (req, res) => {
-
   try {
 
     const search = req.query.search || "";
@@ -54,17 +62,9 @@ export const getProductController = async (req, res) => {
     });
 
   }
-
 };
 
-
-
-/* =================================
-   ADD PRODUCT PAGE
-================================= */
-
 export const getAddProductPage = async (req, res) => {
-
   try {
 
     const categories = await Category.find({ isDeleted: false });
@@ -80,21 +80,11 @@ export const getAddProductPage = async (req, res) => {
     });
 
   } catch (error) {
-
     console.log(error, "Add product page error");
-
   }
-
 };
 
-
-
-/* =================================
-   ADD PRODUCT
-================================= */
-
 export const addProductController = async (req, res) => {
-
   try {
 
     const files = req.files || [];
@@ -103,22 +93,21 @@ export const addProductController = async (req, res) => {
       throw new Error("Minimum 3 images required");
     }
 
-    const uploadPromises = files.map((file) => {
+    const uploadPromises = files.map(async (file) => {
 
-      return new Promise((resolve, reject) => {
+      const processedBuffer = await processProductImage(file);
+
+      return await new Promise((resolve, reject) => {
 
         const stream = cloudinary.uploader.upload_stream(
           { folder: "products" },
           (error, result) => {
-
             if (error) return reject(error);
-
             resolve(result.secure_url);
-
           }
         );
 
-        stream.end(file.buffer);
+        stream.end(processedBuffer);
 
       });
 
@@ -150,17 +139,9 @@ export const addProductController = async (req, res) => {
     });
 
   }
-
 };
 
-
-
-/* =================================
-   EDIT PRODUCT PAGE
-================================= */
-
 export const getEditProductPage = async (req, res) => {
-
   try {
 
     const product = await getProductByIdService(req.params.id);
@@ -179,20 +160,12 @@ export const getEditProductPage = async (req, res) => {
   } catch (error) {
 
     console.log(error, "Edit product page error");
-
     res.redirect("/api/admin/products");
 
   }
-
 };
 
-
-
-/* =================================
-   EDIT PRODUCT
-================================= */
 export const editProductController = async (req, res) => {
-
   try {
 
     const removeImages = req.body.removeImages
@@ -203,22 +176,21 @@ export const editProductController = async (req, res) => {
 
     if (req.files && req.files.length > 0) {
 
-      const uploadPromises = req.files.map((file) => {
+      const uploadPromises = req.files.map(async (file) => {
 
-        return new Promise((resolve, reject) => {
+        const processedBuffer = await processProductImage(file);
+
+        return await new Promise((resolve, reject) => {
 
           const stream = cloudinary.uploader.upload_stream(
             { folder: "products" },
             (error, result) => {
-
               if (error) return reject(error);
-
               resolve(result.secure_url);
-
             }
           );
 
-          stream.end(file.buffer);
+          stream.end(processedBuffer);
 
         });
 
@@ -228,7 +200,7 @@ export const editProductController = async (req, res) => {
 
     }
 
-    await editProductService(req.params.id,{
+    await editProductService(req.params.id, {
       ...req.body,
       newImages,
       removeImages
@@ -236,9 +208,9 @@ export const editProductController = async (req, res) => {
 
     res.redirect("/api/admin/products");
 
-  } catch(error){
+  } catch (error) {
 
-    console.log(error,"Edit product error");
+    console.log(error, "Edit product error");
 
     const [product, categories] = await Promise.all([
       getProductByIdService(req.params.id),
@@ -259,26 +231,18 @@ export const editProductController = async (req, res) => {
     });
 
   }
-
 };
-/* =================================
-   DELETE PRODUCT (SOFT DELETE)
-================================= */
 
 export const deleteProductController = async (req, res) => {
-
   try {
 
     await deleteProductService(req.params.id);
-
     res.redirect("/api/admin/products");
 
   } catch (error) {
 
     console.log(error, "Delete product error");
-
     res.redirect("/api/admin/products");
 
   }
-
 };

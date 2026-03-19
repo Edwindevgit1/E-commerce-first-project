@@ -1,6 +1,11 @@
 import Product from "../models/Product.js";
 import Category from "../models/Category.js";
 
+
+/* ==============================
+   HELPER
+================================ */
+
 const parseListField = (value) => {
   if (Array.isArray(value)) {
     return value.map((item) => String(item).trim()).filter(Boolean);
@@ -14,6 +19,32 @@ const parseListField = (value) => {
   }
 
   return [];
+};
+
+const resolveMainImageIndex = ({ mainImageKey, images, remainingImages, uploadedImages }) => {
+  if (typeof mainImageKey === "string" && mainImageKey.length > 0) {
+    if (mainImageKey.startsWith("existing:")) {
+      const originalIndex = Number(mainImageKey.split(":")[1]);
+      if (!Number.isNaN(originalIndex) && Array.isArray(images)) {
+        let currentIndex = 0;
+
+        for (let index = 0; index < images.length; index += 1) {
+          if (!remainingImages.includes(images[index])) continue;
+          if (index === originalIndex) return currentIndex;
+          currentIndex += 1;
+        }
+      }
+    }
+
+    if (mainImageKey.startsWith("new:")) {
+      const newIndex = Number(mainImageKey.split(":")[1]);
+      if (!Number.isNaN(newIndex) && newIndex >= 0 && newIndex < uploadedImages.length) {
+        return remainingImages.length + newIndex;
+      }
+    }
+  }
+
+  return 0;
 };
 
 
@@ -57,7 +88,6 @@ export const getProductService = async (search, category, status) => {
 };
 
 
-
 /* ==============================
    ADD PRODUCT
 ================================ */
@@ -73,10 +103,11 @@ export const addProductService = async (data) => {
     description,
     sizes,
     colors,
-    images
+    images,
+    mainImageKey
   } = data;
 
-  if (!productName || !category || !price || !stock) {
+  if (!productName || !category || price === undefined || stock === undefined) {
     throw new Error("Required fields missing");
   }
 
@@ -93,13 +124,18 @@ export const addProductService = async (data) => {
     colors: parseListField(colors),
     status,
     description,
-    images
+    images,
+    mainImageIndex: resolveMainImageIndex({
+      mainImageKey,
+      images: [],
+      remainingImages: [],
+      uploadedImages: images
+    })
   });
 
   return await product.save();
 
 };
-
 
 
 /* ==============================
@@ -121,7 +157,6 @@ export const getProductByIdService = async (id) => {
 };
 
 
-
 /* ==============================
    EDIT PRODUCT
 ================================ */
@@ -134,24 +169,50 @@ export const editProductService = async (id, data) => {
     throw new Error("Product not found");
   }
 
-  product.productName = data.productName || product.productName;
-  if (data.category) {
-    product.category = data.category;
-  }
-  product.price = data.price || product.price;
-  product.stock = data.stock || product.stock;
+  /* ===== BASIC FIELD UPDATES ===== */
+
+  if (data.productName) product.productName = data.productName;
+  if (data.category) product.category = data.category;
+
+  if (data.price !== undefined) product.price = data.price;
+  if (data.stock !== undefined) product.stock = data.stock;
+
   product.sizes = parseListField(data.sizes);
   product.colors = parseListField(data.colors);
-  product.status = data.status || product.status;
-  product.description = data.description || product.description;
+
+  if (data.status) product.status = data.status;
+  if (data.description) product.description = data.description;
+
+
+  /* ===== IMAGE MANAGEMENT ===== */
 
   const removeIndexes = Array.isArray(data.removeImages) ? data.removeImages : [];
-  const remainingImages = (product.images || []).filter((_, index) => !removeIndexes.includes(index));
+
+  const remainingImages = (product.images || []).filter(
+    (_, index) => !removeIndexes.includes(index)
+  );
+
   const uploadedImages = Array.isArray(data.newImages) ? data.newImages : [];
+
   const updatedImages = [...remainingImages, ...uploadedImages];
+
+  /* enforce minimum images */
 
   if (updatedImages.length < 3) {
     throw new Error("Minimum 3 images required");
+  }
+
+  /* ===== MAIN IMAGE INDEX HANDLING ===== */
+
+  product.mainImageIndex = resolveMainImageIndex({
+    mainImageKey: data.mainImageKey,
+    images: product.images || [],
+    remainingImages,
+    uploadedImages
+  });
+
+  if (product.mainImageIndex >= updatedImages.length) {
+    product.mainImageIndex = 0;
   }
 
   product.images = updatedImages;
@@ -159,7 +220,6 @@ export const editProductService = async (id, data) => {
   return await product.save();
 
 };
-
 
 
 /* ==============================
