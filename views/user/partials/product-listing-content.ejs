@@ -1,0 +1,172 @@
+<section class="shop-head" id="listingShell">
+  <aside class="filter-panel">
+    <h2>Filters</h2>
+
+    <form method="GET" action="/api/user/products" class="filter-form" id="listingFilterForm">
+      <input type="hidden" name="search" value="<%= search %>" />
+      <input type="hidden" name="sort" value="<%= sort %>" />
+
+      <div class="filter-group filter-group--dropdown open" data-filter-group>
+        <button type="button" class="filter-group__toggle" data-filter-toggle aria-expanded="true">
+          <span>Category</span>
+          <span class="filter-group__caret">⌄</span>
+        </button>
+        <div class="filter-group__content" data-filter-content>
+          <% categories.forEach((item) => { %>
+            <label class="filter-check filter-check--square">
+              <input type="radio" name="category" value="<%= item._id %>" <%= String(category) === String(item._id) ? "checked" : "" %> />
+              <span><%= item.name %></span>
+            </label>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="filter-group filter-group--dropdown" data-filter-group>
+        <button type="button" class="filter-group__toggle" data-filter-toggle aria-expanded="false">
+          <span>Size</span>
+          <span class="filter-group__caret">⌄</span>
+        </button>
+        <div class="filter-group__content" data-filter-content>
+          <% sizeOptions.forEach((item) => { %>
+            <label class="filter-check filter-check--square">
+              <input type="radio" name="size" value="<%= item %>" <%= size === item ? "checked" : "" %> />
+              <span><%= item %></span>
+            </label>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="filter-group filter-group--dropdown" data-filter-group>
+        <button type="button" class="filter-group__toggle" data-filter-toggle aria-expanded="false">
+          <span>Color</span>
+          <span class="filter-group__caret">⌄</span>
+        </button>
+        <div class="filter-group__content filter-color-list" data-filter-content>
+          <% colorOptions.forEach((item) => { %>
+            <label class="filter-check filter-check--color">
+              <input type="radio" name="color" value="<%= item %>" <%= color === item ? "checked" : "" %> />
+              <span class="filter-color-dot" style="--chip-color: <%= item.toLowerCase() %>;"></span>
+              <span><%= item %></span>
+            </label>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="filter-group filter-group--dropdown" data-filter-group>
+        <button type="button" class="filter-group__toggle" data-filter-toggle aria-expanded="false">
+          <span>Price Range</span>
+          <span class="filter-group__caret">⌄</span>
+        </button>
+        <div class="filter-group__content" data-filter-content>
+          <label class="filter-check">
+            <input type="radio" name="priceRange" value="0-999" <%= priceRange === "0-999" ? "checked" : "" %> />
+            <span>Under 1000</span>
+          </label>
+          <label class="filter-check">
+            <input type="radio" name="priceRange" value="1000-2999" <%= priceRange === "1000-2999" ? "checked" : "" %> />
+            <span>1000 - 2999</span>
+          </label>
+          <label class="filter-check">
+            <input type="radio" name="priceRange" value="3000-4999" <%= priceRange === "3000-4999" ? "checked" : "" %> />
+            <span>3000 - 4999</span>
+          </label>
+          <label class="filter-check">
+            <input type="radio" name="priceRange" value="5000-99999" <%= priceRange === "5000-99999" ? "checked" : "" %> />
+            <span>5000+</span>
+          </label>
+          <label class="filter-check">
+            <input type="radio" name="priceRange" value="" <%= !priceRange ? "checked" : "" %> />
+            <span>All prices</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <button type="submit" class="filter-apply-btn">Apply Filters</button>
+        <a href="/api/user/products" class="filter-clear-btn" data-listing-link>Clear</a>
+      </div>
+    </form>
+  </aside>
+
+  <section class="listing-content">
+    <div class="listing-toolbar">
+      <div class="listing-toolbar__meta"></div>
+
+      <form method="GET" action="/api/user/products" class="listing-sort-form" id="listingSortForm">
+        <input type="hidden" name="search" value="<%= search %>" />
+        <input type="hidden" name="category" value="<%= category %>" />
+        <input type="hidden" name="priceRange" value="<%= priceRange %>" />
+        <input type="hidden" name="size" value="<%= size %>" />
+        <input type="hidden" name="color" value="<%= color %>" />
+        <input type="hidden" name="sort" value="<%= sort %>" />
+
+        <div class="listing-sort-dropdown" data-sort-dropdown>
+          <button type="button" class="listing-sort-toggle" data-sort-toggle aria-expanded="false">
+            <span>Sort by:</span>
+            <strong data-sort-label>
+              <% if (sort === "price_asc") { %>
+                Price: low to high
+              <% } else if (sort === "price_desc") { %>
+                Price: high to low
+              <% } else if (sort === "az") { %>
+                A-Z
+              <% } else if (sort === "za") { %>
+                Z-A
+              <% } else { %>
+                Newest
+              <% } %>
+            </strong>
+            <span class="listing-sort-caret">⌄</span>
+          </button>
+
+          <div class="listing-sort-menu" data-sort-menu>
+            <button type="button" class="listing-sort-option <%= !sort ? "active" : "" %>" data-sort-value="">Newest</button>
+            <button type="button" class="listing-sort-option <%= sort === "price_asc" ? "active" : "" %>" data-sort-value="price_asc">Price: low to high</button>
+            <button type="button" class="listing-sort-option <%= sort === "price_desc" ? "active" : "" %>" data-sort-value="price_desc">Price: high to low</button>
+            <button type="button" class="listing-sort-option <%= sort === "az" ? "active" : "" %>" data-sort-value="az">A-Z</button>
+            <button type="button" class="listing-sort-option <%= sort === "za" ? "active" : "" %>" data-sort-value="za">Z-A</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <section class="product-grid">
+      <% if (!products.length) { %>
+        <p class="empty-text">No products found.</p>
+      <% } %>
+
+      <% products.forEach((product) => { %>
+        <a href="/api/user/products/<%= product._id %>" class="product-card">
+          <div class="product-card__image">
+            <img
+              src="<%= product.images[product.mainImageIndex || 0] || product.images[0] %>"
+              alt="<%= product.productName %>"
+            />
+          </div>
+          <h3><%= product.productName %></h3>
+          <strong>₹<%= product.offerPrice > 0 ? product.offerPrice : product.price %></strong>
+        </a>
+      <% }) %>
+    </section>
+
+    <section class="pagination">
+      <% if (currentPage > 1) { %>
+        <a href="/api/user/products?page=<%= currentPage - 1 %>&search=<%= search %>&category=<%= category %>&priceRange=<%= priceRange %>&size=<%= size %>&color=<%= color %>&sort=<%= sort %>" data-listing-link>-</a>
+      <% } %>
+
+      <% for (let i = 1; i <= totalPages; i++) { %>
+        <a
+          href="/api/user/products?page=<%= i %>&search=<%= search %>&category=<%= category %>&priceRange=<%= priceRange %>&size=<%= size %>&color=<%= color %>&sort=<%= sort %>"
+          class="<%= i === currentPage ? 'active' : '' %>"
+          data-listing-link
+        >
+          <%= i %>
+        </a>
+      <% } %>
+
+      <% if (currentPage < totalPages) { %>
+        <a href="/api/user/products?page=<%= currentPage + 1 %>&search=<%= search %>&category=<%= category %>&priceRange=<%= priceRange %>&size=<%= size %>&color=<%= color %>&sort=<%= sort %>" data-listing-link>+</a>
+      <% } %>
+    </section>
+  </section>
+</section>

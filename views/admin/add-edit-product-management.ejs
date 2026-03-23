@@ -130,25 +130,59 @@ required
 </select>
 </label>
 
-<label class="field">
+<section class="field builder-field">
 <span>Sizes</span>
 <input
-type="text"
+type="hidden"
 name="sizes"
-placeholder="7, 8, 9, 10"
-value="<%= Array.isArray(product?.sizes) ? product.sizes.join(', ') : (product?.sizes || '') %>"
+id="sizesHidden"
+value="<%= Array.isArray(product?.sizes) && product.sizes.length ? product.sizes.join(', ') : (Array.isArray(product?.variants) ? [...new Set(product.variants.map((variant) => variant.size))].join(', ') : '') %>"
 />
-</label>
 
-<label class="field">
+<div class="value-builder">
+  <div class="builder-input-row">
+    <input type="text" id="sizeDraftInput" placeholder="Enter size" />
+    <button type="button" class="btn btn-light builder-add-btn" id="addSizeBtn">+ Add Size</button>
+  </div>
+  <div class="builder-chip-list" id="sizeChipList"></div>
+</div>
+</section>
+
+<section class="field builder-field">
 <span>Colors</span>
 <input
-type="text"
+type="hidden"
 name="colors"
-placeholder="Black, White, Blue"
-value="<%= Array.isArray(product?.colors) ? product.colors.join(', ') : (product?.colors || '') %>"
+id="colorsHidden"
+value="<%= Array.isArray(product?.colors) && product.colors.length ? product.colors.join(', ') : (Array.isArray(product?.variants) ? [...new Set(product.variants.map((variant) => variant.color))].join(', ') : '') %>"
 />
-</label>
+
+<div class="value-builder">
+  <div class="builder-input-row">
+    <input type="text" id="colorDraftInput" placeholder="Enter color" />
+    <button type="button" class="btn btn-light builder-add-btn" id="addColorBtn">+ Add Color</button>
+  </div>
+  <div class="builder-chip-list" id="colorChipList"></div>
+</div>
+</section>
+
+<section class="field builder-field field-wide">
+<span>Highlights</span>
+<input
+type="hidden"
+name="highlights"
+id="highlightsHidden"
+value="<%= Array.isArray(product?.highlights) ? product.highlights.join(', ') : '' %>"
+/>
+
+<div class="value-builder">
+  <div class="builder-input-row">
+    <input type="text" id="highlightDraftInput" placeholder="Enter a product highlight" />
+    <button type="button" class="btn btn-light builder-add-btn" id="addHighlightBtn">+ Add Highlight</button>
+  </div>
+  <div class="builder-chip-list" id="highlightChipList"></div>
+</div>
+</section>
 
 <label class="field field-wide">
 <span>Description</span>
@@ -157,6 +191,15 @@ name="description"
 rows="5"
 placeholder="Write a short description"
 ><%= product?.description || '' %></textarea>
+</label>
+
+<label class="field field-wide">
+<span>Shipping Info</span>
+<textarea
+name="shippingInfo"
+rows="4"
+placeholder="Enter delivery, dispatch, or return information"
+><%= product?.shippingInfo || '' %></textarea>
 </label>
 </div>
 
@@ -247,6 +290,18 @@ const imagePreviewRow = document.getElementById("imagePreviewRow");
 const removeImagesInput = document.getElementById("removeImages");
 const imageValidationMessage = document.getElementById("imageValidationMessage");
 const mainImageInput = document.getElementById("mainImageKey");
+const sizesHidden = document.getElementById("sizesHidden");
+const colorsHidden = document.getElementById("colorsHidden");
+const sizeDraftInput = document.getElementById("sizeDraftInput");
+const colorDraftInput = document.getElementById("colorDraftInput");
+const addSizeBtn = document.getElementById("addSizeBtn");
+const addColorBtn = document.getElementById("addColorBtn");
+const highlightsHidden = document.getElementById("highlightsHidden");
+const highlightDraftInput = document.getElementById("highlightDraftInput");
+const addHighlightBtn = document.getElementById("addHighlightBtn");
+const sizeChipList = document.getElementById("sizeChipList");
+const colorChipList = document.getElementById("colorChipList");
+const highlightChipList = document.getElementById("highlightChipList");
 
 const cropModal = document.getElementById("cropModal");
 const cropImage = document.getElementById("cropImage");
@@ -260,6 +315,9 @@ let currentSourceFile = null;
 let currentReplaceIndex = null;
 let currentNewEditIndex = null;
 let currentFileName = "";
+let sizeValues = parseHiddenList(sizesHidden?.value);
+let colorValues = parseHiddenList(colorsHidden?.value);
+let highlightValues = parseHiddenList(highlightsHidden?.value);
 
 if (errorMessage) {
   setTimeout(() => {
@@ -308,6 +366,31 @@ if (productForm) {
     }
   });
 }
+
+addSizeBtn?.addEventListener("click", () => addBuilderValue("size"));
+addColorBtn?.addEventListener("click", () => addBuilderValue("color"));
+addHighlightBtn?.addEventListener("click", () => addBuilderValue("highlight"));
+
+sizeDraftInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addBuilderValue("size");
+  }
+});
+
+colorDraftInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addBuilderValue("color");
+  }
+});
+
+highlightDraftInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addBuilderValue("highlight");
+  }
+});
 
 function setMainImage(imageKey) {
   if (!mainImageInput) return;
@@ -717,6 +800,103 @@ function showImageValidation(message) {
   imageValidationMessage.textContent = message;
 }
 
+function parseHiddenList(value) {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function syncBuilderHidden(type) {
+  if (type === "size" && sizesHidden) {
+    sizesHidden.value = sizeValues.join(", ");
+  }
+
+  if (type === "color" && colorsHidden) {
+    colorsHidden.value = colorValues.join(", ");
+  }
+
+  if (type === "highlight" && highlightsHidden) {
+    highlightsHidden.value = highlightValues.join(", ");
+  }
+}
+
+function renderBuilderChips(type) {
+  const values = type === "size"
+    ? sizeValues
+    : type === "color"
+      ? colorValues
+      : highlightValues;
+  const listNode = type === "size"
+    ? sizeChipList
+    : type === "color"
+      ? colorChipList
+      : highlightChipList;
+
+  if (!listNode) return;
+  listNode.innerHTML = "";
+
+  values.forEach((value) => {
+    const chip = document.createElement("span");
+    chip.className = "builder-chip";
+
+    const text = document.createElement("span");
+    text.textContent = value;
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "builder-chip-remove";
+    removeBtn.textContent = "✕";
+    removeBtn.addEventListener("click", () => removeBuilderValue(type, value));
+
+    chip.appendChild(text);
+    chip.appendChild(removeBtn);
+    listNode.appendChild(chip);
+  });
+
+  syncBuilderHidden(type);
+}
+
+function addBuilderValue(type) {
+  const input = type === "size"
+    ? sizeDraftInput
+    : type === "color"
+      ? colorDraftInput
+      : highlightDraftInput;
+  if (!input) return;
+
+  const value = input.value.trim();
+  if (!value) return;
+
+  const targetValues = type === "size"
+    ? sizeValues
+    : type === "color"
+      ? colorValues
+      : highlightValues;
+  if (!targetValues.includes(value)) {
+    targetValues.push(value);
+  }
+
+  input.value = "";
+  renderBuilderChips(type);
+}
+
+function removeBuilderValue(type, value) {
+  if (type === "size") {
+    sizeValues = sizeValues.filter((item) => item !== value);
+  } else if (type === "color") {
+    colorValues = colorValues.filter((item) => item !== value);
+  } else {
+    highlightValues = highlightValues.filter((item) => item !== value);
+  }
+
+  renderBuilderChips(type);
+}
+
+renderBuilderChips("size");
+renderBuilderChips("color");
+renderBuilderChips("highlight");
 normalizeMainImageSelection();
 updateRemoveButtonsState();
 </script>

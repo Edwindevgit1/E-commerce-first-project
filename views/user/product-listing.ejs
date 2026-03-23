@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Products</title>
+  <link rel="stylesheet" href="/css/storefront-navbar.css" />
+  <link rel="stylesheet" href="/css/user-products.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+</head>
+<body>
+  <%- include("partials/storefront-navbar") %>
+
+  <main class="shop-shell">
+    <div id="listingContent">
+      <%- include("partials/product-listing-content") %>
+    </div>
+  </main>
+
+  <script>
+    const listingContent = document.getElementById("listingContent");
+
+    async function updateListing(url, push = true) {
+      const fetchUrl = new URL(url, window.location.origin);
+      fetchUrl.searchParams.set("partial", "1");
+
+      const response = await fetch(fetchUrl.toString(), {
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      });
+
+      if (!response.ok) return;
+
+      const html = await response.text();
+      listingContent.innerHTML = html;
+
+      if (push) {
+        const cleanUrl = new URL(url, window.location.origin);
+        window.history.pushState({}, "", cleanUrl.pathname + cleanUrl.search);
+      }
+
+      bindListingInteractions();
+      bindNavbarCategoryLinks();
+      document.getElementById("listingShell")?.scrollIntoView({ block: "start" });
+    }
+
+    function bindNavbarCategoryLinks() {
+      document.querySelectorAll(".store-category-track a").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          const targetUrl = new URL(link.href, window.location.origin);
+          if (!targetUrl.pathname.startsWith("/api/user/products")) return;
+          event.preventDefault();
+          updateListing(targetUrl.toString());
+        });
+      });
+    }
+
+    function bindListingInteractions() {
+      const filterForm = document.getElementById("listingFilterForm");
+      const sortForm = document.getElementById("listingSortForm");
+      const sortDropdown = sortForm?.querySelector("[data-sort-dropdown]");
+      const sortToggle = sortForm?.querySelector("[data-sort-toggle]");
+      const sortMenu = sortForm?.querySelector("[data-sort-menu]");
+      const sortInput = sortForm?.querySelector('input[name="sort"]');
+      const sortLabel = sortForm?.querySelector("[data-sort-label]");
+
+      filterForm?.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const params = new URLSearchParams(new FormData(filterForm));
+        updateListing(`/api/user/products?${params.toString()}`);
+      });
+
+      filterForm?.querySelectorAll("[data-filter-group]")?.forEach((group) => {
+        const toggle = group.querySelector("[data-filter-toggle]");
+        toggle?.addEventListener("click", () => {
+          const isOpen = group.classList.toggle("open");
+          toggle.setAttribute("aria-expanded", String(isOpen));
+        });
+      });
+
+      sortToggle?.addEventListener("click", () => {
+        const isOpen = sortDropdown.classList.toggle("open");
+        sortToggle.setAttribute("aria-expanded", String(isOpen));
+      });
+
+      sortMenu?.querySelectorAll("[data-sort-value]")?.forEach((option) => {
+        option.addEventListener("click", () => {
+          if (!sortInput || !sortLabel) return;
+          sortInput.value = option.dataset.sortValue || "";
+          sortLabel.textContent = option.textContent.trim();
+          sortDropdown?.classList.remove("open");
+          sortToggle?.setAttribute("aria-expanded", "false");
+
+          const params = new URLSearchParams(new FormData(sortForm));
+          updateListing(`/api/user/products?${params.toString()}`);
+        });
+      });
+
+      if (window.listingSortOutsideClickHandler) {
+        document.removeEventListener("click", window.listingSortOutsideClickHandler);
+      }
+
+      window.listingSortOutsideClickHandler = (event) => {
+        if (!sortDropdown) return;
+        if (!sortDropdown.contains(event.target)) {
+          sortDropdown.classList.remove("open");
+          sortToggle?.setAttribute("aria-expanded", "false");
+        }
+      };
+
+      document.addEventListener("click", window.listingSortOutsideClickHandler);
+
+      listingContent.querySelectorAll("[data-listing-link]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          updateListing(link.href);
+        });
+      });
+    }
+
+    window.addEventListener("popstate", () => {
+      updateListing(window.location.href, false);
+    });
+
+    bindListingInteractions();
+    bindNavbarCategoryLinks();
+  </script>
+</body>
+</html>

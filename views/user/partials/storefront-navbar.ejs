@@ -1,0 +1,123 @@
+<%
+  const activeCategoryId =
+    typeof category !== "undefined" && category
+      ? String(category)
+      : (typeof product !== "undefined" && product?.category?._id
+          ? String(product.category._id)
+          : "");
+  const categoryItems =
+    typeof navbarCategories !== "undefined" && Array.isArray(navbarCategories)
+      ? navbarCategories
+      : [];
+%>
+
+<header class="store-navbar">
+  <div class="store-navbar__inner">
+    <a href="/api/auth/home" class="store-logo">NIKE</a>
+
+    <div class="store-category-rail" data-category-rail>
+      <button
+        type="button"
+        class="store-rail-btn"
+        data-direction="left"
+        aria-label="Scroll categories left"
+      >
+        ‹
+      </button>
+
+      <div class="store-category-window">
+        <nav class="store-category-track track-pending">
+          <% categoryItems.forEach((item) => { %>
+            <a
+              href="/api/user/products?category=<%= item._id %>"
+              class="store-category-link <%= activeCategoryId === String(item._id) ? 'active' : '' %>"
+            >
+              <%= item.name %>
+            </a>
+          <% }) %>
+        </nav>
+      </div>
+
+      <button
+        type="button"
+        class="store-rail-btn"
+        data-direction="right"
+        aria-label="Scroll categories right"
+      >
+        ›
+      </button>
+    </div>
+
+    <div class="store-tools">
+      <form action="/api/user/products" method="GET" class="store-search">
+        <% if (activeCategoryId) { %>
+          <input type="hidden" name="category" value="<%= activeCategoryId %>" />
+        <% } %>
+        <input
+          type="text"
+          name="search"
+          placeholder="Search"
+          value="<%= typeof search !== 'undefined' ? search : '' %>"
+          data-store-search-input
+        />
+        <button type="button" class="store-search-clear <%= (typeof search !== 'undefined' && search) ? 'visible' : '' %>" aria-label="Clear search" data-store-search-clear>×</button>
+      </form>
+
+      <a href="/api/user/profile" class="store-icon" aria-label="Profile">👤</a>
+      <button class="store-icon" type="button" aria-label="Wishlist">♡</button>
+      <button class="store-icon" type="button" aria-label="Cart">🛒</button>
+    </div>
+  </div>
+</header>
+
+<script>
+  (() => {
+    const navbar = document.currentScript?.previousElementSibling;
+    if (!navbar) return;
+
+    const rail = navbar.querySelector("[data-category-rail]");
+    const track = rail?.querySelector(".store-category-track");
+    const leftBtn = rail?.querySelector('[data-direction="left"]');
+    const rightBtn = rail?.querySelector('[data-direction="right"]');
+    const searchForm = navbar.querySelector(".store-search");
+    const searchInput = searchForm?.querySelector("[data-store-search-input]");
+    const clearBtn = searchForm?.querySelector("[data-store-search-clear]");
+
+    if (!track || !leftBtn || !rightBtn) return;
+
+    const activeLink = track.querySelector(".store-category-link.active");
+    const revealTrack = () => {
+      track.classList.remove("track-pending");
+    };
+
+    if (activeLink) {
+      const left =
+        activeLink.offsetLeft - (track.clientWidth - activeLink.clientWidth) / 2;
+      track.scrollLeft = Math.max(0, left);
+    }
+
+    revealTrack();
+
+    leftBtn.addEventListener("click", () => {
+      track.scrollBy({ left: -180, behavior: "smooth" });
+    });
+
+    rightBtn.addEventListener("click", () => {
+      track.scrollBy({ left: 180, behavior: "smooth" });
+    });
+
+    const syncClearVisibility = () => {
+      if (!clearBtn || !searchInput) return;
+      clearBtn.classList.toggle("visible", Boolean(searchInput.value.trim()));
+    };
+
+    searchInput?.addEventListener("input", syncClearVisibility);
+
+    clearBtn?.addEventListener("click", () => {
+      if (!searchInput) return;
+      searchInput.value = "";
+      syncClearVisibility();
+      searchForm?.submit();
+    });
+  })();
+</script>

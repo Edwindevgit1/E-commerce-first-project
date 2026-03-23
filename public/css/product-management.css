@@ -231,6 +231,62 @@ body {
   grid-column: 1 / -1;
 }
 
+.builder-field {
+  align-content: start;
+}
+
+.value-builder {
+  display: grid;
+  gap: 8px;
+}
+
+.builder-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.builder-input-row input {
+  flex: 1;
+}
+
+.builder-add-btn {
+  min-width: 96px;
+}
+
+.builder-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.builder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff, #e6ebf5);
+  border: 1px solid #cad4e3;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.builder-chip-remove {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(220, 55, 55, 0.12);
+  color: #a52424;
+  cursor: pointer;
+  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .btn,
 .page-btn,
 .icon-btn {

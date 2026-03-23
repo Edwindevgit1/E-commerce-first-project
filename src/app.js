@@ -20,8 +20,10 @@ import signupotp from "../routes/user/signupotp.route.js";
 import profileemailverify from "../routes/user/profile-email-otp.route.js";
 import promotedemoteAdmin from "../routes/admin/promotedemoteAdmin.route.js";
 import userAuth from "../middleware/user/userauth.middleware.js";
+import loadNavbarCategories from "../middleware/user/loadNavbarCategories.js";
 import categoryRoutes from "../routes/admin/categoryRoute.js";
 import productRoutes from "../routes/admin/productRoute.js";
+import userProductRoute from "../routes/user/productRoute.js";
 
 
 const app = express();
@@ -45,6 +47,7 @@ app.use((req, res, next) => {
   );
   next();
 });
+app.use(loadNavbarCategories);
 app.use(passport.initialize());
 app.use(passport.session());
 //admin
@@ -68,5 +71,6 @@ app.use('/api/user',userAuth,adressrouter)
 app.use('/api/user',userAuth,changepassword)
 app.use('/api/user',userAuth,logout)
 app.use('/api/user',userAuth,profileemailverify)
-
+//product
+app.use('/api/user',userProductRoute)
 export default app;

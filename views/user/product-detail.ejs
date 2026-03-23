@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= product.productName %></title>
+  <link rel="stylesheet" href="/css/storefront-navbar.css" />
+  <link rel="stylesheet" href="/css/user-products.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+</head>
+<body>
+  <%- include("partials/storefront-navbar") %>
+
+  <main class="details-shell">
+    <nav class="breadcrumb">
+      <a href="/api/user/products" class="breadcrumb-back" aria-label="Back to products">←</a>
+      <a href="/api/user/products">Home</a> /
+      <span><%= product.category?.name || "Shoes" %></span> /
+      <strong><%= product.productName %></strong>
+    </nav>
+
+    <section class="details-grid">
+      <section class="detail-gallery">
+        <div class="main-preview-frame">
+          <img
+            id="mainPreview"
+            src="<%= product.images[product.mainImageIndex || 0] || product.images[0] %>"
+            class="main-preview"
+            alt="<%= product.productName %>"
+          />
+        </div>
+
+        <div class="thumb-row">
+          <% product.images.forEach(image => { %>
+            <button type="button" class="thumb-button" onclick="document.getElementById('mainPreview').src='<%= image %>'">
+              <img
+                src="<%= image %>"
+                class="thumb-item"
+                alt="thumb"
+              />
+            </button>
+          <% }) %>
+        </div>
+
+        <div class="detail-tabs">
+          <button type="button" class="detail-tab active" data-detail-tab="details">Details</button>
+          <button type="button" class="detail-tab" data-detail-tab="reviews">Reviews</button>
+          <button type="button" class="detail-tab" data-detail-tab="shipping">Shipping</button>
+        </div>
+
+        <div class="detail-copy-panels">
+          <div class="detail-copy-panel active" data-detail-panel="details">
+            <% if (product.description) { %>
+              <p><%= product.description %></p>
+            <% } %>
+
+            <% if (product.highlights?.length) { %>
+              <ul class="highlights detail-highlights">
+                <% product.highlights.forEach(item => { %>
+                  <li><%= item %></li>
+                <% }) %>
+              </ul>
+            <% } %>
+
+            <% if (!product.description && !product.highlights?.length) { %>
+              <p>Product details will be available soon.</p>
+            <% } %>
+          </div>
+          <div class="detail-copy-panel" data-detail-panel="reviews">
+            <% if (!product.reviews.length) { %>
+              <p>No reviews yet.</p>
+            <% } %>
+
+            <% product.reviews.forEach(review => { %>
+              <article class="review-card">
+                <strong><%= review.userName %></strong>
+                <p><%= review.comment %></p>
+              </article>
+            <% }) %>
+          </div>
+          <div class="detail-copy-panel" data-detail-panel="shipping">
+            <p><%= product.shippingInfo || "Standard delivery timelines and shipping updates will be shown here for this product." %></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-info-card">
+        <div class="detail-info-header">
+          <h1><%= product.productName %></h1>
+          <button type="button" class="wishlist-btn" aria-label="Add to wishlist">♡</button>
+        </div>
+
+        <div class="price-box">
+          <% if (product.offerPrice > 0) { %>
+            <strong>₹<%= product.offerPrice %></strong>
+            <span class="old-price">₹<%= product.price %></span>
+          <% } else { %>
+            <strong>₹<%= product.price %></strong>
+          <% } %>
+        </div>
+
+        <% if (product.couponCode) { %>
+          <p class="coupon-box">
+            Coupon: <strong><%= product.couponCode %></strong> - <%= product.couponDescription %>
+          </p>
+        <% } %>
+
+        <div class="description-box">
+          <h3>description</h3>
+          <p><%= product.description || "No description available for this product yet." %></p>
+        </div>
+
+        <div class="stock-box">
+          <% if (!hasStock) { %>
+            <span class="danger-text">Out of stock</span>
+          <% } else { %>
+            <span class="success-text">In stock</span>
+          <% } %>
+        </div>
+
+        <% if (displaySizes.length) { %>
+          <div class="variant-box">
+            <h3>size</h3>
+            <div class="variant-list">
+              <% displaySizes.forEach((size) => { %>
+                <button type="button" class="variant-pill"><%= size %></button>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
+
+        <% if (displayColors.length) { %>
+          <div class="highlight-box detail-color-box">
+            <h3>color</h3>
+            <div class="color-list">
+              <% displayColors.forEach((color) => { %>
+                <span class="color-pill">
+                  <span class="color-dot" style="--detail-color: <%= color.toLowerCase() %>;"></span>
+                  <%= color %>
+                </span>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
+
+        <div class="detail-action-row">
+          <button class="cart-btn" <%= !hasStock ? "disabled" : "" %>>
+            <%= !hasStock ? "Unavailable" : "Add to cart" %>
+          </button>
+          <button class="cart-btn" <%= !hasStock ? "disabled" : "" %>>Buy now</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const mainPreview = document.getElementById("mainPreview");
+    const mainPreviewFrame = document.querySelector(".main-preview-frame");
+    const detailTabs = document.querySelectorAll("[data-detail-tab]");
+    const detailPanels = document.querySelectorAll("[data-detail-panel]");
+
+    mainPreviewFrame?.addEventListener("mousemove", (event) => {
+      const rect = mainPreviewFrame.getBoundingClientRect();
+      const originX = ((event.clientX - rect.left) / rect.width) * 100;
+      const originY = ((event.clientY - rect.top) / rect.height) * 100;
+
+      mainPreview.style.transformOrigin = `${originX}% ${originY}%`;
+      mainPreview.style.transform = "scale(3.22)";
+    });
+
+    mainPreviewFrame?.addEventListener("mouseleave", () => {
+      mainPreview.style.transform = "scale(1)";
+      mainPreview.style.transformOrigin = "center center";
+    });
+
+    detailTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const target = tab.dataset.detailTab;
+
+        detailTabs.forEach((item) => item.classList.toggle("active", item === tab));
+        detailPanels.forEach((panel) => {
+          panel.classList.toggle("active", panel.dataset.detailPanel === target);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

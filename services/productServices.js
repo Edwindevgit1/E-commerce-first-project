@@ -101,8 +101,10 @@ export const addProductService = async (data) => {
     stock,
     status,
     description,
+    shippingInfo,
     sizes,
     colors,
+    highlights,
     images,
     mainImageKey
   } = data;
@@ -122,8 +124,10 @@ export const addProductService = async (data) => {
     stock,
     sizes: parseListField(sizes),
     colors: parseListField(colors),
+    highlights: parseListField(highlights),
     status,
     description,
+    shippingInfo: shippingInfo || "",
     images,
     mainImageIndex: resolveMainImageIndex({
       mainImageKey,
@@ -179,9 +183,11 @@ export const editProductService = async (id, data) => {
 
   product.sizes = parseListField(data.sizes);
   product.colors = parseListField(data.colors);
+  product.highlights = parseListField(data.highlights);
 
   if (data.status) product.status = data.status;
-  if (data.description) product.description = data.description;
+  product.description = data.description || "";
+  product.shippingInfo = data.shippingInfo || "";
 
 
   /* ===== IMAGE MANAGEMENT ===== */

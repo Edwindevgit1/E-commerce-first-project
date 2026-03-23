@@ -12,62 +12,32 @@ import {
 
 const router = express.Router();
 
-
-/* ===============================
-   PRODUCT LIST PAGE
-================================ */
-
 router.get(
   "/products",
   getProductController
 );
-
-
-/* ===============================
-   ADD PRODUCT PAGE
-================================ */
 
 router.get(
   "/add-product",
   getAddProductPage
 );
 
-
-/* ===============================
-   ADD PRODUCT
-================================ */
-
 router.post(
   "/add-product",
-  upload.array("images", 5),
+  upload.array("images", 10),
   addProductController
 );
-
-
-/* ===============================
-   EDIT PRODUCT PAGE
-================================ */
 
 router.get(
   "/edit-product/:id",
   getEditProductPage
 );
 
-
-/* ===============================
-   UPDATE PRODUCT
-================================ */
-
 router.post(
   "/edit-product/:id",
-  upload.array("images", 5),
+  upload.array("images", 10),
   editProductController
 );
-
-
-/* ===============================
-   SOFT DELETE PRODUCT
-================================ */
 
 router.post(
   "/delete-product/:id",
