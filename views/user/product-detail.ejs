@@ -116,11 +116,19 @@
         </div>
 
         <div class="stock-box">
-          <% if (!hasStock) { %>
-            <span class="danger-text">Out of stock</span>
+          <% if (availabilityState === "sold_out") { %>
+            <span class="danger-text">Sold out</span>
+          <% } else if (availabilityState === "variant_unavailable") { %>
+            <span class="danger-text">Unavailable options</span>
+          <% } else if (availabilityState === "low_stock") { %>
+            <span class="low-stock-text">Only <%= product.stock %> left</span>
           <% } else { %>
             <span class="success-text">In stock</span>
           <% } %>
+        </div>
+
+        <div class="detail-status-message <%= availabilityState === 'available' ? 'is-ready' : availabilityState === 'low_stock' ? 'is-low-stock' : 'is-warning' %>">
+          <p><%= availabilityMessage %></p>
         </div>
 
         <% if (displaySizes.length) { %>
@@ -149,13 +157,39 @@
         <% } %>
 
         <div class="detail-action-row">
-          <button class="cart-btn" <%= !hasStock ? "disabled" : "" %>>
-            <%= !hasStock ? "Unavailable" : "Add to cart" %>
+          <button class="cart-btn" <%= availabilityState !== "available" ? "disabled" : "" %>>
+            <%= availabilityState === "sold_out" ? "Sold out" : availabilityState === "variant_unavailable" ? "Unavailable" : "Add to cart" %>
           </button>
-          <button class="cart-btn" <%= !hasStock ? "disabled" : "" %>>Buy now</button>
+          <button class="cart-btn" <%= availabilityState !== "available" ? "disabled" : "" %>>
+            <%= availabilityState === "available" ? "Buy now" : "Unavailable" %>
+          </button>
         </div>
       </section>
     </section>
+
+    <% if (relatedProducts?.length) { %>
+      <section class="detail-related-section">
+        <div class="detail-related-head">
+          <h2>You may also like</h2>
+          <a href="/api/user/products?category=<%= product.category?._id || '' %>">View more</a>
+        </div>
+
+        <div class="detail-related-grid">
+          <% relatedProducts.forEach((item) => { %>
+            <a href="/api/user/products/<%= item._id %>" class="detail-related-card">
+              <div class="detail-related-card__image">
+                <img
+                  src="<%= item.images[item.mainImageIndex || 0] || item.images[0] %>"
+                  alt="<%= item.productName %>"
+                />
+              </div>
+              <h3><%= item.productName %></h3>
+              <strong>₹<%= item.offerPrice > 0 ? item.offerPrice : item.price %></strong>
+            </a>
+          <% }) %>
+        </div>
+      </section>
+    <% } %>
   </main>
 
   <script>

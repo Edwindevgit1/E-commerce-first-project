@@ -49,7 +49,7 @@
 
 <article class="stat-card">
 <span>Total Products</span>
-<strong><%= products ? products.length : 0 %></strong>
+<strong><%= totalProducts || 0 %></strong>
 </article>
 
 <article class="stat-card">
@@ -178,7 +178,7 @@ No products found yet.
 <tr>
 
 <td>
-<%= ((currentPage-1)*10) + index + 1 %>
+<%= ((currentPage - 1) * (limit || 10)) + index + 1 %>
 </td>
 
 
@@ -281,10 +281,36 @@ title="Soft Delete"
 
 
 <div class="pagination">
+<% if ((totalPages || 1) > 1) { %>
+  <% if (currentPage > 1) { %>
+    <a
+      href="/api/admin/products?page=<%= currentPage - 1 %>&search=<%= encodeURIComponent(search || '') %>&category=<%= encodeURIComponent(selectedCategory || '') %>&status=<%= encodeURIComponent(selectedStatus || '') %>"
+      class="page-btn"
+    >
+      Prev
+    </a>
+  <% } %>
 
-<span class="page-btn active">
-<%= currentPage %>
-</span>
+  <% for (let i = 1; i <= totalPages; i += 1) { %>
+    <a
+      href="/api/admin/products?page=<%= i %>&search=<%= encodeURIComponent(search || '') %>&category=<%= encodeURIComponent(selectedCategory || '') %>&status=<%= encodeURIComponent(selectedStatus || '') %>"
+      class="page-btn <%= i === currentPage ? 'active' : '' %>"
+    >
+      <%= i %>
+    </a>
+  <% } %>
+
+  <% if (currentPage < totalPages) { %>
+    <a
+      href="/api/admin/products?page=<%= currentPage + 1 %>&search=<%= encodeURIComponent(search || '') %>&category=<%= encodeURIComponent(selectedCategory || '') %>&status=<%= encodeURIComponent(selectedStatus || '') %>"
+      class="page-btn"
+    >
+      Next
+    </a>
+  <% } %>
+<% } else { %>
+  <span class="page-btn active"><%= currentPage %></span>
+<% } %>
 
 </div>
 

@@ -52,7 +52,7 @@ const resolveMainImageIndex = ({ mainImageKey, images, remainingImages, uploaded
    GET PRODUCTS
 ================================ */
 
-export const getProductService = async (search, category, status) => {
+export const getProductService = async (search, category, status, page = 1, limit = 10) => {
 
   const query = { isDeleted: false };
 
@@ -71,18 +71,26 @@ export const getProductService = async (search, category, status) => {
     query.status = status;
   }
 
-  const products = await Product
-    .find(query)
-    .populate("category")
-    .sort({ createdAt: -1 });
+  const skip = (page - 1) * limit;
 
-  const categories = await Category.find({
-    isDeleted: false
-  });
+  const [products, totalProducts, categories] = await Promise.all([
+    Product
+      .find(query)
+      .populate("category")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Product.countDocuments(query),
+    Category.find({
+      isDeleted: false
+    })
+  ]);
 
   return {
     products,
-    categories
+    categories,
+    totalProducts,
+    totalPages: Math.max(1, Math.ceil(totalProducts / limit))
   };
 
 };
