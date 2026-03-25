@@ -24,6 +24,7 @@ import loadNavbarCategories from "../middleware/user/loadNavbarCategories.js";
 import categoryRoutes from "../routes/admin/categoryRoute.js";
 import productRoutes from "../routes/admin/productRoute.js";
 import userProductRoute from "../routes/user/productRoute.js";
+import userCartRoutes from "../routes/user/cartRoute.js";
 
 
 const app = express();
@@ -71,6 +72,7 @@ app.use('/api/user',userAuth,adressrouter)
 app.use('/api/user',userAuth,changepassword)
 app.use('/api/user',userAuth,logout)
 app.use('/api/user',userAuth,profileemailverify)
+app.use('/api/user',userAuth,userCartRoutes)
 //product
 app.use('/api/user',userProductRoute)
 export default app;

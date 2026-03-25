@@ -157,9 +157,11 @@
         <% } %>
 
         <div class="detail-action-row">
-          <button class="cart-btn" <%= availabilityState !== "available" ? "disabled" : "" %>>
-            <%= availabilityState === "sold_out" ? "Sold out" : availabilityState === "variant_unavailable" ? "Unavailable" : "Add to cart" %>
-          </button>
+          <form action="/api/user/cart/add/<%= product._id %>" method="POST">
+            <button class="cart-btn" <%= availabilityState !== "available" ? "disabled" : "" %>>
+              <%= availabilityState === "sold_out" ? "Sold out" : availabilityState === "variant_unavailable" ? "Unavailable" : "Add to cart" %>
+            </button>
+          </form>
           <button class="cart-btn" <%= availabilityState !== "available" ? "disabled" : "" %>>
             <%= availabilityState === "available" ? "Buy now" : "Unavailable" %>
           </button>

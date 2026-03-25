@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cart</title>
+  <link rel="stylesheet" href="/css/storefront-navbar.css" />
+  <link rel="stylesheet" href="/css/cart.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+</head>
+<body>
+  <%- include("partials/storefront-navbar") %>
+
+  <main class="shop-shell">
+    <section class="cart-shell">
+      <div class="cart-head">
+        <h1>Your Cart</h1>
+        <p>Review the products you added before checkout.</p>
+      </div>
+
+      <% if (!cartItems.length) { %>
+        <div class="cart-empty">
+          <p>Your cart is empty.</p>
+          <a href="/api/user/products" class="cart-link-btn">Continue Shopping</a>
+        </div>
+      <% } else { %>
+        <div class="cart-layout">
+          <div class="cart-list">
+
+            <% cartItems.forEach((item) => { %>
+              <article class="cart-item-card">
+
+                <!-- Image -->
+                <div class="cart-item-image">
+                  <img src="<%= item.productImage %>" alt="<%= item.productName %>" />
+                </div>
+
+                <!-- Info -->
+                <div class="cart-item-copy">
+                  <h3><%= item.productName %></h3>
+                  <p><%= item.category %></p>
+                  <span class="cart-item-price">₹<%= item.price %></span>
+
+                  <% if (!item.isAvailable) { %>
+                    <span class="cart-item-warning">Currently unavailable</span>
+                  <% } %>
+                </div>
+
+                <!-- Quantity Controls -->
+                <div class="cart-item-actions">
+
+                  <!-- Decrement -->
+                  <form action="/api/user/cart/update/<%= item.productId %>" method="POST" class="cart-qty-form">
+                    <input type="hidden" name="action" value="decrement" />
+                    <button 
+                      type="submit" 
+                      class="qty-btn"
+                      <%= !item.isAvailable ? "disabled" : "" %>
+                    >-</button>
+                  </form>
+
+                  <span class="cart-qty-value"><%= item.quantity %></span>
+
+                  <!-- Increment -->
+                  <form action="/api/user/cart/update/<%= item.productId %>" method="POST" class="cart-qty-form">
+                    <input type="hidden" name="action" value="increment" />
+                    <button
+                      type="submit"
+                      class="qty-btn"
+                      <%= item.quantity >= item.stock || !item.isAvailable ? "disabled" : "" %>
+                    >
+                      +
+                    </button>
+                  </form>
+
+                </div>
+
+                <!-- Subtotal + Remove -->
+                <div class="cart-item-subtotal">
+                  <strong>₹<%= item.subtotal %></strong>
+
+                  <form action="/api/user/cart/remove/<%= item.productId %>" method="POST">
+                    <button type="submit" class="remove-cart-btn">Remove</button>
+                  </form>
+                </div>
+
+              </article>
+            <% }) %>
+
+          </div>
+          <aside class="cart-summary">
+            <h2>Order Summary</h2>
+
+            <div class="cart-summary-row">
+              <span>Total</span>
+              <strong>₹<%= grandTotal %></strong>
+            </div>
+
+            <button 
+              type="button" 
+              class="cart-checkout-btn"
+              <%= cartItems.some(item => !item.isAvailable) ? "disabled" : "" %>  
+              Proceed to Checkout
+            </button>
+
+          </aside>
+        </div>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

@@ -669,7 +669,12 @@ body {
   margin-top: 14px;
 }
 
+.detail-action-row form {
+  margin: 0;
+}
+
 .cart-btn {
+  width: 100%;
   min-height: 34px;
   border: 0;
   background: linear-gradient(165deg, #0a2052, #06143a);
