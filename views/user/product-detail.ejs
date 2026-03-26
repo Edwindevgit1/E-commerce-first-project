@@ -98,13 +98,19 @@
         </div>
 
         <div class="price-box">
-          <% if (product.offerPrice > 0) { %>
-            <strong>₹<%= product.offerPrice %></strong>
-            <span class="old-price">₹<%= product.price %></span>
+          <% if (product.hasDiscount) { %>
+            <strong>₹<%= product.displayPrice %></strong>
+            <span class="old-price">₹<%= product.originalPrice %></span>
           <% } else { %>
             <strong>₹<%= product.price %></strong>
           <% } %>
         </div>
+
+        <% if (product.discountSource === "category") { %>
+          <p class="coupon-box">
+            Category Offer: <strong><%= product.categoryOfferPercentage %>% off</strong>
+          </p>
+        <% } %>
 
         <% if (product.couponCode) { %>
           <p class="coupon-box">
@@ -159,20 +165,12 @@
         <% } %>
 
         <div class="detail-action-row">
-          <% if (isInCart) { %>
-            <a href="/api/user/cart" class="cart-btn detail-cart-link">Buy now</a>
-          <% } else { %>
-            <form action="/api/user/cart/add/<%= product._id %>" method="POST">
-              <button class="cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
-                <%= availabilityState === "sold_out" ? "Sold out" : availabilityState === "variant_unavailable" ? "Unavailable" : "Add to cart" %>
-              </button>
-            </form>
-            <form action="/api/user/cart/add/<%= product._id %>" method="POST">
-              <button class="cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
-                <%= canAddToCart ? "Buy now" : "Unavailable" %>
-              </button>
-            </form>
-          <% } %>
+          <form action="/api/user/cart/add/<%= product._id %>" method="POST">
+            <button class="cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
+              <%= availabilityState === "sold_out" ? "Sold out" : availabilityState === "variant_unavailable" ? "Unavailable" : "Add to cart" %>
+            </button>
+          </form>
+          <a href="/api/user/cart" class="cart-btn detail-cart-link">Buy now</a>
         </div>
       </section>
     </section>
@@ -194,7 +192,7 @@
                 />
               </div>
               <h3><%= item.productName %></h3>
-              <strong>₹<%= item.offerPrice > 0 ? item.offerPrice : item.price %></strong>
+              <strong>₹<%= item.displayPrice %></strong>
             </a>
           <% }) %>
         </div>

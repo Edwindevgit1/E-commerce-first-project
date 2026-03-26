@@ -20,6 +20,7 @@ import signupotp from "../routes/user/signupotp.route.js";
 import profileemailverify from "../routes/user/profile-email-otp.route.js";
 import promotedemoteAdmin from "../routes/admin/promotedemoteAdmin.route.js";
 import userAuth from "../middleware/user/userauth.middleware.js";
+import runtimeUserCheck from "../middleware/user/runtime-user-check.middleware.js";
 import loadNavbarCategories from "../middleware/user/loadNavbarCategories.js";
 import categoryRoutes from "../routes/admin/categoryRoute.js";
 import productRoutes from "../routes/admin/productRoute.js";
@@ -50,6 +51,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(loadNavbarCategories);
+app.use(runtimeUserCheck);
 app.use(passport.initialize());
 app.use(passport.session());
 //admin

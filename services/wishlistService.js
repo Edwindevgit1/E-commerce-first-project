@@ -1,5 +1,6 @@
 import Wishlist from "../models/Wishlist.js";
 import Product from "../models/Product.js";
+import { getEffectiveProductPricing } from "../utils/pricing.js";
 
 export const getWishlistService = async (userId) => {
   if(!userId){
@@ -11,15 +12,13 @@ export const getWishlistService = async (userId) => {
     select:"productName price offerPrice images mainImageIndex stock status isBlocked isDeleted category",
     populate:{
       path:"category",
-      select:"name"
+      select:"name offerPercentage"
     }
   })
   .lean()
   const products = (wishlist?.products || []).map((product)=>{
-    const price = 
-    product.offerPrice && product.offerPrice > 0
-    ? product.offerPrice
-    : product.price;
+    const pricing = getEffectiveProductPricing(product);
+    const price = pricing.effectivePrice;
 
     const imageIndex = product.mainImageIndex ?? 0;
     return{
@@ -31,6 +30,8 @@ export const getWishlistService = async (userId) => {
         "",
       category:product.category?.name || "",
       price,
+      originalPrice: pricing.basePrice,
+      hasDiscount: pricing.hasDiscount,
       stock:product.stock,
       status:product.status,
       isBlocked:product.isBlocked,

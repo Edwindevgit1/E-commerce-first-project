@@ -1,5 +1,19 @@
 import Category from "../models/Category.js";
 
+const normalizeOfferPercentage = (value) => {
+  const offerPercentage = Number(value);
+
+  if (Number.isNaN(offerPercentage)) {
+    return 0;
+  }
+
+  if (offerPercentage < 0 || offerPercentage > 90) {
+    throw new Error("Category offer must be between 0 and 90");
+  }
+
+  return offerPercentage;
+};
+
 export const getCategoryService = async (search,page,limit,sort) => {
   const query = {isDeleted:false};
   if(search){
@@ -44,7 +58,8 @@ export const addCategoryService = async (data) => {
   const category = new Category({
     name: name,
     status: data.status,
-    description: data.description
+    description: data.description,
+    offerPercentage: normalizeOfferPercentage(data.offerPercentage)
   });
 
   return category.save();
@@ -69,6 +84,7 @@ export const editCategoryService = async (id,data)=>{
   category.name = name;
   category.status = data.status || category.status;
   category.description=data.description || category.description;
+  category.offerPercentage = normalizeOfferPercentage(data.offerPercentage);
 
   return await category.save()
 }

@@ -1,6 +1,7 @@
 import Category from "../../models/Category.js";
 import Cart from "../../models/Cart.js";
 import Product from "../../models/Product.js";
+import { getEffectiveProductPricing } from "../../utils/pricing.js";
 
 const normalizeColorList = (items = []) => {
   const seen = new Set();
@@ -34,6 +35,19 @@ const getSortStage = (sort) => {
     default:
       return { createdAt: -1 };
   }
+};
+
+const enrichProductPricing = (product) => {
+  const pricing = getEffectiveProductPricing(product);
+
+  return {
+    ...product.toObject(),
+    displayPrice: pricing.effectivePrice,
+    originalPrice: pricing.basePrice,
+    hasDiscount: pricing.hasDiscount,
+    discountSource: pricing.discountSource,
+    categoryOfferPercentage: pricing.categoryOfferPercentage
+  };
 };
 
 export const getProductListingPage = async (req, res) => {
@@ -135,8 +149,10 @@ export const getProductListingPage = async (req, res) => {
       Product.distinct("variants.color", baseQuery)
     ]);
 
+    const pricedProducts = products.map(enrichProductPricing);
+
     const viewData = {
-      products,
+      products: pricedProducts,
       categories,
       sizeOptions: [...new Set([...(sizeOptions || []), ...(variantSizeOptions || [])])]
         .filter(Boolean)
@@ -224,9 +240,12 @@ export const getProductDetailsPage = async (req, res) => {
       ...availableVariants.map((variant) => variant.color)
     ]);
 
+    const pricedProduct = enrichProductPricing(product);
+    const pricedRelatedProducts = relatedProducts.map(enrichProductPricing);
+
     res.render("user/product-detail", {
-      product,
-      relatedProducts,
+      product: pricedProduct,
+      relatedProducts: pricedRelatedProducts,
       hasStock,
       hasVariantStock,
       isLowStock,

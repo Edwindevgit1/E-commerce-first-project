@@ -59,6 +59,9 @@
                   <h3><%= item.productName %></h3>
                   <p><%= item.category %></p>
                   <span class="cart-item-price">₹<%= item.price %></span>
+                  <% if (item.hasDiscount) { %>
+                    <span class="cart-item-old-price">₹<%= item.originalPrice %></span>
+                  <% } %>
 
                   <% if (!item.isAvailable) { %>
                     <span class="cart-item-warning">Currently unavailable</span>
@@ -139,6 +142,12 @@
   </main>
 
   <script>
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+
     window.addEventListener("load", () => {
       history.pushState({ cartPage: true }, "", location.href);
     });

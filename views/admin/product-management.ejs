@@ -26,7 +26,7 @@
 <div class="chip-row">
 <a href="/api/admin/dashboard" class="chip">Dashboard</a>
 <a href="/api/admin/products" class="chip chip-dark">Products</a>
-<a href="/api/admin/categories" class="chip">Categories</a>
+<a href="/api/admin/category" class="chip">Categories</a>
 <a href="/api/admin/orders" class="chip">Orders</a>
 <a href="/api/admin/adminusermanagement" class="chip">Users</a>
 </div>
@@ -282,34 +282,28 @@ title="Soft Delete"
 
 <div class="pagination">
 <% if ((totalPages || 1) > 1) { %>
-  <% if (currentPage > 1) { %>
-    <a
-      href="/api/admin/products?page=<%= currentPage - 1 %>&search=<%= encodeURIComponent(search || '') %>&category=<%= encodeURIComponent(selectedCategory || '') %>&status=<%= encodeURIComponent(selectedStatus || '') %>"
-      class="page-btn"
-    >
-      Prev
-    </a>
-  <% } %>
 
-  <% for (let i = 1; i <= totalPages; i += 1) { %>
-    <a
-      href="/api/admin/products?page=<%= i %>&search=<%= encodeURIComponent(search || '') %>&category=<%= encodeURIComponent(selectedCategory || '') %>&status=<%= encodeURIComponent(selectedStatus || '') %>"
-      class="page-btn <%= i === currentPage ? 'active' : '' %>"
-    >
-      <%= i %>
-    </a>
-  <% } %>
+<% if (currentPage > 1) { %>
+<a
+class="page-btn"
+href="/api/admin/products?page=<%= currentPage - 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= selectedCategory ? '&category=' + encodeURIComponent(selectedCategory) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %>"
+>Prev</a>
+<% } %>
 
-  <% if (currentPage < totalPages) { %>
-    <a
-      href="/api/admin/products?page=<%= currentPage + 1 %>&search=<%= encodeURIComponent(search || '') %>&category=<%= encodeURIComponent(selectedCategory || '') %>&status=<%= encodeURIComponent(selectedStatus || '') %>"
-      class="page-btn"
-    >
-      Next
-    </a>
-  <% } %>
-<% } else { %>
-  <span class="page-btn active"><%= currentPage %></span>
+<% paginationItems.forEach(i => { %>
+<a
+class="page-btn <%= i === currentPage ? 'active' : '' %>"
+href="/api/admin/products?page=<%= i %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= selectedCategory ? '&category=' + encodeURIComponent(selectedCategory) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %>"
+><%= i %></a>
+<% }) %>
+
+<% if (currentPage < totalPages) { %>
+<a
+class="page-btn"
+href="/api/admin/products?page=<%= currentPage + 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= selectedCategory ? '&category=' + encodeURIComponent(selectedCategory) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %>"
+>Next</a>
+<% } %>
+
 <% } %>
 
 </div>

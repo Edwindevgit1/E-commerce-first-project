@@ -1,5 +1,17 @@
 import { getCategoryService ,addCategoryService, editCategoryService, deleteCatrgoryService } from "../../services/categoryServices.js";
 
+const buildPaginationItems = (currentPage, totalPages) => {
+  const startPage = Math.max(1, currentPage - 1);
+  const endPage = Math.min(totalPages, currentPage + 1);
+  const paginationItems = [];
+
+  for (let page = startPage; page <= endPage; page += 1) {
+    paginationItems.push(page);
+  }
+
+  return paginationItems;
+};
+
 export const getCategoryController = async (req,res)=>{
   try{
       const search = req.query.search || "";
@@ -14,6 +26,7 @@ export const getCategoryController = async (req,res)=>{
         currentPage:page,
         totalPages,
         totalCategories,
+        paginationItems: buildPaginationItems(page, totalPages || 1),
         search,
         sort,
         error:null
@@ -35,6 +48,7 @@ export const addCategoryController = async (req,res)=>{
       currentPage:1,
       totalPages,
       totalCategories,
+      paginationItems: buildPaginationItems(1, totalPages || 1),
       search:"",
       sort:"newest",
       error:error.message
@@ -53,6 +67,7 @@ export const editCategoryController = async (req,res)=>{
       currentPage:1,
       totalPages,
       totalCategories,
+      paginationItems: buildPaginationItems(1, totalPages || 1),
       search:"",
       sort:"newest",
       error:error.message
@@ -70,6 +85,7 @@ export const softdeleteCategoryController = async (req,res)=>{
       currentPage:1,
       totalPages,
       totalCategories,
+      paginationItems: buildPaginationItems(1, totalPages || 1),
       search:"",
       sort:"newest",
       error:error.message

@@ -24,7 +24,7 @@ rel="stylesheet"
 <div class="chip-row">
 <a href="/api/admin/dashboard" class="chip">Dashboard</a>
 <a href="/api/admin/products" class="chip chip-dark">Products</a>
-<a href="/api/admin/categories" class="chip">Categories</a>
+<a href="/api/admin/category" class="chip">Categories</a>
 <a href="/api/admin/orders" class="chip">Orders</a>
 <a href="/api/admin/adminusermanagement" class="chip">Users</a>
 </div>
@@ -123,11 +123,42 @@ required
 </label>
 
 <label class="field">
+<span>Offer Price</span>
+<input
+type="number"
+name="offerPrice"
+placeholder="2999"
+value="<%= product?.offerPrice ?? '' %>"
+min="0"
+/>
+</label>
+
+<label class="field">
+<span>Coupon Code</span>
+<input
+type="text"
+name="couponCode"
+placeholder="SAVE10"
+value="<%= product?.couponCode || '' %>"
+/>
+</label>
+
+<label class="field">
 <span>Status</span>
 <select name="status">
 <option value="active" <%= product?.status === "active" || !product ? "selected" : "" %>>Active</option>
 <option value="inactive" <%= product?.status === "inactive" ? "selected" : "" %>>Inactive</option>
 </select>
+</label>
+
+<label class="field">
+<span>Coupon Description</span>
+<input
+type="text"
+name="couponDescription"
+placeholder="Save more on this item"
+value="<%= product?.couponDescription || '' %>"
+/>
 </label>
 
 <section class="field builder-field">

@@ -24,6 +24,18 @@ const processProductImage = async (file) => {
     .toBuffer();
 };
 
+const buildPaginationItems = (currentPage, totalPages) => {
+  const startPage = Math.max(1, currentPage - 1);
+  const endPage = Math.min(totalPages, currentPage + 1);
+  const paginationItems = [];
+
+  for (let page = startPage; page <= endPage; page += 1) {
+    paginationItems.push(page);
+  }
+
+  return paginationItems;
+};
+
 export const getProductController = async (req, res) => {
   try {
 
@@ -51,6 +63,7 @@ export const getProductController = async (req, res) => {
       selectedStatus,
       currentPage,
       limit,
+      paginationItems: buildPaginationItems(currentPage, totalPages || 1),
       error: null
     });
 
@@ -68,6 +81,7 @@ export const getProductController = async (req, res) => {
       selectedStatus: "",
       currentPage: 1,
       limit: 5,
+      paginationItems: [1],
       error: "Failed to load products"
     });
 

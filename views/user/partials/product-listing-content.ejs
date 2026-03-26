@@ -144,7 +144,10 @@
             />
           </div>
           <h3><%= product.productName %></h3>
-          <strong>₹<%= product.offerPrice > 0 ? product.offerPrice : product.price %></strong>
+          <strong>₹<%= product.displayPrice %></strong>
+          <% if (product.hasDiscount) { %>
+            <span class="product-card__old-price">₹<%= product.originalPrice %></span>
+          <% } %>
         </a>
       <% }) %>
     </section>

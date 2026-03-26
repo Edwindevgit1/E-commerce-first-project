@@ -15,6 +15,12 @@ const categorySchema = new mongoose.Schema({
     trim:true,
     default:""
   },
+  offerPercentage: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 90
+  },
   isDeleted:{
     type:Boolean,
     default:false

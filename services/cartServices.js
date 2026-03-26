@@ -1,6 +1,7 @@
 import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
 import { removeFromWishlistService } from "./wishlistService.js";
+import { getEffectiveProductPricing } from "../utils/pricing.js";
 
 const MAX_CART_QUANTITY = 5;
 const EXPECTED_CART_ERRORS = new Set([
@@ -33,10 +34,10 @@ export const getCartService = async (userId)=>{
   .populate({
     path:"items.product",
     select:
-        "productName price offerPrice images mainImageIndex stock status isBlocked isDeleted category",
+        "productName price offerPrice images mainImageIndex stock status isBlocked isDeleted category couponCode couponDescription",
       populate: {
         path: "category",
-        select: "name"
+        select: "name offerPercentage"
       }
   })
   .lean();
@@ -49,10 +50,8 @@ export const getCartService = async (userId)=>{
   const validItems = (cart.items || []).filter((item)=> item.product);
   const cartItems = validItems.map((item)=>{
     const product = item.product;
-    const price = 
-    product.offerPrice && product.offerPrice > 0
-    ? product.offerPrice
-    : product.price;
+    const pricing = getEffectiveProductPricing(product);
+    const price = pricing.effectivePrice;
     const imageIndex = product.mainImageIndex ?? 0;
     const subtotal = price * item.quantity;
     return {
@@ -64,6 +63,8 @@ export const getCartService = async (userId)=>{
         "",
       category:product.category?.name || "",
       price,
+      originalPrice: pricing.basePrice,
+      hasDiscount: pricing.hasDiscount,
       quantity:item.quantity,
       stock:product.stock,
       status:product.status,

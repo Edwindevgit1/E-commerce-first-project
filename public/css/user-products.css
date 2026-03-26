@@ -539,6 +539,14 @@ body {
   text-decoration: line-through;
 }
 
+.product-card__old-price {
+  display: block;
+  margin-top: 2px;
+  color: #717171;
+  font-size: 10px;
+  text-decoration: line-through;
+}
+
 .coupon-box,
 .description-box,
 .stock-box,

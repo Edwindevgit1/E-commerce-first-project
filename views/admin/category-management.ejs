@@ -19,7 +19,7 @@
           <div class="chip-row">
             <a href="/api/admin/dashboard" class="chip">Dashboard</a>
             <a href="/api/admin/products" class="chip">Products</a>
-            <a href="/api/admin/categories" class="chip chip-dark">Categories</a>
+            <a href="/api/admin/category" class="chip chip-dark">Categories</a>
             <a href="/api/admin/orders" class="chip">Orders</a>
             <a href="/api/admin/adminusermanagement" class="chip">Users</a>
           </div>
@@ -85,6 +85,17 @@
                 ></textarea>
               </label>
 
+              <label class="field">
+                <span>Category Offer (%)</span>
+                <input
+                  type="number"
+                  name="offerPercentage"
+                  min="0"
+                  max="90"
+                  placeholder="10"
+                />
+              </label>
+
               <div class="form-actions">
                 <button type="submit" class="btn btn-dark">Save Category</button>
                 <button type="reset" class="btn btn-light">Reset</button>
@@ -143,6 +154,7 @@
                     <th>#</th>
                     <th>Category</th>
                     <th>Status</th>
+                    <th>Offer</th>
                     <th>Created</th>
                     <th>Actions</th>
                   </tr>
@@ -151,7 +163,7 @@
                 <tbody>
                   <% if (!categories || categories.length === 0) { %>
                     <tr>
-                      <td colspan="5" class="empty-cell">
+                      <td colspan="6" class="empty-cell">
                         No categories yet. Once you wire the backend listing, they will appear here.
                       </td>
                     </tr>
@@ -171,6 +183,9 @@
                           </span>
                         </td>
                         <td>
+                          <%= category.offerPercentage > 0 ? `${category.offerPercentage}% off` : '--' %>
+                        </td>
+                        <td>
                           <%= category.createdAt ? new Date(category.createdAt).toLocaleDateString('en-IN') : '--' %>
                         </td>
                         <td>
@@ -182,6 +197,7 @@
                               data-name="<%= category.name %>"
                               data-status="<%= category.status %>"
                               data-description="<%= category.description || '' %>"
+                              data-offer="<%= category.offerPercentage || 0 %>"
                               title="Edit"
                             >
                               ✏
@@ -212,12 +228,12 @@
                    class="page-btn">Prev</a>
               <% } %>
             
-              <% for(let i = 1; i <= totalPages; i++) { %>
+              <% paginationItems.forEach(i => { %>
                 <a href="/api/admin/category?page=<%= i %>&search=<%= search %>&sort=<%= sort %>"
                    class="page-btn <%= i === currentPage ? 'active' : '' %>">
                    <%= i %>
                 </a>
-              <% } %>
+              <% }) %>
             
               <% if (currentPage < totalPages) { %>
                 <a href="/api/admin/category?page=<%= currentPage + 1 %>&search=<%= search %>&sort=<%= sort %>"
@@ -253,6 +269,11 @@
             <textarea name="description" id="editCategoryDescription" rows="4"></textarea>
           </label>
 
+          <label class="field">
+            <span>Category Offer (%)</span>
+            <input type="number" name="offerPercentage" id="editCategoryOfferPercentage" min="0" max="90" />
+          </label>
+
           <div class="modal-actions">
             <button type="button" class="btn btn-light close-edit-modal">Cancel</button>
             <button type="submit" class="btn btn-dark">Update</button>
@@ -284,6 +305,7 @@
       const editCategoryName = document.getElementById("editCategoryName");
       const editCategoryStatus = document.getElementById("editCategoryStatus");
       const editCategoryDescription = document.getElementById("editCategoryDescription");
+      const editCategoryOfferPercentage = document.getElementById("editCategoryOfferPercentage");
 
       const deleteCategoryForm = document.getElementById("deleteCategoryForm");
       const deleteModalText = document.getElementById("deleteModalText");
@@ -294,11 +316,13 @@
           const name = button.dataset.name;
           const status = button.dataset.status;
           const description = button.dataset.description;
+          const offerPercentage = button.dataset.offer;
 
           editCategoryForm.action = `/api/admin/edit-category/${id}`;
           editCategoryName.value = name;
           editCategoryStatus.value = status;
           editCategoryDescription.value = description;
+          editCategoryOfferPercentage.value = offerPercentage;
 
           editModal.classList.add("show");
         });

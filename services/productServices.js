@@ -21,6 +21,24 @@ const parseListField = (value) => {
   return [];
 };
 
+const normalizeOfferPrice = (value, basePrice) => {
+  const parsedValue = Number(value);
+
+  if (value === "" || value === null || value === undefined || Number.isNaN(parsedValue)) {
+    return 0;
+  }
+
+  if (parsedValue < 0) {
+    throw new Error("Offer price cannot be negative");
+  }
+
+  if (parsedValue > 0 && parsedValue >= Number(basePrice)) {
+    throw new Error("Offer price must be lower than the regular price");
+  }
+
+  return parsedValue;
+};
+
 const resolveMainImageIndex = ({ mainImageKey, images, remainingImages, uploadedImages }) => {
   if (typeof mainImageKey === "string" && mainImageKey.length > 0) {
     if (mainImageKey.startsWith("existing:")) {
@@ -110,6 +128,9 @@ export const addProductService = async (data) => {
     status,
     description,
     shippingInfo,
+    offerPrice,
+    couponCode,
+    couponDescription,
     sizes,
     colors,
     highlights,
@@ -130,12 +151,15 @@ export const addProductService = async (data) => {
     category,
     price,
     stock,
+    offerPrice: normalizeOfferPrice(offerPrice, price),
     sizes: parseListField(sizes),
     colors: parseListField(colors),
     highlights: parseListField(highlights),
     status,
     description,
     shippingInfo: shippingInfo || "",
+    couponCode: couponCode?.trim() || "",
+    couponDescription: couponDescription?.trim() || "",
     images,
     mainImageIndex: resolveMainImageIndex({
       mainImageKey,
@@ -188,6 +212,7 @@ export const editProductService = async (id, data) => {
 
   if (data.price !== undefined) product.price = data.price;
   if (data.stock !== undefined) product.stock = data.stock;
+  product.offerPrice = normalizeOfferPrice(data.offerPrice, data.price ?? product.price);
 
   product.sizes = parseListField(data.sizes);
   product.colors = parseListField(data.colors);
@@ -196,6 +221,8 @@ export const editProductService = async (id, data) => {
   if (data.status) product.status = data.status;
   product.description = data.description || "";
   product.shippingInfo = data.shippingInfo || "";
+  product.couponCode = data.couponCode?.trim() || "";
+  product.couponDescription = data.couponDescription?.trim() || "";
 
 
   /* ===== IMAGE MANAGEMENT ===== */
