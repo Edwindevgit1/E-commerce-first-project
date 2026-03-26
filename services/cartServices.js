@@ -1,7 +1,30 @@
 import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
+import { removeFromWishlistService } from "./wishlistService.js";
 
 const MAX_CART_QUANTITY = 5;
+const MIN_CART_STOCK = 3;
+const EXPECTED_CART_ERRORS = new Set([
+  "User is required",
+  "User and product are required",
+  "User and product is required",
+  "Invalid action",
+  "Cart not found",
+  "Product not found in the cart",
+  "Product is unavailable",
+  "Product is out of stock",
+  "This product is not available for cart when stock is below 3",
+  "Cannot exceed available stock"
+]);
+const isPurchasableProduct = (product, desiredQuantity = 1) =>
+  Boolean(
+    product &&
+    !product.isDeleted &&
+    !product.isBlocked &&
+    product.status === "active" &&
+    product.stock >= MIN_CART_STOCK &&
+    desiredQuantity <= product.stock
+  );
 
 
 export const getCartService = async (userId)=>{
@@ -49,18 +72,18 @@ export const getCartService = async (userId)=>{
       isBlocked:product.isBlocked,
       isDeleted:product.isDeleted,
       subtotal,
-      isAvailable:
-        !product.isDeleted &&
-        !product.isBlocked &&
-        product.status === "active" &&
-        product.stock >= item.quantity
+      isAvailable: isPurchasableProduct(product, item.quantity)
     }
   }) 
   const grandTotal = cartItems.reduce((sum,item)=>sum + item.subtotal,0)
+  const hasUnavailableItems = cartItems.some((item) => !item.isAvailable);
+  const canCheckout = cartItems.length > 0 && !hasUnavailableItems;
   return {
     cart,
     cartItems,
-    grandTotal
+    grandTotal,
+    hasUnavailableItems,
+    canCheckout
   }
 }
 
@@ -78,6 +101,9 @@ export const addToCartService = async (userId, productId)=>{
   }
   if(product.stock <= 0){
     throw new Error("Product is out of stock");
+  }
+  if(product.stock < MIN_CART_STOCK){
+    throw new Error("This product is not available for cart when stock is below 3");
   }
   let cart = await Cart.findOne({user:userId});
   if(!cart){
@@ -105,7 +131,13 @@ export const addToCartService = async (userId, productId)=>{
       quantity:1
     })
   }
-  return await cart.save()
+  const savedCart = await cart.save()
+  try{
+    await removeFromWishlistService(userId,productId)
+  }catch(error){
+    console.log(error,"Wishlist removal failed")
+  }
+  return savedCart
 }
 export const removeFromCartService = async (userId, productId)=>{
   if(!userId || !productId){
@@ -134,6 +166,17 @@ export const updateCartQuantityService = async (userId, productId, action)=>{
   if(!item){
     throw new Error("Product not found in the cart");
   }
+
+  if(action === "decrement"){
+    if(item.quantity === 1){
+      cart.items = cart.items.filter(
+        (cartItem)=>String(cartItem.product) !== String(productId))
+    }else{
+      item.quantity -=1;
+    }
+    return await cart.save()
+  }
+
   const product = await Product.findById(productId);
   if(
     !product ||
@@ -146,6 +189,9 @@ export const updateCartQuantityService = async (userId, productId, action)=>{
   if(product.stock <= 0){
     throw new Error("Product is out of stock");
   }
+  if(product.stock < MIN_CART_STOCK){
+    throw new Error("This product is not available for cart when stock is below 3");
+  }
   if(action === "increment"){
     const newQuantity = item.quantity + 1;
     if(newQuantity > MAX_CART_QUANTITY){
@@ -156,13 +202,8 @@ export const updateCartQuantityService = async (userId, productId, action)=>{
     }
     item.quantity = newQuantity;
   }
-  if(action === "decrement"){
-    if(item.quantity === 1){
-      cart.items = cart.items.filter(
-        (cartItem)=>String(cartItem.product) !== String(productId))
-    }else{
-      item.quantity -=1;
-    }
-  }
   return await cart.save()
 }
+
+export const isExpectedCartError = (error) =>
+  Boolean(error?.message && EXPECTED_CART_ERRORS.has(error.message));

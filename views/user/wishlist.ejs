@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wishlist</title>
+  <link rel="stylesheet" href="/css/storefront-navbar.css" />
+  <link rel="stylesheet" href="/css/cart.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+</head>
+<body>
+  <%- include("partials/storefront-navbar") %>
+
+  <main class="shop-shell">
+    <section class="cart-shell">
+      <div class="cart-head">
+        <h1>Your Wishlist</h1>
+        <p>Keep track of the products you want to revisit later.</p>
+      </div>
+
+      <% if (!wishlistProducts.length) { %>
+        <div class="cart-empty">
+          <p>Your wishlist is empty.</p>
+          <a href="/api/user/products" class="cart-link-btn">Continue Shopping</a>
+        </div>
+      <% } else { %>
+        <div class="wishlist-list">
+          <% wishlistProducts.forEach((product) => { %>
+            <article class="cart-item-card wishlist-item-card">
+              <div class="cart-item-image">
+                <a href="/api/user/products/<%= product.productId %>" class="wishlist-item-image-link">
+                  <img
+                    src="<%= product.productImage %>"
+                    alt="<%= product.productName %>"
+                  />
+                </a>
+              </div>
+
+              <div class="cart-item-copy">
+                <h3><%= product.productName %></h3>
+                <p><%= product.category %></p>
+                <span class="cart-item-price">₹<%= product.price %></span>
+
+                <% if (!product.isAvailable) { %>
+                  <span class="cart-item-warning">Currently unavailable</span>
+                <% } %>
+              </div>
+
+              <div class="wishlist-item-actions">
+                <form action="/api/user/cart/add/<%= product.productId %>" method="POST">
+                  <button
+                    type="submit"
+                    class="cart-checkout-btn wishlist-action-btn"
+                    <%= !product.isAvailable ? "disabled" : "" %>
+                  >
+                    Add to Cart
+                  </button>
+                </form>
+
+                <form action="/api/user/wishlist/remove/<%= product.productId %>" method="POST">
+                  <button type="submit" class="remove-cart-btn wishlist-remove-btn">Remove</button>
+                </form>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

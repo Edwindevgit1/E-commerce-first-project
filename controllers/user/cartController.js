@@ -1,4 +1,10 @@
-import {getCartService, addToCartService,removeFromCartService,updateCartQuantityService} from "../../services/cartServices.js";
+import {
+  getCartService,
+  addToCartService,
+  removeFromCartService,
+  updateCartQuantityService,
+  isExpectedCartError
+} from "../../services/cartServices.js";
 
 
 export const getCartController = async (req,res)=>{
@@ -7,16 +13,20 @@ export const getCartController = async (req,res)=>{
       return res.redirect("/api/auth/login");
     }
     const userId = req.user._id;
-    const { cartItems, grandTotal } = await getCartService(userId);
+    const { cartItems, grandTotal, hasUnavailableItems, canCheckout } = await getCartService(userId);
     return res.render("user/cart",{
       cartItems,
-      grandTotal
+      grandTotal,
+      hasUnavailableItems,
+      canCheckout
     })
   }catch(error){
     console.log(error,'Get cart items error') 
     return res.render("user/cart",{
       cartItems:[],
-      grandTotal:0
+      grandTotal:0,
+      hasUnavailableItems:false,
+      canCheckout:false
     })
   }
 }
@@ -33,7 +43,9 @@ export const addToCartController = async (req,res)=>{
     await addToCartService(userId,productId)
     return res.redirect("/api/user/cart");
   }catch(error){
-    console.log(error,'Add to cart error')
+    if(!isExpectedCartError(error)){
+      console.log(error,'Add to cart error')
+    }
     return res.redirect("/api/user/products")
   }
 }
@@ -68,7 +80,9 @@ export const updateCartQuantityController = async (req,res)=>{
     await updateCartQuantityService(userId, productId, action);
     return res.redirect("/api/user/cart");
   }catch(error){
-    console.log(error,'Update cart quantity error')
+    if(!isExpectedCartError(error)){
+      console.log(error,'Update cart quantity error')
+    }
     return res.redirect("/api/user/cart")
   }
 }

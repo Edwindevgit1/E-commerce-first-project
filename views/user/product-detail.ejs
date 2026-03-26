@@ -92,7 +92,9 @@
       <section class="detail-info-card">
         <div class="detail-info-header">
           <h1><%= product.productName %></h1>
-          <button type="button" class="wishlist-btn" aria-label="Add to wishlist">♡</button>
+          <form action="/api/user/wishlist/add/<%= product._id %>" method="POST" class="wishlist-form">
+            <button type="submit" class="wishlist-btn" aria-label="Add to wishlist">♡</button>
+          </form>
         </div>
 
         <div class="price-box">
@@ -118,6 +120,8 @@
         <div class="stock-box">
           <% if (availabilityState === "sold_out") { %>
             <span class="danger-text">Sold out</span>
+          <% } else if (availabilityState === "cart_restricted") { %>
+            <span class="danger-text">Only <%= product.stock %> left</span>
           <% } else if (availabilityState === "variant_unavailable") { %>
             <span class="danger-text">Unavailable options</span>
           <% } else if (availabilityState === "low_stock") { %>
@@ -158,12 +162,12 @@
 
         <div class="detail-action-row">
           <form action="/api/user/cart/add/<%= product._id %>" method="POST">
-            <button class="cart-btn" <%= availabilityState !== "available" ? "disabled" : "" %>>
-              <%= availabilityState === "sold_out" ? "Sold out" : availabilityState === "variant_unavailable" ? "Unavailable" : "Add to cart" %>
+            <button class="cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
+              <%= availabilityState === "sold_out" ? "Sold out" : availabilityState === "cart_restricted" ? "Stock too low" : availabilityState === "variant_unavailable" ? "Unavailable" : "Add to cart" %>
             </button>
           </form>
-          <button class="cart-btn" <%= availabilityState !== "available" ? "disabled" : "" %>>
-            <%= availabilityState === "available" ? "Buy now" : "Unavailable" %>
+          <button class="cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
+            <%= canAddToCart ? "Buy now" : "Unavailable" %>
           </button>
         </div>
       </section>

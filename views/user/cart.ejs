@@ -31,16 +31,30 @@
       <% } else { %>
         <div class="cart-layout">
           <div class="cart-list">
+            <label class="cart-select-all">
+              <input type="checkbox" id="selectAllCartItems" checked />
+              <span>Select all available items</span>
+            </label>
 
             <% cartItems.forEach((item) => { %>
-              <article class="cart-item-card">
+              <article
+                class="cart-item-card"
+                data-cart-item
+                data-subtotal="<%= item.subtotal %>"
+                data-available="<%= item.isAvailable ? '1' : '0' %>"
+              >
+                <div class="cart-item-check">
+                  <input
+                    type="checkbox"
+                    class="cart-item-checkbox"
+                    <%= item.isAvailable ? "checked" : "disabled" %>
+                  />
+                </div>
 
-                <!-- Image -->
                 <div class="cart-item-image">
                   <img src="<%= item.productImage %>" alt="<%= item.productName %>" />
                 </div>
 
-                <!-- Info -->
                 <div class="cart-item-copy">
                   <h3><%= item.productName %></h3>
                   <p><%= item.category %></p>
@@ -51,22 +65,19 @@
                   <% } %>
                 </div>
 
-                <!-- Quantity Controls -->
                 <div class="cart-item-actions">
-
-                  <!-- Decrement -->
                   <form action="/api/user/cart/update/<%= item.productId %>" method="POST" class="cart-qty-form">
                     <input type="hidden" name="action" value="decrement" />
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       class="qty-btn"
-                      <%= !item.isAvailable ? "disabled" : "" %>
-                    >-</button>
+                    >
+                      -
+                    </button>
                   </form>
 
                   <span class="cart-qty-value"><%= item.quantity %></span>
 
-                  <!-- Increment -->
                   <form action="/api/user/cart/update/<%= item.productId %>" method="POST" class="cart-qty-form">
                     <input type="hidden" name="action" value="increment" />
                     <button
@@ -77,10 +88,8 @@
                       +
                     </button>
                   </form>
-
                 </div>
 
-                <!-- Subtotal + Remove -->
                 <div class="cart-item-subtotal">
                   <strong>₹<%= item.subtotal %></strong>
 
@@ -88,30 +97,115 @@
                     <button type="submit" class="remove-cart-btn">Remove</button>
                   </form>
                 </div>
-
               </article>
             <% }) %>
-
           </div>
+
           <aside class="cart-summary">
             <h2>Order Summary</h2>
 
             <div class="cart-summary-row">
-              <span>Total</span>
-              <strong>₹<%= grandTotal %></strong>
+              <span>Selected items</span>
+              <strong id="selectedItemCount">0</strong>
             </div>
 
-            <button 
-              type="button" 
-              class="cart-checkout-btn"
-              <%= cartItems.some(item => !item.isAvailable) ? "disabled" : "" %>  
-              Proceed to Checkout
-            </button>
+            <div class="cart-summary-row">
+              <span>Selected total</span>
+              <strong id="selectedGrandTotal">₹0</strong>
+            </div>
 
+            <% if (hasUnavailableItems) { %>
+              <p class="cart-checkout-warning">
+                Some cart items are unavailable or out of stock. Update your cart before checkout.
+              </p>
+            <% } %>
+
+            <p class="cart-checkout-warning cart-selection-warning" id="cartSelectionWarning" hidden>
+              Select at least one available item to continue checkout.
+            </p>
+
+            <button
+              type="button"
+              id="cartCheckoutButton"
+              class="cart-checkout-btn"
+              <%= !canCheckout ? "disabled" : "" %>
+            >
+              Checkout Selected Items
+            </button>
           </aside>
         </div>
       <% } %>
     </section>
   </main>
+
+  <script>
+    const cartItemCards = Array.from(document.querySelectorAll("[data-cart-item]"));
+    const selectAllCartItems = document.getElementById("selectAllCartItems");
+    const selectedItemCount = document.getElementById("selectedItemCount");
+    const selectedGrandTotal = document.getElementById("selectedGrandTotal");
+    const cartCheckoutButton = document.getElementById("cartCheckoutButton");
+    const cartSelectionWarning = document.getElementById("cartSelectionWarning");
+
+    const syncCartSelection = () => {
+      if (!cartItemCards.length) return;
+
+      const availableCheckboxes = cartItemCards
+        .map((card) => card.querySelector(".cart-item-checkbox"))
+        .filter((checkbox) => checkbox && !checkbox.disabled);
+
+      const checkedCards = cartItemCards.filter((card) => {
+        const checkbox = card.querySelector(".cart-item-checkbox");
+        return checkbox && checkbox.checked && !checkbox.disabled;
+      });
+
+      const total = checkedCards.reduce((sum, card) => {
+        return sum + Number(card.dataset.subtotal || 0);
+      }, 0);
+
+      if (selectedItemCount) {
+        selectedItemCount.textContent = String(checkedCards.length);
+      }
+
+      if (selectedGrandTotal) {
+        selectedGrandTotal.textContent = `₹${total}`;
+      }
+
+      if (cartCheckoutButton) {
+        cartCheckoutButton.disabled = checkedCards.length === 0;
+      }
+
+      if (cartSelectionWarning) {
+        cartSelectionWarning.hidden = checkedCards.length > 0;
+      }
+
+      if (selectAllCartItems) {
+        const allChecked =
+          availableCheckboxes.length > 0 &&
+          availableCheckboxes.every((checkbox) => checkbox.checked);
+        selectAllCartItems.checked = allChecked;
+        selectAllCartItems.disabled = availableCheckboxes.length === 0;
+      }
+    };
+
+    cartItemCards.forEach((card) => {
+      const checkbox = card.querySelector(".cart-item-checkbox");
+      if (checkbox) {
+        checkbox.addEventListener("change", syncCartSelection);
+      }
+    });
+
+    selectAllCartItems?.addEventListener("change", () => {
+      cartItemCards.forEach((card) => {
+        const checkbox = card.querySelector(".cart-item-checkbox");
+        if (checkbox && !checkbox.disabled) {
+          checkbox.checked = selectAllCartItems.checked;
+        }
+      });
+
+      syncCartSelection();
+    });
+
+    syncCartSelection();
+  </script>
 </body>
 </html>

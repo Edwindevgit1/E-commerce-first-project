@@ -188,12 +188,16 @@ export const getProductDetailsPage = async (req, res) => {
     const availableVariants = (product.variants || []).filter((variant) => variant.stock > 0);
     const hasVariantStock = !product.variants?.length || availableVariants.length > 0;
     const isLowStock = hasStock && product.stock < 4;
+    const canAddToCart = product.stock >= 3 && hasVariantStock;
     let availabilityState = "available";
     let availabilityMessage = "Ready to order.";
 
     if (!hasStock) {
       availabilityState = "sold_out";
       availabilityMessage = "This product is currently sold out. Please check back later.";
+    } else if (product.stock < 3) {
+      availabilityState = "cart_restricted";
+      availabilityMessage = "This product cannot be added to cart when stock is below 3 pieces.";
     } else if (!hasVariantStock) {
       availabilityState = "variant_unavailable";
       availabilityMessage = "This product is in stock, but no selectable size or color is currently available.";
@@ -219,6 +223,7 @@ export const getProductDetailsPage = async (req, res) => {
       isLowStock,
       availabilityState,
       availabilityMessage,
+      canAddToCart,
       availableVariants,
       displaySizes,
       displayColors
