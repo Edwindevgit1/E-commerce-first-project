@@ -139,6 +139,14 @@
   </main>
 
   <script>
+    window.addEventListener("load", () => {
+      history.pushState({ cartPage: true }, "", location.href);
+    });
+
+    window.addEventListener("popstate", () => {
+      window.location.replace("/api/auth/home");
+    });
+
     const cartItemCards = Array.from(document.querySelectorAll("[data-cart-item]"));
     const selectAllCartItems = document.getElementById("selectAllCartItems");
     const selectedItemCount = document.getElementById("selectedItemCount");

@@ -23,6 +23,11 @@
   </main>
 
   <script>
+    window.addEventListener("load", () => {
+      history.replaceState({ productListingHomeTarget: true }, "", location.href);
+      history.pushState({ productListingGuard: true }, "", location.href);
+    });
+
     const listingContent = document.getElementById("listingContent");
 
     async function updateListing(url, push = true) {
@@ -122,7 +127,12 @@
       });
     }
 
-    window.addEventListener("popstate", () => {
+    window.addEventListener("popstate", (event) => {
+      if (event.state?.productListingHomeTarget) {
+        window.location.replace("/api/auth/home");
+        return;
+      }
+
       updateListing(window.location.href, false);
     });
 

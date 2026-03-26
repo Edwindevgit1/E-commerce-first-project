@@ -120,8 +120,6 @@
         <div class="stock-box">
           <% if (availabilityState === "sold_out") { %>
             <span class="danger-text">Sold out</span>
-          <% } else if (availabilityState === "cart_restricted") { %>
-            <span class="danger-text">Only <%= product.stock %> left</span>
           <% } else if (availabilityState === "variant_unavailable") { %>
             <span class="danger-text">Unavailable options</span>
           <% } else if (availabilityState === "low_stock") { %>
@@ -161,14 +159,20 @@
         <% } %>
 
         <div class="detail-action-row">
-          <form action="/api/user/cart/add/<%= product._id %>" method="POST">
-            <button class="cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
-              <%= availabilityState === "sold_out" ? "Sold out" : availabilityState === "cart_restricted" ? "Stock too low" : availabilityState === "variant_unavailable" ? "Unavailable" : "Add to cart" %>
-            </button>
-          </form>
-          <button class="cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
-            <%= canAddToCart ? "Buy now" : "Unavailable" %>
-          </button>
+          <% if (isInCart) { %>
+            <a href="/api/user/cart" class="cart-btn detail-cart-link">Buy now</a>
+          <% } else { %>
+            <form action="/api/user/cart/add/<%= product._id %>" method="POST">
+              <button class="cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
+                <%= availabilityState === "sold_out" ? "Sold out" : availabilityState === "variant_unavailable" ? "Unavailable" : "Add to cart" %>
+              </button>
+            </form>
+            <form action="/api/user/cart/add/<%= product._id %>" method="POST">
+              <button class="cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
+                <%= canAddToCart ? "Buy now" : "Unavailable" %>
+              </button>
+            </form>
+          <% } %>
         </div>
       </section>
     </section>

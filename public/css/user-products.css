@@ -673,6 +673,20 @@ body {
   margin: 0;
 }
 
+.detail-in-cart-note {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(161, 178, 207, 0.48);
+}
+
+.detail-in-cart-note p {
+  margin: 0;
+  font-size: 12px;
+  color: #233352;
+}
+
 .cart-btn {
   width: 100%;
   min-height: 34px;
@@ -683,6 +697,10 @@ body {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 

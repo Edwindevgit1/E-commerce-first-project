@@ -72,5 +72,15 @@
       <% } %>
     </section>
   </main>
+
+  <script>
+    window.addEventListener("load", () => {
+      history.pushState({ wishlistPage: true }, "", location.href);
+    });
+
+    window.addEventListener("popstate", () => {
+      window.location.replace("/api/auth/home");
+    });
+  </script>
 </body>
 </html>
