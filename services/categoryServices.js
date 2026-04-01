@@ -1,4 +1,5 @@
 import Category from "../models/Category.js";
+import Product from "../models/Product.js";
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const normalizeSearchTerm = (value = "") => String(value).trim().replace(/\s+/g, " ");
@@ -17,8 +18,18 @@ const normalizeOfferPercentage = (value) => {
   return offerPercentage;
 };
 
+const ensureCategoryHasNoProducts = async (categoryId) => {
+  const linkedProductsCount = await Product.countDocuments({
+    category: categoryId
+  });
+
+  if (linkedProductsCount > 0) {
+    throw new Error("This category has products. Remove or reassign them before deleting.");
+  }
+};
+
 export const getCategoryService = async (search,page,limit,sort) => {
-  const query = {isDeleted:false};
+  const query = {};
   const normalizedSearch = normalizeSearchTerm(search);
   if(normalizedSearch){
     const searchPattern = normalizedSearch
@@ -68,10 +79,7 @@ export const addCategoryService = async (data) => {
     isDeleted: true
   });
   if (existingDeleted) {
-    const error = new Error("Category exists in deleted state");
-    error.code = "CATEGORY_SOFT_DELETED";
-    error.categoryId = existingDeleted._id.toString();
-    error.categoryName = existingDeleted.name;
+    const error = new Error("This category already exists in soft deleted state. Restore it from the category list.");
     throw error;
   }
 
@@ -117,6 +125,7 @@ export const deleteCatrgoryService = async (id)=>{
   if(!category || category.isDeleted){
     throw new Error ("Category not found")
   }
+
   category.isDeleted = true;
   return await category.save()
 }
@@ -129,3 +138,15 @@ export const restoreCategoryService = async (id) => {
   category.status="active";
   return await category.save();
 }
+
+export const permanentDeleteCategoryService = async (id) => {
+  const category = await Category.findById(id);
+
+  if (!category) {
+    throw new Error("Category not found");
+  }
+
+  await ensureCategoryHasNoProducts(id);
+
+  await Category.findByIdAndDelete(id);
+};

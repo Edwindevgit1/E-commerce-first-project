@@ -32,7 +32,11 @@ const isPurchasableProduct = (product, desiredQuantity = 1) =>
   );
 
 const getCartItemAvailabilityMessage = (product, quantity) => {
-  if (!product || product.isDeleted || product.isBlocked || product.status !== "active") {
+  if (!product || product.isDeleted) {
+    return "This item is no longer available.";
+  }
+
+  if (product.isBlocked || product.status !== "active") {
     return "This product is currently unavailable.";
   }
 
@@ -102,7 +106,9 @@ export const getCartService = async (userId)=>{
       isDeleted:product.isDeleted,
       subtotal,
       isAvailable: isPurchasableProduct(product, item.quantity),
-      availabilityMessage: getCartItemAvailabilityMessage(product, item.quantity)
+      availabilityMessage: getCartItemAvailabilityMessage(product, item.quantity),
+      disableDecrement:
+        product.isDeleted === true || product.status !== "active"
     }
   }) 
   const grandTotal = cartItems.reduce((sum,item)=>sum + item.subtotal,0)

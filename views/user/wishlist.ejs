@@ -91,6 +91,19 @@
     window.addEventListener("popstate", () => {
       window.location.replace("/api/auth/home");
     });
+
+    const wishlistPageMessage = document.querySelector(".cart-page-message");
+
+    if (wishlistPageMessage) {
+      window.setTimeout(() => {
+        wishlistPageMessage.remove();
+
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete("message");
+
+        window.history.replaceState({}, "", nextUrl.pathname + nextUrl.search);
+      }, 3000);
+    }
   </script>
 </body>
 </html>

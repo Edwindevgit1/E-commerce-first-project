@@ -6,6 +6,7 @@ import {
   isExpectedCartError,
   validateCartForCheckoutService
 } from "../../services/cartServices.js";
+import { placeOrderService } from "../../services/orderServices.js";
 
 const buildRedirectWithMessage = (target, message, key = "error") => {
   const encodedMessage = encodeURIComponent(
@@ -162,7 +163,10 @@ export const checkoutCartController = async (req, res) => {
 
     return res.render("user/checkout", {
       checkoutItems,
-      grandTotal
+      grandTotal,
+      selectedProductIds: Array.isArray(selectedProductIds)
+      ? selectedProductIds
+      : [selectedProductIds]
     });
   } catch (error) {
     if (!isExpectedCartError(error)) {
@@ -171,6 +175,36 @@ export const checkoutCartController = async (req, res) => {
     const message = encodeURIComponent(
       error?.message || "Unable to continue checkout. Please review your cart."
     );
+    return res.redirect(`/api/user/cart?error=${message}`);
+  }
+};
+export const placeOrderController = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.redirect("/api/auth/login");
+    }
+
+    const userId = req.user._id;
+
+    const selectedProductIds = Array.isArray(req.body.selectedProductIds)
+      ? req.body.selectedProductIds
+      : [req.body.selectedProductIds];
+
+    if (!selectedProductIds.length || !selectedProductIds[0]) {
+      return res.redirect("/api/user/cart?error=No items selected");
+    }
+
+    await placeOrderService(userId, selectedProductIds);
+
+    return res.redirect("/api/user/cart?message=Order%20placed%20successfully.");
+
+  } catch (error) {
+    console.log(error, "Place order error");
+
+    const message = encodeURIComponent(
+      error?.message || "Unable to place the order. Please review your cart."
+    );
+
     return res.redirect(`/api/user/cart?error=${message}`);
   }
 };

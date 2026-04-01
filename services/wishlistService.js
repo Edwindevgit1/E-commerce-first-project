@@ -62,12 +62,13 @@ export const addToWishlistService = async (userId, productId) => {
     throw new Error("Product already exists in cart");
   }
 
-  const product = await Product.findById(productId);
+  const product = await Product.findById(productId).populate("category");
   if(
     !product ||
     product.isDeleted === true ||
     product.isBlocked === true ||
-    product.status !== "active"
+    !product.category ||
+    product.category.isDeleted === true
   ){
     throw new Error("Product is unavailable")
   }

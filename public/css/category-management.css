@@ -351,6 +351,10 @@ body {
   gap: 2px;
 }
 
+.category-row--unavailable {
+  opacity: 0.76;
+}
+
 .category-name span {
   color: #70809a;
   font-size: 9px;
@@ -375,6 +379,11 @@ body {
 .status-badge.inactive {
   color: #b35c00;
   background: #fff3e2;
+}
+
+.status-badge.soft-deleted {
+  color: #8b1e1e;
+  background: #ffe7e7;
 }
 
 .empty-cell {

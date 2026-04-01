@@ -21,6 +21,20 @@ const normalizeColorList = (items = []) => {
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const normalizeSearchTerm = (value = "") => String(value).trim().replace(/\s+/g, " ");
+const buildPaginationItems = (currentPage, totalPages) => {
+  if (totalPages <= 3) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const start = Math.max(1, currentPage - 1);
+  const end = Math.min(totalPages, start + 2);
+  const adjustedStart = Math.max(1, end - 2);
+
+  return Array.from(
+    { length: end - adjustedStart + 1 },
+    (_, index) => adjustedStart + index
+  );
+};
 
 const getSortStage = (sort) => {
   switch (sort) {
@@ -194,7 +208,11 @@ export const getProductListingPage = async (req, res) => {
       size,
       color,
       currentPage: page,
-      totalPages: Math.ceil(totalProducts / limit)
+      totalPages: Math.ceil(totalProducts / limit),
+      paginationItems: buildPaginationItems(
+        page,
+        Math.ceil(totalProducts / limit)
+      )
     };
 
     if (req.query.partial === "1") {
