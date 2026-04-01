@@ -23,6 +23,10 @@
         <p>Keep track of the products you want to revisit later.</p>
       </div>
 
+      <% if (pageMessage) { %>
+        <p class="cart-page-message"><%= pageMessage %></p>
+      <% } %>
+
       <% if (!wishlistProducts.length) { %>
         <div class="cart-empty">
           <p>Your wishlist is empty.</p>
@@ -44,10 +48,7 @@
               <div class="cart-item-copy">
                 <h3><%= product.productName %></h3>
                 <p><%= product.category %></p>
-                <span class="cart-item-price">₹<%= product.price %></span>
-                <% if (product.hasDiscount) { %>
-                  <span class="cart-item-old-price">₹<%= product.originalPrice %></span>
-                <% } %>
+                <span class="cart-item-price">₹<%= product.originalPrice || product.price %></span>
 
                 <% if (!product.isAvailable) { %>
                   <span class="cart-item-warning">Currently unavailable</span>

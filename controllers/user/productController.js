@@ -50,6 +50,37 @@ const enrichProductPricing = (product) => {
   };
 };
 
+const getCategoryAvailabilityState = (category) => {
+  if (!category || category.isDeleted === true) {
+    return "deleted";
+  }
+
+  if (category.status !== "active") {
+    return "inactive";
+  }
+
+  return "active";
+};
+
+const enrichProductState = (product) => {
+  const enrichedProduct = enrichProductPricing(product);
+  const categoryAvailability = getCategoryAvailabilityState(product.category);
+  const productAvailability = product.status === "active" ? "active" : "inactive";
+  const isUnavailable = categoryAvailability !== "active" || productAvailability !== "active";
+
+  return {
+    ...enrichedProduct,
+    categoryAvailability,
+    productAvailability,
+    isUnavailableBecauseOfCategory: isUnavailable,
+    canUserPurchase:
+      !product.isDeleted &&
+      !product.isBlocked &&
+      productAvailability === "active" &&
+      categoryAvailability === "active"
+  };
+};
+
 export const getProductListingPage = async (req, res) => {
   try {
     const page = Number(req.query.page) || 1;
@@ -65,8 +96,7 @@ export const getProductListingPage = async (req, res) => {
     const andConditions = [];
     const query = {
       isDeleted: false,
-      isBlocked: false,
-      status: "active"
+      isBlocked: false
     };
 
     if (search) {
@@ -131,8 +161,7 @@ export const getProductListingPage = async (req, res) => {
 
     const baseQuery = {
       isDeleted: false,
-      isBlocked: false,
-      status: "active"
+      isBlocked: false
     };
 
     const [products, totalProducts, categories, sizeOptions, colorOptions, variantSizeOptions, variantColorOptions] = await Promise.all([
@@ -149,7 +178,7 @@ export const getProductListingPage = async (req, res) => {
       Product.distinct("variants.color", baseQuery)
     ]);
 
-    const pricedProducts = products.map(enrichProductPricing);
+    const pricedProducts = products.map(enrichProductState);
 
     const viewData = {
       products: pricedProducts,
@@ -177,20 +206,30 @@ export const getProductListingPage = async (req, res) => {
     console.log(error, "product listing page error");
   }
 };
-
 export const getProductDetailsPage = async (req, res) => {
   try {
-    const product = await Product.findOne({
-      _id: req.params.id,
-      isDeleted: false,
-      isBlocked: false,
-      status: "active"
-    }).populate("category");
+    // Fetch product WITHOUT filtering
+    const product = await Product.findById(req.params.id).populate("category");
 
+    // Case 1: Product not found
     if (!product) {
-      return res.redirect("/api/user/products");
+      return res.render("user/product-unavailable", {
+        message: "This product does not exist or may have been removed."
+      });
     }
 
+    // Case 2: Blocked / Deleted / Inactive
+    if (
+      product.isDeleted === true ||
+      product.isBlocked === true
+    ) {
+      return res.render("user/product-unavailable", {
+        message: "This item is currently unavailable."
+      });
+    }
+    
+
+    // Cart quantity
     let cartQuantity = 0;
 
     if (req.user?._id) {
@@ -201,6 +240,7 @@ export const getProductDetailsPage = async (req, res) => {
       cartQuantity = cartItem?.quantity || 0;
     }
 
+    // Related products
     const relatedProducts = await Product.find({
       _id: { $ne: product._id },
       category: product.category?._id,
@@ -211,39 +251,71 @@ export const getProductDetailsPage = async (req, res) => {
       .limit(4)
       .sort({ createdAt: -1 });
 
+    // Stock logic
     const hasStock = product.stock > 0;
-    const availableVariants = (product.variants || []).filter((variant) => variant.stock > 0);
-    const hasVariantStock = !product.variants?.length || availableVariants.length > 0;
+    const categoryAvailability = getCategoryAvailabilityState(product.category);
+
+    const availableVariants = (product.variants || []).filter(
+      (variant) => variant.stock > 0
+    );
+
+    const hasVariantStock =
+      !product.variants?.length || availableVariants.length > 0;
+
     const isLowStock = hasStock && product.stock < 4;
-    const canAddToCart = hasStock && hasVariantStock;
+    const productAvailability = product.status === "active" ? "active" : "inactive";
+    const canAddToCart =
+      hasStock &&
+      hasVariantStock &&
+      productAvailability === "active" &&
+      categoryAvailability === "active";
     const isInCart = cartQuantity > 0;
+
+    // Availability message
     let availabilityState = "available";
     let availabilityMessage = "Ready to order.";
 
-    if (!hasStock) {
+    if (productAvailability === "inactive") {
+      availabilityState = "product_inactive";
+      availabilityMessage = "This product is temporarily unavailable.";
+    } else if (categoryAvailability === "deleted") {
+      availabilityState = "category_deleted";
+      availabilityMessage = "This product is unavailable.";
+    } else if (categoryAvailability === "inactive") {
+      availabilityState = "category_inactive";
+      availabilityMessage = "This product is temporarily unavailable.";
+    } else if (!hasStock) {
       availabilityState = "sold_out";
-      availabilityMessage = "This product is currently sold out. Please check back later.";
+      availabilityMessage =
+        "This product is currently sold out. Please check back later.";
     } else if (!hasVariantStock) {
       availabilityState = "variant_unavailable";
-      availabilityMessage = "This product is in stock, but no selectable size or color is currently available.";
+      availabilityMessage =
+        "This product is in stock, but no selectable size or color is currently available.";
     } else if (isLowStock) {
       availabilityState = "low_stock";
       availabilityMessage = "Almost few pieces left. Hurry up.";
     }
 
-    const displaySizes = [...new Set([
-      ...(product.sizes || []),
-      ...availableVariants.map((variant) => variant.size)
-    ])].filter(Boolean);
+    // Sizes & colors
+    const displaySizes = [
+      ...new Set([
+        ...(product.sizes || []),
+        ...availableVariants.map((variant) => variant.size)
+      ])
+    ].filter(Boolean);
+
     const displayColors = normalizeColorList([
       ...(product.colors || []),
       ...availableVariants.map((variant) => variant.color)
     ]);
 
-    const pricedProduct = enrichProductPricing(product);
-    const pricedRelatedProducts = relatedProducts.map(enrichProductPricing);
+    // Pricing
+    const pricedProduct = enrichProductState(product);
+    const pricedRelatedProducts = relatedProducts.map(enrichProductState);
 
-    res.render("user/product-detail", {
+    // Render page
+    return res.render("user/product-detail", {
       product: pricedProduct,
       relatedProducts: pricedRelatedProducts,
       hasStock,
@@ -256,10 +328,17 @@ export const getProductDetailsPage = async (req, res) => {
       cartQuantity,
       availableVariants,
       displaySizes,
-      displayColors
+      displayColors,
+      productAvailability,
+      categoryAvailability,
+      pageMessage: req.query.message || null
     });
+
   } catch (error) {
-    console.log(error, "product details error");
-    res.redirect("/api/user/products");
+    console.log(error, "product detail page error");
+
+    return res.render("user/product-unavailable", {
+      message: "Something went wrong while loading this product."
+    });
   }
 };

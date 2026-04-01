@@ -314,6 +314,20 @@ data-image-key="existing:<%= index %>"
 
 <script src="/vendor/cropper/cropper.min.js"></script>
 <script>
+window.addEventListener("pageshow", function (event) {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
+window.addEventListener("load", () => {
+  history.pushState({ productFormLocked: true }, "", location.href);
+});
+
+window.addEventListener("popstate", () => {
+  window.history.go(1);
+});
+
 const errorMessage = document.getElementById("errorMessage");
 const productForm = document.querySelector(".product-form");
 const imageInput = document.getElementById("imageInput");

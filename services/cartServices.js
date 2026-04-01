@@ -13,7 +13,10 @@ const EXPECTED_CART_ERRORS = new Set([
   "Product not found in the cart",
   "Product is unavailable",
   "Product is out of stock",
-  "Cannot exceed available stock"
+  "Cannot exceed available stock",
+  "Your cart is empty",
+  "No valid cart items selected",
+  "One of the cart products no longer exists"
 ]);
 const isPurchasableProduct = (product, desiredQuantity = 1) =>
   Boolean(
@@ -21,9 +24,36 @@ const isPurchasableProduct = (product, desiredQuantity = 1) =>
     !product.isDeleted &&
     !product.isBlocked &&
     product.status === "active" &&
+    product.category &&
+    !product.category.isDeleted &&
+    product.category.status === "active" &&
     product.stock > 0 &&
     desiredQuantity <= product.stock
   );
+
+const getCartItemAvailabilityMessage = (product, quantity) => {
+  if (!product || product.isDeleted || product.isBlocked || product.status !== "active") {
+    return "This product is currently unavailable.";
+  }
+
+  if (!product.category || product.category.isDeleted) {
+    return "This product is unavailable.";
+  }
+
+  if (product.category.status !== "active") {
+    return "This product is temporarily unavailable.";
+  }
+
+  if (product.stock <= 0) {
+    return "This product is out of stock.";
+  }
+
+  if (quantity > product.stock) {
+    return `This product only has ${product.stock} stock available. Please reduce the quantity.`;
+  }
+
+  return null;
+};
 
 
 export const getCartService = async (userId)=>{
@@ -33,11 +63,11 @@ export const getCartService = async (userId)=>{
   let cart = await Cart.findOne({user:userId})
   .populate({
     path:"items.product",
-    select:
+      select:
         "productName price offerPrice images mainImageIndex stock status isBlocked isDeleted category couponCode couponDescription",
       populate: {
         path: "category",
-        select: "name offerPercentage"
+        select: "name offerPercentage status isDeleted"
       }
   })
   .lean();
@@ -71,7 +101,8 @@ export const getCartService = async (userId)=>{
       isBlocked:product.isBlocked,
       isDeleted:product.isDeleted,
       subtotal,
-      isAvailable: isPurchasableProduct(product, item.quantity)
+      isAvailable: isPurchasableProduct(product, item.quantity),
+      availabilityMessage: getCartItemAvailabilityMessage(product, item.quantity)
     }
   }) 
   const grandTotal = cartItems.reduce((sum,item)=>sum + item.subtotal,0)
@@ -90,11 +121,14 @@ export const addToCartService = async (userId, productId)=>{
   if(!userId || !productId){
     throw new Error("User and product are required");
   }
-  const product = await Product.findById(productId);
+  const product = await Product.findById(productId).populate("category");
   if(!product ||
     product.isDeleted === true ||
     product.isBlocked === true ||
-    product.status !=="active"
+    product.status !=="active" ||
+    !product.category ||
+    product.category.isDeleted === true ||
+    product.category.status !== "active"
   ){
     throw new Error("Product is unavailable");
   }
@@ -173,12 +207,15 @@ export const updateCartQuantityService = async (userId, productId, action)=>{
     return await cart.save()
   }
 
-  const product = await Product.findById(productId);
+  const product = await Product.findById(productId).populate("category");
   if(
     !product ||
     product.isDeleted === true ||
     product.isBlocked === true ||
-    product.status !=="active" 
+    product.status !=="active" ||
+    !product.category ||
+    product.category.isDeleted === true ||
+    product.category.status !== "active"
   ){
     throw new Error("Product is unavailable")
   }
@@ -200,3 +237,103 @@ export const updateCartQuantityService = async (userId, productId, action)=>{
 
 export const isExpectedCartError = (error) =>
   Boolean(error?.message && EXPECTED_CART_ERRORS.has(error.message));
+
+export const validateCartForCheckoutService = async (
+  userId,
+  selectedProductIds = []
+) => {
+  if (!userId) {
+    throw new Error("User is required");
+  }
+
+  const cart = await Cart.findOne({ user: userId }).populate({
+    path: "items.product",
+    populate: {
+      path: "category",
+      select: "name offerPercentage"
+    }
+  });
+
+  if (!cart || !cart.items.length) {
+    throw new Error("Your cart is empty");
+  }
+
+  const selectedIdSet = new Set(
+    (Array.isArray(selectedProductIds) ? selectedProductIds : [selectedProductIds])
+      .map((id) => String(id || "").trim())
+      .filter(Boolean)
+  );
+
+  const itemsToValidate =
+    selectedIdSet.size > 0
+      ? cart.items.filter((item) => selectedIdSet.has(String(item.product?._id)))
+      : cart.items;
+
+  if (!itemsToValidate.length) {
+    throw new Error("No valid cart items selected");
+  }
+
+  const checkoutItems = [];
+  let grandTotal = 0;
+
+  for (const item of itemsToValidate) {
+    const productId = item.product?._id;
+    const product = await Product.findById(productId).populate("category");
+
+    if (!product) {
+      throw new Error("One of the cart products no longer exists");
+    }
+
+    if (
+      product.isDeleted === true ||
+      product.isBlocked === true ||
+      product.status !== "active" ||
+      !product.category ||
+      product.category.isDeleted === true ||
+      product.category.status !== "active"
+    ) {
+      throw new Error(`${product.productName} is unavailable`);
+    }
+
+    if (product.stock <= 0) {
+      throw new Error(`${product.productName} is out of stock`);
+    }
+
+    if (item.quantity > product.stock) {
+      throw new Error(
+        `${product.productName} only has ${product.stock} item(s) available`
+      );
+    }
+
+    if (item.quantity > MAX_CART_QUANTITY) {
+      throw new Error(
+        `${product.productName} exceeds the maximum allowed quantity`
+      );
+    }
+
+    const pricing = getEffectiveProductPricing(product);
+    const price = pricing.effectivePrice;
+    const subtotal = price * item.quantity;
+    const imageIndex = product.mainImageIndex ?? 0;
+
+    checkoutItems.push({
+      productId: product._id,
+      productName: product.productName,
+      productImage:
+        product.images?.[imageIndex] ||
+        product.images?.[0] ||
+        "",
+      category: product.category?.name || "",
+      price,
+      quantity: item.quantity,
+      subtotal
+    });
+
+    grandTotal += subtotal;
+  }
+
+  return {
+    checkoutItems,
+    grandTotal
+  };
+};

@@ -1,5 +1,6 @@
 import Wishlist from "../models/Wishlist.js";
 import Product from "../models/Product.js";
+import Cart from "../models/Cart.js";
 import { getEffectiveProductPricing } from "../utils/pricing.js";
 
 export const getWishlistService = async (userId) => {
@@ -52,6 +53,15 @@ export const addToWishlistService = async (userId, productId) => {
   if(!userId || !productId){
     throw new Error("User and product are required")
   }
+  const cart = await Cart.findOne({ user: userId }).lean();
+  const isAlreadyInCart = cart?.items?.some(
+    (item) => String(item.product) === String(productId)
+  );
+
+  if (isAlreadyInCart) {
+    throw new Error("Product already exists in cart");
+  }
+
   const product = await Product.findById(productId);
   if(
     !product ||

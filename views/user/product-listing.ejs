@@ -24,7 +24,7 @@
 
   <script>
     window.addEventListener("load", () => {
-      history.replaceState({ productListingHomeTarget: true }, "", location.href);
+      history.replaceState({ productListingPage: true }, "", location.href);
       history.pushState({ productListingGuard: true }, "", location.href);
     });
 
@@ -45,7 +45,11 @@
 
       if (push) {
         const cleanUrl = new URL(url, window.location.origin);
-        window.history.pushState({}, "", cleanUrl.pathname + cleanUrl.search);
+        window.history.replaceState(
+          { productListingGuard: true },
+          "",
+          cleanUrl.pathname + cleanUrl.search
+        );
       }
 
       bindListingInteractions();
@@ -128,12 +132,10 @@
     }
 
     window.addEventListener("popstate", (event) => {
-      if (event.state?.productListingHomeTarget) {
+      if (event.state?.productListingPage || event.state?.productListingGuard) {
         window.location.replace("/api/auth/home");
         return;
       }
-
-      updateListing(window.location.href, false);
     });
 
     bindListingInteractions();

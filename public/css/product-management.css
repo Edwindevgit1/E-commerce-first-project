@@ -389,6 +389,30 @@ body {
   font-size: 9px;
 }
 
+.product-category-cell,
+.status-stack {
+  display: grid;
+  gap: 4px;
+}
+
+.product-category-cell strong {
+  font-size: 11px;
+}
+
+.category-availability-note {
+  font-size: 9px;
+  font-weight: 700;
+  color: #b35c00;
+}
+
+.product-row--unavailable {
+  opacity: 0.76;
+}
+
+.product-row--unavailable .product-thumb {
+  filter: grayscale(1);
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -408,6 +432,16 @@ body {
 .status-badge.inactive {
   color: #b35c00;
   background: #fff3e2;
+}
+
+.status-badge.soft-deleted {
+  color: #8b1e1e;
+  background: #ffe7e7;
+}
+
+.status-badge.category-warning {
+  color: #8b5e00;
+  background: #fff4dc;
 }
 
 .action-row,

@@ -7,7 +7,9 @@ import {
   addProductService,
   getProductByIdService,
   editProductService,
-  deleteProductService
+  deleteProductService,
+  restoreProductService,
+  permanentDeleteProductService
 } from "../../services/productServices.js";
 
 
@@ -64,7 +66,8 @@ export const getProductController = async (req, res) => {
       currentPage,
       limit,
       paginationItems: buildPaginationItems(currentPage, totalPages || 1),
-      error: null
+      error: null,
+      restorePrompt: null
     });
 
   } catch (error) {
@@ -82,7 +85,8 @@ export const getProductController = async (req, res) => {
       currentPage: 1,
       limit: 5,
       paginationItems: [1],
-      error: "Failed to load products"
+      error: "Failed to load products",
+      restorePrompt: null
     });
 
   }
@@ -149,6 +153,40 @@ export const addProductController = async (req, res) => {
   } catch (error) {
 
     console.log(error, "Add product controller error");
+
+    if (error.code === "PRODUCT_SOFT_DELETED") {
+      const search = "";
+      const selectedCategory = "";
+      const selectedStatus = "";
+      const currentPage = 1;
+      const limit = 5;
+
+      const { products, categories, totalPages, totalProducts } = await getProductService(
+        search,
+        selectedCategory,
+        selectedStatus,
+        currentPage,
+        limit
+      );
+
+      return res.render("admin/product-management", {
+        products: products || [],
+        categories: categories || [],
+        totalProducts: totalProducts || 0,
+        totalPages: totalPages || 1,
+        search,
+        selectedCategory,
+        selectedStatus,
+        currentPage,
+        limit,
+        paginationItems: buildPaginationItems(currentPage, totalPages || 1),
+        error: null,
+        restorePrompt: {
+          id: error.productId,
+          name: error.productName
+        }
+      });
+    }
 
     const categories = await Category.find({ isDeleted: false });
 
@@ -268,5 +306,25 @@ export const deleteProductController = async (req, res) => {
     console.log(error, "Delete product error");
     res.redirect("/api/admin/products");
 
+  }
+};
+
+export const restoreProductController = async (req, res) => {
+  try {
+    await restoreProductService(req.params.id);
+    res.redirect("/api/admin/products");
+  } catch (error) {
+    console.log(error, "Restore product error");
+    res.redirect("/api/admin/products");
+  }
+};
+
+export const permanentDeleteProductController = async (req, res) => {
+  try {
+    await permanentDeleteProductService(req.params.id);
+    res.redirect("/api/admin/products");
+  } catch (error) {
+    console.log(error, "Permanent delete product error");
+    res.redirect("/api/admin/products");
   }
 };

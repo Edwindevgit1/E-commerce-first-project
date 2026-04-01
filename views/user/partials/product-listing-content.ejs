@@ -136,7 +136,10 @@
       <% } %>
 
       <% products.forEach((product) => { %>
-        <a href="/api/user/products/<%= product._id %>" class="product-card">
+        <a
+          href="/api/user/products/<%= product._id %>"
+          class="product-card <%= product.isUnavailableBecauseOfCategory ? 'product-card--disabled' : '' %>"
+        >
           <div class="product-card__image">
             <img
               src="<%= product.images[product.mainImageIndex || 0] || product.images[0] %>"
@@ -144,6 +147,13 @@
             />
           </div>
           <h3><%= product.productName %></h3>
+          <% if (product.productAvailability === "inactive") { %>
+            <span class="product-card__status is-out">Temporarily unavailable</span>
+          <% } else if (product.categoryAvailability === "deleted") { %>
+            <span class="product-card__status is-out">Unavailable</span>
+          <% } else if (product.categoryAvailability === "inactive") { %>
+            <span class="product-card__status is-out">Temporarily unavailable</span>
+          <% } %>
           <strong>₹<%= product.displayPrice %></strong>
           <% if (product.hasDiscount) { %>
             <span class="product-card__old-price">₹<%= product.originalPrice %></span>

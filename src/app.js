@@ -20,7 +20,6 @@ import signupotp from "../routes/user/signupotp.route.js";
 import profileemailverify from "../routes/user/profile-email-otp.route.js";
 import promotedemoteAdmin from "../routes/admin/promotedemoteAdmin.route.js";
 import userAuth from "../middleware/user/userauth.middleware.js";
-import runtimeUserCheck from "../middleware/user/runtime-user-check.middleware.js";
 import loadNavbarCategories from "../middleware/user/loadNavbarCategories.js";
 import categoryRoutes from "../routes/admin/categoryRoute.js";
 import productRoutes from "../routes/admin/productRoute.js";
@@ -51,7 +50,6 @@ app.use((req, res, next) => {
   next();
 });
 app.use(loadNavbarCategories);
-app.use(runtimeUserCheck);
 app.use(passport.initialize());
 app.use(passport.session());
 //admin
@@ -61,6 +59,8 @@ app.use('/api/admin',promotedemoteAdmin)
 app.use('/api/admin',blockunblock)
 app.use('/api/admin',categoryRoutes)
 app.use('/api/admin',productRoutes)
+//products
+app.use('/api/user',userProductRoute)
 //user
 app.use('/api/auth',signupRouter)
 app.use('/api/auth',signupotp)
@@ -77,6 +77,5 @@ app.use('/api/user',userAuth,logout)
 app.use('/api/user',userAuth,profileemailverify)
 app.use('/api/user',userAuth,userCartRoutes)
 app.use('/api/user',userAuth,userWishlistRoutes)
-//product
-app.use('/api/user',userProductRoute)
+
 export default app;

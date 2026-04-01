@@ -1,5 +1,8 @@
 import Category from "../models/Category.js";
 
+const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const normalizeSearchTerm = (value = "") => String(value).trim().replace(/\s+/g, " ");
+
 const normalizeOfferPercentage = (value) => {
   const offerPercentage = Number(value);
 
@@ -16,8 +19,14 @@ const normalizeOfferPercentage = (value) => {
 
 export const getCategoryService = async (search,page,limit,sort) => {
   const query = {isDeleted:false};
-  if(search){
-    query.name = { $regex: search, $options: "i" };
+  const normalizedSearch = normalizeSearchTerm(search);
+  if(normalizedSearch){
+    const searchPattern = normalizedSearch
+      .split(" ")
+      .map((term) => escapeRegex(term))
+      .join("\\s+");
+
+    query.name = { $regex: searchPattern, $options: "i" };
   }
   const totalCategories = await Category.countDocuments(query)
   let sortOption = { createdAt: -1 };
@@ -46,22 +55,33 @@ export const addCategoryService = async (data) => {
     throw new Error("Name is required");
   }
 
-  const existing = await Category.findOne({
-    name: { $regex: `^${name}$`, $options: "i" },
+  const existingActive = await Category.findOne({
+    name: { $regex: `^${escapeRegex(name)}$`, $options: "i" },
     isDeleted: false
   });
 
-  if (existing) {
+  if (existingActive) {
     throw new Error("Category already exists");
+  }
+  const existingDeleted = await Category.findOne({
+    name: { $regex: `^${escapeRegex(name)}$`, $options: "i" },
+    isDeleted: true
+  });
+  if (existingDeleted) {
+    const error = new Error("Category exists in deleted state");
+    error.code = "CATEGORY_SOFT_DELETED";
+    error.categoryId = existingDeleted._id.toString();
+    error.categoryName = existingDeleted.name;
+    throw error;
   }
 
   const category = new Category({
     name: name,
     status: data.status,
     description: data.description,
-    offerPercentage: normalizeOfferPercentage(data.offerPercentage)
+    offerPercentage: normalizeOfferPercentage(data.offerPercentage),
+    isDeleted:false
   });
-
   return category.save();
 };
 export const editCategoryService = async (id,data)=>{
@@ -83,7 +103,9 @@ export const editCategoryService = async (id,data)=>{
   }
   category.name = name;
   category.status = data.status || category.status;
-  category.description=data.description || category.description;
+  category.description = typeof data.description === "string"
+    ? data.description.trim()
+    : "";
   category.offerPercentage = normalizeOfferPercentage(data.offerPercentage);
 
   return await category.save()
@@ -97,4 +119,13 @@ export const deleteCatrgoryService = async (id)=>{
   }
   category.isDeleted = true;
   return await category.save()
+}
+export const restoreCategoryService = async (id) => {
+  const category = await Category.findById(id);
+  if(!category){
+    throw new Error("Category not found")
+  }
+  category.isDeleted=false;
+  category.status="active";
+  return await category.save();
 }

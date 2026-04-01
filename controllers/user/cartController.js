@@ -3,9 +3,39 @@ import {
   addToCartService,
   removeFromCartService,
   updateCartQuantityService,
-  isExpectedCartError
+  isExpectedCartError,
+  validateCartForCheckoutService
 } from "../../services/cartServices.js";
 
+const buildRedirectWithMessage = (target, message, key = "error") => {
+  const encodedMessage = encodeURIComponent(
+    message || "Something went wrong. Please try again."
+  );
+  const separator = target.includes("?") ? "&" : "?";
+  return `${target}${separator}${key}=${encodedMessage}`;
+};
+
+const getCartFriendlyMessage = (error, fallback) => {
+  if (/^Maximum \d+ quantity/.test(error?.message || "")) {
+    return "Maximum quantity reached for this product.";
+  }
+
+  switch (error?.message) {
+    case "Product is unavailable":
+      return "This product is no longer available.";
+    case "Product is out of stock":
+      return "This product is currently out of stock.";
+    case "Cannot add more than available stock":
+    case "Cannot exceed available stock":
+      return "You cannot add more than the available stock.";
+    case "Cart not found":
+      return "Your cart could not be found. Please try again.";
+    case "Product not found in the cart":
+      return "This product is no longer in your cart.";
+    default:
+      return error?.message || fallback;
+  }
+};
 
 export const getCartController = async (req,res)=>{
   try{
@@ -18,7 +48,9 @@ export const getCartController = async (req,res)=>{
       cartItems,
       grandTotal,
       hasUnavailableItems,
-      canCheckout
+      canCheckout,
+      checkoutError: req.query.error || null,
+      cartMessage: req.query.message || null
     })
   }catch(error){
     console.log(error,'Get cart items error') 
@@ -26,7 +58,9 @@ export const getCartController = async (req,res)=>{
       cartItems:[],
       grandTotal:0,
       hasUnavailableItems:false,
-      canCheckout:false
+      canCheckout:false,
+      checkoutError: req.query.error || null,
+      cartMessage: req.query.message || null
     })
   }
 }
@@ -46,7 +80,18 @@ export const addToCartController = async (req,res)=>{
     if(!isExpectedCartError(error)){
       console.log(error,'Add to cart error')
     }
-    return res.redirect("/api/user/products")
+    const fallbackUrl = "/api/user/products";
+    const referer = req.get("referer");
+    const target = referer && referer.includes("/api/user/products/")
+      ? referer
+      : fallbackUrl;
+    return res.redirect(
+      buildRedirectWithMessage(
+        target,
+        getCartFriendlyMessage(error, "Unable to add this product to your cart."),
+        "message"
+      )
+    );
   }
 }
 export const removeFromCartController = async (req,res)=>{
@@ -60,10 +105,18 @@ export const removeFromCartController = async (req,res)=>{
       return res.redirect("/api/user/cart")
     }
     await removeFromCartService(userId, productId);
-    return res.redirect("/api/user/cart");
+    return res.redirect(
+      buildRedirectWithMessage("/api/user/cart", "Item removed from your cart.", "message")
+    );
   }catch(error){
    console.log(error,"Remove from cart error") 
-   return res.redirect("/api/user/cart");
+   return res.redirect(
+    buildRedirectWithMessage(
+      "/api/user/cart",
+      getCartFriendlyMessage(error, "Unable to remove this item right now."),
+      "message"
+    )
+   );
   }
 }
 export const updateCartQuantityController = async (req,res)=>{
@@ -83,6 +136,41 @@ export const updateCartQuantityController = async (req,res)=>{
     if(!isExpectedCartError(error)){
       console.log(error,'Update cart quantity error')
     }
-    return res.redirect("/api/user/cart")
+    return res.redirect(
+      buildRedirectWithMessage(
+        "/api/user/cart",
+        getCartFriendlyMessage(error, "Unable to update cart quantity right now."),
+        "message"
+      )
+    )
   }
 }
+
+export const checkoutCartController = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.redirect("/api/auth/login");
+    }
+
+    const userId = req.user._id;
+    const selectedProductIds = req.body.selectedProductIds || [];
+
+    const { checkoutItems, grandTotal } = await validateCartForCheckoutService(
+      userId,
+      selectedProductIds
+    );
+
+    return res.render("user/checkout", {
+      checkoutItems,
+      grandTotal
+    });
+  } catch (error) {
+    if (!isExpectedCartError(error)) {
+      console.log(error, "Checkout validation error");
+    }
+    const message = encodeURIComponent(
+      error?.message || "Unable to continue checkout. Please review your cart."
+    );
+    return res.redirect(`/api/user/cart?error=${message}`);
+  }
+};

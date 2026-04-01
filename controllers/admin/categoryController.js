@@ -1,5 +1,10 @@
-import { getCategoryService ,addCategoryService, editCategoryService, deleteCatrgoryService } from "../../services/categoryServices.js";
-
+import {
+  getCategoryService,
+  addCategoryService,
+  editCategoryService,
+  deleteCatrgoryService,
+  restoreCategoryService
+} from "../../services/categoryServices.js";
 const buildPaginationItems = (currentPage, totalPages) => {
   const startPage = Math.max(1, currentPage - 1);
   const endPage = Math.min(totalPages, currentPage + 1);
@@ -11,84 +16,113 @@ const buildPaginationItems = (currentPage, totalPages) => {
 
   return paginationItems;
 };
+export const getCategoryController = async (req, res) => {
+  try {
+    const search = req.query.search || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = 5;
+    const sort = req.query.sort || "newest";
 
-export const getCategoryController = async (req,res)=>{
-  try{
-      const search = req.query.search || "";
-      const page = parseInt(req.query.page) || 1;
-      const limit = 5;
-      const sort = req.query.sort || "newest"
+    const { categories, totalPages, totalCategories } =
+      await getCategoryService(search, page, limit, sort);
 
-      const {categories,totalPages,totalCategories} = await getCategoryService(search,page,limit,sort)
-
-      res.render("admin/category-management",{
-        categories: categories || [],
-        currentPage:page,
-        totalPages,
-        totalCategories,
-        paginationItems: buildPaginationItems(page, totalPages || 1),
-        search,
-        sort,
-        error:null
-      })
-
-  }catch(error){
-    console.log(error,'Get category controller error')
-  }
-}
-
-export const addCategoryController = async (req,res)=>{
-  try{
-    await addCategoryService(req.body)
-    res.redirect("/api/admin/category")
-  }catch(error){
-    const { categories, totalPages, totalCategories } = await getCategoryService("", 1, 5, "newest")
-    res.render('admin/category-management',{
+    res.render("admin/category-management", {
       categories: categories || [],
-      currentPage:1,
+      currentPage: page,
+      totalPages,
+      totalCategories,
+      paginationItems: buildPaginationItems(page, totalPages || 1),
+      search,
+      sort,
+      error: null,
+      restorePrompt: null 
+    });
+
+  } catch (error) {
+    console.log(error, "Get category controller error");
+  }
+};
+export const addCategoryController = async (req, res) => {
+  try {
+    await addCategoryService(req.body);
+    return res.redirect("/api/admin/category");
+
+  } catch (error) {
+    const { categories, totalPages, totalCategories } =
+      await getCategoryService("", 1, 5, "newest");
+
+    return res.render("admin/category-management", {
+      categories: categories || [],
+      currentPage: 1,
       totalPages,
       totalCategories,
       paginationItems: buildPaginationItems(1, totalPages || 1),
-      search:"",
-      sort:"newest",
-      error:error.message
-    })
-  }
-}
+      search: "",
+      sort: "newest",
 
-export const editCategoryController = async (req,res)=>{
-  try{
-    await editCategoryService(req.params.id,req.body);
-    res.redirect('/api/admin/category')
-  }catch(error){
-    const { categories, totalPages, totalCategories } = await getCategoryService("", 1, 5, "newest")
-    res.render('admin/category-management',{
+      error: error.code === "CATEGORY_SOFT_DELETED" ? null : error.message,
+
+      restorePrompt:
+        error.code === "CATEGORY_SOFT_DELETED"
+          ? {
+              id: error.categoryId,
+              name: error.categoryName
+            }
+          : null
+    });
+  }
+};
+export const editCategoryController = async (req, res) => {
+  try {
+    await editCategoryService(req.params.id, req.body);
+    return res.redirect("/api/admin/category");
+
+  } catch (error) {
+    const { categories, totalPages, totalCategories } =
+      await getCategoryService("", 1, 5, "newest");
+
+    return res.render("admin/category-management", {
       categories: categories || [],
-      currentPage:1,
+      currentPage: 1,
       totalPages,
       totalCategories,
       paginationItems: buildPaginationItems(1, totalPages || 1),
-      search:"",
-      sort:"newest",
-      error:error.message
-    })
+      search: "",
+      sort: "newest",
+      error: error.message,
+      restorePrompt: null
+    });
   }
-}
-export const softdeleteCategoryController = async (req,res)=>{
-  try{
-    await deleteCatrgoryService(req.params.id)
-    res.redirect('/api/admin/category')
-  }catch(error){
-    const { categories, totalPages, totalCategories } = await getCategoryService("", 1, 5, "newest")
-    return res.render("admin/category-management",{
+};
+export const softdeleteCategoryController = async (req, res) => {
+  try {
+    await deleteCatrgoryService(req.params.id);
+    return res.redirect("/api/admin/category");
+
+  } catch (error) {
+    const { categories, totalPages, totalCategories } =
+      await getCategoryService("", 1, 5, "newest");
+
+    return res.render("admin/category-management", {
       categories: categories || [],
-      currentPage:1,
+      currentPage: 1,
       totalPages,
       totalCategories,
       paginationItems: buildPaginationItems(1, totalPages || 1),
-      search:"",
-      sort:"newest",
-      error:error.message
-    })
+      search: "",
+      sort: "newest",
+      error: error.message,
+      restorePrompt: null 
+    });
   }
-}
+};
+
+export const restoreCategoryController = async (req, res) => {
+  try {
+    await restoreCategoryService(req.params.id);
+    return res.redirect("/api/admin/category");
+
+  } catch (error) {
+    return res.redirect("/api/admin/category");
+  }
+};

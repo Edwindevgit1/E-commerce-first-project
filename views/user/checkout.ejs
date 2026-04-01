@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout</title>
+  <link rel="stylesheet" href="/css/storefront-navbar.css" />
+  <link rel="stylesheet" href="/css/cart.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+</head>
+<body>
+  <%- include("partials/storefront-navbar") %>
+
+  <main class="shop-shell">
+    <section class="cart-shell">
+      <div class="cart-head">
+        <h1>Checkout</h1>
+        <p>Your selected items were revalidated successfully before checkout.</p>
+      </div>
+
+      <div class="cart-layout">
+        <div class="cart-list">
+          <% checkoutItems.forEach((item) => { %>
+            <article class="cart-item-card">
+              <div class="cart-item-image">
+                <img src="<%= item.productImage %>" alt="<%= item.productName %>" />
+              </div>
+
+              <div class="cart-item-copy">
+                <h3><%= item.productName %></h3>
+                <p><%= item.category %></p>
+                <span class="cart-item-price">₹<%= item.price %></span>
+                <span class="cart-item-meta">Qty: <%= item.quantity %></span>
+              </div>
+
+              <div class="cart-item-subtotal">
+                <strong>₹<%= item.subtotal %></strong>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+
+        <aside class="cart-summary">
+          <h2>Order Summary</h2>
+          <div class="cart-summary-row">
+            <span>Total</span>
+            <strong>₹<%= grandTotal %></strong>
+          </div>
+          <button type="button" class="cart-checkout-btn" disabled>
+            Order placement comes next
+          </button>
+        </aside>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

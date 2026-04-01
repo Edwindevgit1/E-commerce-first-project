@@ -511,3 +511,51 @@ body {
   justify-content: flex-end;
   flex-wrap: wrap;
 }
+
+.modal-card {
+  width: min(420px, calc(100% - 32px));
+  background: #fff;
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+}
+
+.modal-card h3 {
+  margin: 0 0 10px;
+}
+
+.modal-card p {
+  margin: 0 0 18px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.confirm-btn,
+.cancel-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 0;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.confirm-btn {
+  background: #0a2052;
+  color: #fff;
+}
+
+.cancel-btn {
+  background: #e2e8f0;
+  color: #111827;
+}

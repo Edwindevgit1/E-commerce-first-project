@@ -24,6 +24,10 @@
       <strong><%= product.productName %></strong>
     </nav>
 
+    <% if (pageMessage) { %>
+      <p class="detail-page-message"><%= pageMessage %></p>
+    <% } %>
+
     <section class="details-grid">
       <section class="detail-gallery">
         <div class="main-preview-frame">
@@ -92,9 +96,18 @@
       <section class="detail-info-card">
         <div class="detail-info-header">
           <h1><%= product.productName %></h1>
-          <form action="/api/user/wishlist/add/<%= product._id %>" method="POST" class="wishlist-form">
-            <button type="submit" class="wishlist-btn" aria-label="Add to wishlist">♡</button>
-          </form>
+          <% if (!isInCart) { %>
+            <form action="/api/user/wishlist/add/<%= product._id %>" method="POST" class="wishlist-form">
+              <button
+                type="submit"
+                class="wishlist-btn"
+                aria-label="Add to wishlist"
+                title="Add to wishlist"
+              >
+                ♡
+              </button>
+            </form>
+          <% } %>
         </div>
 
         <div class="price-box">
@@ -124,7 +137,13 @@
         </div>
 
         <div class="stock-box">
-          <% if (availabilityState === "sold_out") { %>
+          <% if (availabilityState === "product_inactive") { %>
+            <span class="danger-text">Temporarily unavailable</span>
+          <% } else if (availabilityState === "category_deleted") { %>
+            <span class="danger-text">Unavailable</span>
+          <% } else if (availabilityState === "category_inactive") { %>
+            <span class="danger-text">Temporarily unavailable</span>
+          <% } else if (availabilityState === "sold_out") { %>
             <span class="danger-text">Sold out</span>
           <% } else if (availabilityState === "variant_unavailable") { %>
             <span class="danger-text">Unavailable options</span>
@@ -167,10 +186,26 @@
         <div class="detail-action-row">
           <form action="/api/user/cart/add/<%= product._id %>" method="POST">
             <button class="cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
-              <%= availabilityState === "sold_out" ? "Sold out" : availabilityState === "variant_unavailable" ? "Unavailable" : "Add to cart" %>
+              <%= availabilityState === "product_inactive"
+                ? "Temporarily unavailable"
+                : availabilityState === "category_deleted"
+                ? "Unavailable"
+                : availabilityState === "category_inactive"
+                ? "Temporarily unavailable"
+                : availabilityState === "sold_out"
+                ? "Sold out"
+                : availabilityState === "variant_unavailable"
+                ? "Unavailable"
+                : "Add to cart" %>
             </button>
           </form>
-          <a href="/api/user/cart" class="cart-btn detail-cart-link">Buy now</a>
+          <a
+            href="<%= canAddToCart ? '/api/user/cart' : '#' %>"
+            class="cart-btn detail-cart-link <%= !canAddToCart ? 'cart-btn--disabled-link' : '' %>"
+            <%= !canAddToCart ? 'aria-disabled="true"' : '' %>
+          >
+            Buy now
+          </a>
         </div>
       </section>
     </section>

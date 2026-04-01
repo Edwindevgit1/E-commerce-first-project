@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product Unavailable</title>
+
+  <link rel="stylesheet" href="/css/storefront-navbar.css" />
+  <link rel="stylesheet" href="/css/user-products.css" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+</head>
+<body>
+
+  <%- include("partials/storefront-navbar") %>
+
+  <main class="shop-shell">
+    <section class="product-unavailable-shell">
+      <div class="product-unavailable-card">
+        <h1>Product Unavailable</h1>
+        <p><%= message || "This product is unavailable." %></p>
+        <a href="/api/user/products" class="cart-link-btn">Continue Shopping</a>
+      </div>
+    </section>
+  </main>
+
+</body>
+</html>

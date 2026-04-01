@@ -1,11 +1,6 @@
 import Product from "../models/Product.js";
 import Category from "../models/Category.js";
 
-
-/* ==============================
-   HELPER
-================================ */
-
 const parseListField = (value) => {
   if (Array.isArray(value)) {
     return value.map((item) => String(item).trim()).filter(Boolean);
@@ -20,6 +15,9 @@ const parseListField = (value) => {
 
   return [];
 };
+
+const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const normalizeSearchTerm = (value = "") => String(value).trim().replace(/\s+/g, " ");
 
 const normalizeOfferPrice = (value, basePrice) => {
   const parsedValue = Number(value);
@@ -65,18 +63,19 @@ const resolveMainImageIndex = ({ mainImageKey, images, remainingImages, uploaded
   return 0;
 };
 
-
-/* ==============================
-   GET PRODUCTS
-================================ */
-
 export const getProductService = async (search, category, status, page = 1, limit = 10) => {
 
-  const query = { isDeleted: false };
+  const query = {};
+  const normalizedSearch = normalizeSearchTerm(search);
 
-  if (search) {
+  if (normalizedSearch) {
+    const searchPattern = normalizedSearch
+      .split(" ")
+      .map((term) => escapeRegex(term))
+      .join("\\s+");
+
     query.productName = {
-      $regex: search,
+      $regex: searchPattern,
       $options: "i"
     };
   }
@@ -85,7 +84,10 @@ export const getProductService = async (search, category, status, page = 1, limi
     query.category = category;
   }
 
-  if (status) {
+  if (status === "soft_deleted") {
+    query.isDeleted = true;
+  } else if (status) {
+    query.isDeleted = false;
     query.status = status;
   }
 
@@ -113,11 +115,6 @@ export const getProductService = async (search, category, status, page = 1, limi
 
 };
 
-
-/* ==============================
-   ADD PRODUCT
-================================ */
-
 export const addProductService = async (data) => {
 
   const {
@@ -142,12 +139,36 @@ export const addProductService = async (data) => {
     throw new Error("Required fields missing");
   }
 
+  const normalizedProductName = String(productName).trim();
+
+  const existingActive = await Product.findOne({
+    productName: { $regex: `^${escapeRegex(normalizedProductName)}$`, $options: "i" },
+    isDeleted: false
+  });
+
+  if (existingActive) {
+    throw new Error("Product already exists");
+  }
+
+  const existingDeleted = await Product.findOne({
+    productName: { $regex: `^${escapeRegex(normalizedProductName)}$`, $options: "i" },
+    isDeleted: true
+  });
+
+  if (existingDeleted) {
+    const error = new Error("Product exists in deleted state");
+    error.code = "PRODUCT_SOFT_DELETED";
+    error.productId = existingDeleted._id.toString();
+    error.productName = existingDeleted.productName;
+    throw error;
+  }
+
   if (!images || images.length < 3) {
     throw new Error("Minimum 3 images required");
   }
 
   const product = new Product({
-    productName,
+    productName: normalizedProductName,
     category,
     price,
     stock,
@@ -173,11 +194,6 @@ export const addProductService = async (data) => {
 
 };
 
-
-/* ==============================
-   GET PRODUCT BY ID
-================================ */
-
 export const getProductByIdService = async (id) => {
 
   const product = await Product
@@ -192,11 +208,6 @@ export const getProductByIdService = async (id) => {
 
 };
 
-
-/* ==============================
-   EDIT PRODUCT
-================================ */
-
 export const editProductService = async (id, data) => {
 
   const product = await Product.findById(id);
@@ -204,8 +215,6 @@ export const editProductService = async (id, data) => {
   if (!product || product.isDeleted) {
     throw new Error("Product not found");
   }
-
-  /* ===== BASIC FIELD UPDATES ===== */
 
   if (data.productName) product.productName = data.productName;
   if (data.category) product.category = data.category;
@@ -237,13 +246,12 @@ export const editProductService = async (id, data) => {
 
   const updatedImages = [...remainingImages, ...uploadedImages];
 
-  /* enforce minimum images */
+  
 
   if (updatedImages.length < 3) {
     throw new Error("Minimum 3 images required");
   }
 
-  /* ===== MAIN IMAGE INDEX HANDLING ===== */
 
   product.mainImageIndex = resolveMainImageIndex({
     mainImageKey: data.mainImageKey,
@@ -263,10 +271,6 @@ export const editProductService = async (id, data) => {
 };
 
 
-/* ==============================
-   SOFT DELETE PRODUCT
-================================ */
-
 export const deleteProductService = async (id) => {
 
   const product = await Product.findById(id);
@@ -279,4 +283,27 @@ export const deleteProductService = async (id) => {
 
   return await product.save();
 
+};
+
+export const restoreProductService = async (id) => {
+  const product = await Product.findById(id);
+
+  if (!product) {
+    throw new Error("Product not found");
+  }
+
+  product.isDeleted = false;
+  product.status = "active";
+
+  return await product.save();
+};
+
+export const permanentDeleteProductService = async (id) => {
+  const product = await Product.findById(id);
+
+  if (!product) {
+    throw new Error("Product not found");
+  }
+
+  await Product.findByIdAndDelete(id);
 };

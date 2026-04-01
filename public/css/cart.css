@@ -30,6 +30,18 @@ body {
   font-size: 12px;
 }
 
+.cart-page-message {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(10, 32, 82, 0.08);
+  border: 1px solid rgba(10, 32, 82, 0.14);
+  color: #0a2052;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 .cart-empty {
   margin-top: 18px;
   display: grid;
@@ -227,6 +239,7 @@ body {
   font-size: 11px;
   font-weight: 700;
 }
+
 
 .remove-cart-btn {
   margin-top: 6px;

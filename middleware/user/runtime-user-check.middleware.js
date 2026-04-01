@@ -1,6 +1,14 @@
 import User from "../../models/User.js";
 
+const isPublicUserPage = (path = "") =>
+  path === "/api/auth/home" ||
+  path === "/api/user/products" ||
+  /^\/api\/user\/products\/[^/]+$/.test(path);
+
 const runtimeUserCheck = async (req, res, next) => {
+  const currentPath = (req.originalUrl || req.path || "").split("?")[0];
+  const isPublicPage = isPublicUserPage(currentPath);
+
   try {
     const sessionUser = req.session?.user;
 
@@ -12,7 +20,14 @@ const runtimeUserCheck = async (req, res, next) => {
 
     if (!user || user.isBlocked) {
       req.session.user = null;
+      if (isPublicPage) {
+        return next();
+      }
       return res.redirect("/api/auth/login");
+    }
+
+    if (isPublicPage) {
+      return next();
     }
 
     if (!req.user) {
@@ -30,6 +45,9 @@ const runtimeUserCheck = async (req, res, next) => {
   } catch (error) {
     console.log("Runtime user check error:", error);
     req.session.user = null;
+    if (isPublicPage) {
+      return next();
+    }
     return res.redirect("/api/auth/login");
   }
 };

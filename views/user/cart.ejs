@@ -23,6 +23,10 @@
         <p>Review the products you added before checkout.</p>
       </div>
 
+      <% if (cartMessage) { %>
+        <p class="cart-page-message" id="cartPageMessage"><%= cartMessage %></p>
+      <% } %>
+
       <% if (!cartItems.length) { %>
         <div class="cart-empty">
           <p>Your cart is empty.</p>
@@ -40,6 +44,7 @@
               <article
                 class="cart-item-card"
                 data-cart-item
+                data-product-id="<%= item.productId %>"
                 data-subtotal="<%= item.subtotal %>"
                 data-available="<%= item.isAvailable ? '1' : '0' %>"
               >
@@ -64,7 +69,11 @@
                   <% } %>
 
                   <% if (!item.isAvailable) { %>
-                    <span class="cart-item-warning">Currently unavailable</span>
+                    <span class="cart-item-warning"><%= item.availabilityMessage || "Currently unavailable" %></span>
+                  <% } else if (item.quantity >= 5) { %>
+                    <span class="cart-item-warning">Maximum quantity reached</span>
+                  <% } else if (item.quantity >= item.stock) { %>
+                    <span class="cart-item-warning">Only <%= item.stock %> in stock</span>
                   <% } %>
                 </div>
 
@@ -86,7 +95,7 @@
                     <button
                       type="submit"
                       class="qty-btn"
-                      <%= item.quantity >= item.stock || !item.isAvailable ? "disabled" : "" %>
+                      <%= item.quantity >= item.stock || item.quantity >= 5 || !item.isAvailable ? "disabled" : "" %>
                     >
                       +
                     </button>
@@ -123,18 +132,25 @@
               </p>
             <% } %>
 
+            <% if (checkoutError) { %>
+              <p class="cart-checkout-warning"><%= checkoutError %></p>
+            <% } %>
+
             <p class="cart-checkout-warning cart-selection-warning" id="cartSelectionWarning" hidden>
               Select at least one available item to continue checkout.
             </p>
 
-            <button
-              type="button"
-              id="cartCheckoutButton"
-              class="cart-checkout-btn"
-              <%= !canCheckout ? "disabled" : "" %>
-            >
-              Checkout Selected Items
-            </button>
+            <form action="/api/user/cart/checkout" method="POST" id="cartCheckoutForm">
+              <div id="selectedProductInputs"></div>
+              <button
+                type="submit"
+                id="cartCheckoutButton"
+                class="cart-checkout-btn"
+                <%= !canCheckout ? "disabled" : "" %>
+              >
+                Checkout Selected Items
+              </button>
+            </form>
           </aside>
         </div>
       <% } %>
@@ -157,11 +173,13 @@
     });
 
     const cartItemCards = Array.from(document.querySelectorAll("[data-cart-item]"));
+    const cartPageMessage = document.getElementById("cartPageMessage");
     const selectAllCartItems = document.getElementById("selectAllCartItems");
     const selectedItemCount = document.getElementById("selectedItemCount");
     const selectedGrandTotal = document.getElementById("selectedGrandTotal");
     const cartCheckoutButton = document.getElementById("cartCheckoutButton");
     const cartSelectionWarning = document.getElementById("cartSelectionWarning");
+    const selectedProductInputs = document.getElementById("selectedProductInputs");
 
     const syncCartSelection = () => {
       if (!cartItemCards.length) return;
@@ -174,6 +192,18 @@
         const checkbox = card.querySelector(".cart-item-checkbox");
         return checkbox && checkbox.checked && !checkbox.disabled;
       });
+
+      if (selectedProductInputs) {
+        selectedProductInputs.innerHTML = checkedCards
+          .map((card) => {
+            const productId = card.dataset.productId;
+
+            if (!productId) return "";
+
+            return `<input type="hidden" name="selectedProductIds" value="${productId}">`;
+          })
+          .join("");
+      }
 
       const total = checkedCards.reduce((sum, card) => {
         return sum + Number(card.dataset.subtotal || 0);
@@ -223,6 +253,16 @@
     });
 
     syncCartSelection();
+
+    if (cartPageMessage) {
+      window.setTimeout(() => {
+        cartPageMessage.remove();
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete("message");
+        window.history.replaceState({}, "", url.pathname + url.search);
+      }, 3000);
+    }
   </script>
 </body>
 </html>

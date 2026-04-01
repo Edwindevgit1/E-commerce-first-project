@@ -127,6 +127,10 @@ Active
 Inactive
 </option>
 
+<option value="soft_deleted" <%= selectedStatus === "soft_deleted" ? "selected" : "" %>>
+Soft Deleted
+</option>
+
 </select>
 
 <button type="submit" class="btn btn-dark">
@@ -174,8 +178,13 @@ No products found yet.
 <% } else { %>
 
 <% products.forEach((product,index)=>{ %>
+<% const categoryInactive = product.category && product.category.status !== "active"; %>
+<% const categoryDeleted = !product.category || product.category.isDeleted; %>
+<% const isSoftDeleted = product.isDeleted === true; %>
+<% const productInactive = product.status !== "active"; %>
+<% const productUnavailable = isSoftDeleted || productInactive || categoryInactive || categoryDeleted; %>
 
-<tr>
+<tr class="<%= productUnavailable ? 'product-row--unavailable' : '' %>">
 
 <td>
 <%= ((currentPage - 1) * (limit || 10)) + index + 1 %>
@@ -215,7 +224,14 @@ class="product-thumb"
 
 
 <td>
-<%= product.category?.name || "--" %>
+<div class="product-category-cell">
+<strong><%= product.category?.name || "--" %></strong>
+<% if (categoryDeleted) { %>
+<span class="category-availability-note">Category deleted</span>
+<% } else if (categoryInactive) { %>
+<span class="category-availability-note">Category inactive</span>
+<% } %>
+</div>
 </td>
 
 
@@ -230,13 +246,16 @@ class="product-thumb"
 
 
 <td>
-
-<span class="status-badge <%= product.status === 'active' ? 'active' : 'inactive' %>">
-
-<%= product.status %>
-
+<div class="status-stack">
+<span class="status-badge <%= isSoftDeleted ? 'soft-deleted' : product.status === 'active' ? 'active' : 'inactive' %>">
+<%= isSoftDeleted ? 'soft deleted' : product.status %>
 </span>
-
+<% if (!isSoftDeleted && !productInactive && categoryDeleted) { %>
+<span class="status-badge category-warning">Unavailable</span>
+<% } else if (!isSoftDeleted && !productInactive && categoryInactive) { %>
+<span class="status-badge category-warning">Temporarily unavailable</span>
+<% } %>
+</div>
 </td>
 
 
@@ -244,6 +263,17 @@ class="product-thumb"
 
 <div class="action-row">
 
+<% if (isSoftDeleted) { %>
+<button
+type="button"
+class="btn btn-dark open-restore-action-modal"
+data-id="<%= product._id %>"
+data-name="<%= product.productName %>"
+title="Make Active Again"
+>
+Restore
+</button>
+<% } else { %>
 <a
 href="/api/admin/edit-product/<%= product._id %>"
 class="icon-btn edit-btn"
@@ -251,13 +281,14 @@ title="Edit"
 >
 ✏
 </a>
+<% } %>
 
 <button
 type="button"
 class="icon-btn delete-btn open-delete-modal"
 data-id="<%= product._id %>"
 data-name="<%= product.productName %>"
-title="Soft Delete"
+title="Delete Options"
 >
 🗑
 </button>
@@ -313,16 +344,59 @@ href="/api/admin/products?page=<%= currentPage + 1 %><%= search ? '&search=' + e
 </section>
 </main>
 
+<% if (restorePrompt) { %>
+<div class="modal-backdrop show" id="restoreProductModal">
+  <div class="modal-box">
+    <h3>Restore Product?</h3>
+    <p>
+      The product "<%= restorePrompt.name %>" was deleted previously.
+      Do you want to make it available again?
+    </p>
+
+    <div class="modal-actions">
+      <form action="/api/admin/restore-product/<%= restorePrompt.id %>" method="POST">
+        <button type="submit" class="btn btn-dark">Yes, Restore</button>
+      </form>
+
+      <a href="/api/admin/products" class="btn btn-light">Cancel</a>
+    </div>
+  </div>
+</div>
+<% } %>
+
+
+<div class="modal-backdrop" id="restoreActionModal">
+  <div class="modal-box">
+    <h3>Restore Product</h3>
+
+    <p id="restoreActionText">
+      Are you sure you want to restore this product?
+    </p>
+
+    <form id="restoreActionForm" method="POST">
+      <div class="modal-actions">
+        <button type="button" class="btn btn-light close-restore-action-modal">
+          Cancel
+        </button>
+
+        <button type="submit" class="btn btn-dark">
+          Yes, Restore
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 
 
 <div class="modal-backdrop" id="deleteModal">
 
 <div class="modal-box">
 
-<h3>Soft Delete Product</h3>
+<h3>Delete Product</h3>
 
 <p id="deleteProductText">
-Are you sure you want to soft delete this product?
+Choose how you want to remove this product.
 </p>
 
 <form id="deleteProductForm" method="POST">
@@ -333,8 +407,12 @@ Are you sure you want to soft delete this product?
 Cancel
 </button>
 
-<button type="submit" class="btn btn-danger">
-OK, Delete
+<button type="submit" class="btn btn-light" id="softDeleteProductButton">
+Soft Delete
+</button>
+
+<button type="submit" class="btn btn-danger" id="permanentDeleteProductButton">
+Permanent Delete
 </button>
 
 </div>
@@ -349,11 +427,61 @@ OK, Delete
 
 <script>
 
+window.addEventListener("pageshow", function (event) {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
 const deleteModal=document.getElementById("deleteModal");
 
 const deleteProductForm=document.getElementById("deleteProductForm");
 
 const deleteProductText=document.getElementById("deleteProductText");
+const restoreActionModal = document.getElementById("restoreActionModal");
+const restoreActionForm = document.getElementById("restoreActionForm");
+const restoreActionText = document.getElementById("restoreActionText");
+
+
+
+document.querySelectorAll(".open-restore-action-modal").forEach(button=>{
+
+button.addEventListener("click",()=>{
+
+restoreActionForm.action=`/api/admin/restore-product/${button.dataset.id}`;
+
+restoreActionText.textContent=
+`Are you sure you want to restore "${button.dataset.name}"?`;
+
+restoreActionModal.classList.add("show");
+
+});
+
+});
+
+
+
+document.querySelectorAll(".close-restore-action-modal").forEach(button=>{
+
+button.addEventListener("click",()=>{
+
+restoreActionModal.classList.remove("show");
+
+});
+
+});
+
+
+
+restoreActionModal?.addEventListener("click",(event)=>{
+
+if(event.target===restoreActionModal){
+
+restoreActionModal.classList.remove("show");
+
+}
+
+});
 
 
 
@@ -361,10 +489,11 @@ document.querySelectorAll(".open-delete-modal").forEach(button=>{
 
 button.addEventListener("click",()=>{
 
+deleteProductForm.dataset.productId = button.dataset.id;
 deleteProductForm.action=`/api/admin/delete-product/${button.dataset.id}`;
 
 deleteProductText.textContent=
-`Are you sure you want to soft delete "${button.dataset.name}"?`;
+`Choose whether to soft delete or permanently delete "${button.dataset.name}".`;
 
 deleteModal.classList.add("show");
 
@@ -391,6 +520,33 @@ deleteModal.addEventListener("click",(event)=>{
 if(event.target===deleteModal){
 
 deleteModal.classList.remove("show");
+
+}
+
+});
+
+const softDeleteProductButton = document.getElementById("softDeleteProductButton");
+const permanentDeleteProductButton = document.getElementById("permanentDeleteProductButton");
+
+softDeleteProductButton?.addEventListener("click", () => {
+  const action = deleteProductForm.dataset.productId;
+  if (!action) return;
+  deleteProductForm.action = `/api/admin/delete-product/${action}`;
+});
+
+permanentDeleteProductButton?.addEventListener("click", () => {
+  const action = deleteProductForm.dataset.productId;
+  if (!action) return;
+  deleteProductForm.action = `/api/admin/permanent-delete-product/${action}`;
+});
+
+const restoreProductModal = document.getElementById("restoreProductModal");
+
+restoreProductModal?.addEventListener("click",(event)=>{
+
+if(event.target===restoreProductModal){
+
+window.location.href="/api/admin/products";
 
 }
 
