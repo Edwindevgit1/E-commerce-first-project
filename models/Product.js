@@ -12,7 +12,18 @@ const variantSchema = new mongoose.Schema(
   {
     size: { type: String, required: true },
     color: { type: String, required: true },
-    stock: { type: Number, required: true, min: 0 }
+    price: { type: Number, required: true, min: 0 },
+    offerPrice: { type: Number, default: 0, min: 0 },
+    stock: { type: Number, required: true, min: 0 },
+    images: {
+      type: [String],
+      default: [],
+      validate: [arr => arr.length >= 3, "Each variant needs at least 3 images"]
+    },
+    mainImageIndex: {
+      type: Number,
+      default: 0
+    }
   },
   { _id: false }
 );

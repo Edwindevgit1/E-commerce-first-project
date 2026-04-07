@@ -4,6 +4,7 @@ import {
   addToCartController,
   removeFromCartController,
   updateCartQuantityController,
+  updateCartQuantityAjaxController,
   checkoutCartController,
   placeOrderController
 } from "../../controllers/user/cartController.js";
@@ -15,6 +16,7 @@ router.get("/cart",noCache,getCartController)
 router.post("/cart/add/:productId",addToCartController);
 router.post("/cart/remove/:productId",removeFromCartController)
 router.post("/cart/update/:productId",updateCartQuantityController)
+router.post("/cart/update-ajax/:productId",updateCartQuantityAjaxController)
 router.post("/cart/checkout", checkoutCartController)
 router.post("/cart/place-order", placeOrderController);
 

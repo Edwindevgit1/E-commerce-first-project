@@ -13,6 +13,12 @@
     />
   </head>
   <body>
+    <%
+      const addFieldErrors = validationErrors || {};
+      const addFormData = formData || {};
+      const editFieldErrors = editValidationErrors || {};
+      const editData = editFormData || null;
+    %>
     <main class="neo-scene">
       <section class="neo-card">
         <header class="top-strip">
@@ -65,15 +71,22 @@
                   type="text"
                   name="name"
                   placeholder="Running Shoes"
+                  value="<%= addFormData.name || '' %>"
                 />
+                <% if (addFieldErrors.name) { %>
+                  <small class="feedback error" data-inline-error="add-name"><%= addFieldErrors.name %></small>
+                <% } %>
               </label>
 
               <label class="field">
                 <span>Status</span>
                 <select name="status">
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="active" <%= addFormData.status === "active" || !addFormData.status ? "selected" : "" %>>Active</option>
+                  <option value="inactive" <%= addFormData.status === "inactive" ? "selected" : "" %>>Inactive</option>
                 </select>
+                <% if (addFieldErrors.status) { %>
+                  <small class="feedback error" data-inline-error="add-status"><%= addFieldErrors.status %></small>
+                <% } %>
               </label>
 
               <label class="field">
@@ -82,7 +95,10 @@
                   name="description"
                   rows="4"
                   placeholder="Short description for this category"
-                ></textarea>
+                ><%= addFormData.description || "" %></textarea>
+                <% if (addFieldErrors.description) { %>
+                  <small class="feedback error" data-inline-error="add-description"><%= addFieldErrors.description %></small>
+                <% } %>
               </label>
 
               <label class="field">
@@ -93,7 +109,11 @@
                   min="0"
                   max="90"
                   placeholder="10"
+                  value="<%= addFormData.offerPercentage ?? '' %>"
                 />
+                <% if (addFieldErrors.offerPercentage) { %>
+                  <small class="feedback error" data-inline-error="add-offerPercentage"><%= addFieldErrors.offerPercentage %></small>
+                <% } %>
               </label>
 
               <div class="form-actions">
@@ -278,28 +298,40 @@
       <div class="modal-box">
         <h3>Edit Category</h3>
 
-        <form id="editCategoryForm" method="POST" class="category-form modal-form">
+        <form id="editCategoryForm" method="POST" class="category-form modal-form" novalidate>
           <label class="field">
             <span>Name</span>
-            <input type="text" name="name" id="editCategoryName" required />
+            <input type="text" name="name" id="editCategoryName" value="<%= editData?.name || '' %>" />
+            <% if (editFieldErrors.name) { %>
+              <small class="feedback error" data-inline-error="edit-name"><%= editFieldErrors.name %></small>
+            <% } %>
           </label>
 
           <label class="field">
             <span>Status</span>
             <select name="status" id="editCategoryStatus">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="active" <%= editData?.status === "active" || !editData?.status ? "selected" : "" %>>Active</option>
+              <option value="inactive" <%= editData?.status === "inactive" ? "selected" : "" %>>Inactive</option>
             </select>
+            <% if (editFieldErrors.status) { %>
+              <small class="feedback error" data-inline-error="edit-status"><%= editFieldErrors.status %></small>
+            <% } %>
           </label>
 
           <label class="field">
             <span>Description</span>
-            <textarea name="description" id="editCategoryDescription" rows="4"></textarea>
+            <textarea name="description" id="editCategoryDescription" rows="4"><%= editData?.description || "" %></textarea>
+            <% if (editFieldErrors.description) { %>
+              <small class="feedback error" data-inline-error="edit-description"><%= editFieldErrors.description %></small>
+            <% } %>
           </label>
 
           <label class="field">
             <span>Category Offer (%)</span>
-            <input type="number" name="offerPercentage" id="editCategoryOfferPercentage" min="0" max="90" />
+            <input type="number" name="offerPercentage" id="editCategoryOfferPercentage" min="0" max="90" value="<%= editData?.offerPercentage ?? '' %>" />
+            <% if (editFieldErrors.offerPercentage) { %>
+              <small class="feedback error" data-inline-error="edit-offerPercentage"><%= editFieldErrors.offerPercentage %></small>
+            <% } %>
           </label>
 
           <div class="modal-actions">
@@ -364,6 +396,7 @@
       const permanentDeleteCategoryButton = document.getElementById("permanentDeleteCategoryButton");
       const restoreActionForm = document.getElementById("restoreActionForm");
       const restoreActionText = document.getElementById("restoreActionText");
+      const editFormData = <%- JSON.stringify(editData || null).replace(/</g, "\\u003c") %>;
 
       document.querySelectorAll(".open-edit-modal").forEach((button) => {
         button.addEventListener("click", () => {
@@ -477,6 +510,17 @@
           messageNode.style.display = "none";
         }, 3000);
       });
+
+      document.querySelectorAll("[data-inline-error]").forEach((messageNode) => {
+        setTimeout(() => {
+          messageNode.remove();
+        }, 3000);
+      });
+
+      if (editFormData?.id) {
+        editCategoryForm.action = `/api/admin/edit-category/${editFormData.id}`;
+        editModal.classList.add("show");
+      }
     </script>
   </body>
 </html>

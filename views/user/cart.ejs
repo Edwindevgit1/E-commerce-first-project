@@ -78,24 +78,26 @@
                 </div>
 
                 <div class="cart-item-actions">
-                  <form action="/api/user/cart/update/<%= item.productId %>" method="POST" class="cart-qty-form">
-                    <input type="hidden" name="action" value="decrement" />
+                  <form action="/api/user/cart/update/<%= item.productId %>" method="POST" class="cart-qty-form" data-cart-qty-form>
+                    <input type="hidden" name="cartAction" value="decrement" />
                     <button
-                      type="submit"
+                      type="button"
                       class="qty-btn"
+                      data-qty-button="decrement"
                       <%= item.disableDecrement ? "disabled" : "" %>
                     >
                       -
                     </button>
                   </form>
 
-                  <span class="cart-qty-value"><%= item.quantity %></span>
+                  <span class="cart-qty-value" data-cart-quantity><%= item.quantity %></span>
 
-                  <form action="/api/user/cart/update/<%= item.productId %>" method="POST" class="cart-qty-form">
-                    <input type="hidden" name="action" value="increment" />
+                  <form action="/api/user/cart/update/<%= item.productId %>" method="POST" class="cart-qty-form" data-cart-qty-form>
+                    <input type="hidden" name="cartAction" value="increment" />
                     <button
-                      type="submit"
+                      type="button"
                       class="qty-btn"
+                      data-qty-button="increment"
                       <%= item.quantity >= item.stock || item.quantity >= 5 || !item.isAvailable ? "disabled" : "" %>
                     >
                       +
@@ -104,7 +106,7 @@
                 </div>
 
                 <div class="cart-item-subtotal">
-                  <strong>₹<%= item.subtotal %></strong>
+                  <strong data-cart-subtotal>₹<%= item.subtotal %></strong>
 
                   <form action="/api/user/cart/remove/<%= item.productId %>" method="POST">
                     <button type="submit" class="remove-cart-btn">Remove</button>
@@ -173,14 +175,34 @@
       window.location.replace("/api/auth/home");
     });
 
-    const cartItemCards = Array.from(document.querySelectorAll("[data-cart-item]"));
-    const cartPageMessage = document.getElementById("cartPageMessage");
-    const selectAllCartItems = document.getElementById("selectAllCartItems");
-    const selectedItemCount = document.getElementById("selectedItemCount");
-    const selectedGrandTotal = document.getElementById("selectedGrandTotal");
-    const cartCheckoutButton = document.getElementById("cartCheckoutButton");
-    const cartSelectionWarning = document.getElementById("cartSelectionWarning");
-    const selectedProductInputs = document.getElementById("selectedProductInputs");
+    let cartItemCards = Array.from(document.querySelectorAll("[data-cart-item]"));
+    let cartPageMessage = document.getElementById("cartPageMessage");
+    let selectAllCartItems = document.getElementById("selectAllCartItems");
+    let selectedItemCount = document.getElementById("selectedItemCount");
+    let selectedGrandTotal = document.getElementById("selectedGrandTotal");
+    let cartCheckoutButton = document.getElementById("cartCheckoutButton");
+    let cartSelectionWarning = document.getElementById("cartSelectionWarning");
+    let selectedProductInputs = document.getElementById("selectedProductInputs");
+    const cartShell = document.querySelector(".cart-shell");
+    const cartLayout = document.querySelector(".cart-layout");
+
+    const refreshCartDomReferences = () => {
+      cartItemCards = Array.from(document.querySelectorAll("[data-cart-item]"));
+      cartPageMessage = document.getElementById("cartPageMessage");
+      selectAllCartItems = document.getElementById("selectAllCartItems");
+      selectedItemCount = document.getElementById("selectedItemCount");
+      selectedGrandTotal = document.getElementById("selectedGrandTotal");
+      cartCheckoutButton = document.getElementById("cartCheckoutButton");
+      cartSelectionWarning = document.getElementById("cartSelectionWarning");
+      selectedProductInputs = document.getElementById("selectedProductInputs");
+    };
+
+    const escapeHtml = (value) =>
+      String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
 
     const syncCartSelection = () => {
       if (!cartItemCards.length) return;
@@ -235,24 +257,291 @@
       }
     };
 
-    cartItemCards.forEach((card) => {
-      const checkbox = card.querySelector(".cart-item-checkbox");
-      if (checkbox) {
-        checkbox.addEventListener("change", syncCartSelection);
+    const getSelectedProductIds = () =>
+      cartItemCards
+        .filter((card) => {
+          const checkbox = card.querySelector(".cart-item-checkbox");
+          return checkbox && checkbox.checked && !checkbox.disabled;
+        })
+        .map((card) => card.dataset.productId);
+
+    const ensureCartMessage = () => {
+      let messageNode = document.getElementById("cartPageMessage");
+
+      if (!messageNode) {
+        messageNode = document.createElement("p");
+        messageNode.className = "cart-page-message";
+        messageNode.id = "cartPageMessage";
+        document.querySelector(".cart-head")?.insertAdjacentElement("afterend", messageNode);
+        cartPageMessage = messageNode;
+      }
+
+      return messageNode;
+    };
+
+    const showCartMessage = (message) => {
+      if (!message) return;
+      const messageNode = ensureCartMessage();
+      messageNode.textContent = message;
+
+      window.clearTimeout(window.cartMessageTimeout);
+      window.cartMessageTimeout = window.setTimeout(() => {
+        messageNode.remove();
+      }, 3000);
+    };
+
+    const getWarningText = (item) => {
+      if (!item.isAvailable) {
+        return item.availabilityMessage || "Currently unavailable";
+      }
+
+      if (item.quantity >= 5) {
+        return "Maximum quantity reached";
+      }
+
+      if (item.quantity >= item.stock) {
+        return `Only ${item.stock} in stock`;
+      }
+
+      return "";
+    };
+
+    const renderEmptyCart = () => {
+      if (!cartShell) return;
+      cartShell.innerHTML = `
+        <div class="cart-head">
+          <h1>Your Cart</h1>
+          <p>Review the products you added before checkout.</p>
+        </div>
+        <div class="cart-empty">
+          <p>Your cart is empty.</p>
+          <a href="/api/user/products" class="cart-link-btn">Continue Shopping</a>
+        </div>
+      `;
+    };
+
+    const renderCartItem = (item, selectedProductIds) => {
+      const warningText = getWarningText(item);
+      const isChecked = item.isAvailable && selectedProductIds.has(String(item.productId));
+
+      return `
+        <article
+          class="cart-item-card"
+          data-cart-item
+          data-product-id="${escapeHtml(item.productId)}"
+          data-subtotal="${escapeHtml(item.subtotal)}"
+          data-available="${item.isAvailable ? "1" : "0"}"
+        >
+          <div class="cart-item-check">
+            <input
+              type="checkbox"
+              class="cart-item-checkbox"
+              ${isChecked ? "checked" : ""}
+              ${item.isAvailable ? "" : "disabled"}
+            />
+          </div>
+
+          <div class="cart-item-image">
+            <img src="${escapeHtml(item.productImage)}" alt="${escapeHtml(item.productName)}" />
+          </div>
+
+          <div class="cart-item-copy">
+            <h3>${escapeHtml(item.productName)}</h3>
+            <p>${escapeHtml(item.category)}</p>
+            <span class="cart-item-price">₹${escapeHtml(item.price)}</span>
+            ${item.hasDiscount ? `<span class="cart-item-old-price">₹${escapeHtml(item.originalPrice)}</span>` : ""}
+            ${warningText ? `<span class="cart-item-warning">${escapeHtml(warningText)}</span>` : ""}
+          </div>
+
+          <div class="cart-item-actions">
+            <form action="/api/user/cart/update/${escapeHtml(item.productId)}" method="POST" class="cart-qty-form" data-cart-qty-form>
+              <input type="hidden" name="cartAction" value="decrement" />
+              <button
+                type="button"
+                class="qty-btn"
+                data-qty-button="decrement"
+                ${item.disableDecrement ? "disabled" : ""}
+              >
+                -
+              </button>
+            </form>
+
+            <span class="cart-qty-value" data-cart-quantity>${escapeHtml(item.quantity)}</span>
+
+            <form action="/api/user/cart/update/${escapeHtml(item.productId)}" method="POST" class="cart-qty-form" data-cart-qty-form>
+              <input type="hidden" name="cartAction" value="increment" />
+              <button
+                type="button"
+                class="qty-btn"
+                data-qty-button="increment"
+                ${item.quantity >= item.stock || item.quantity >= 5 || !item.isAvailable ? "disabled" : ""}
+              >
+                +
+              </button>
+            </form>
+          </div>
+
+          <div class="cart-item-subtotal">
+            <strong data-cart-subtotal>₹${escapeHtml(item.subtotal)}</strong>
+
+            <form action="/api/user/cart/remove/${escapeHtml(item.productId)}" method="POST">
+              <button type="submit" class="remove-cart-btn">Remove</button>
+            </form>
+          </div>
+        </article>
+      `;
+    };
+
+    const renderCartLayout = (payload, selectedIds = new Set()) => {
+      if (!cartLayout) return;
+
+      const items = Array.isArray(payload.cartItems) ? payload.cartItems : [];
+
+      if (!items.length) {
+        renderEmptyCart();
+        refreshCartDomReferences();
+        return;
+      }
+
+      cartLayout.innerHTML = `
+        <div class="cart-list">
+          <label class="cart-select-all">
+            <input type="checkbox" id="selectAllCartItems" />
+            <span>Select all available items</span>
+          </label>
+          ${items.map((item) => renderCartItem(item, selectedIds)).join("")}
+        </div>
+
+        <aside class="cart-summary">
+          <h2>Order Summary</h2>
+
+          <div class="cart-summary-row">
+            <span>Selected items</span>
+            <strong id="selectedItemCount">0</strong>
+          </div>
+
+          <div class="cart-summary-row">
+            <span>Selected total</span>
+            <strong id="selectedGrandTotal">₹0</strong>
+          </div>
+
+          ${payload.hasUnavailableItems ? `
+            <p class="cart-checkout-warning">
+              Some cart items are unavailable or out of stock. Update your cart before checkout.
+            </p>
+          ` : ""}
+
+          <p class="cart-checkout-warning cart-selection-warning" id="cartSelectionWarning" hidden>
+            Select at least one available item to continue checkout.
+          </p>
+
+          <form action="/api/user/cart/checkout" method="POST" id="cartCheckoutForm">
+            <div id="selectedProductInputs"></div>
+            <button
+              type="submit"
+              id="cartCheckoutButton"
+              class="cart-checkout-btn"
+              ${payload.canCheckout ? "" : "disabled"}
+            >
+              Checkout Selected Items
+            </button>
+          </form>
+        </aside>
+      `;
+
+      refreshCartDomReferences();
+      syncCartSelection();
+    };
+
+    const applyCartState = (payload) => {
+      const previouslySelected = new Set(getSelectedProductIds());
+      renderCartLayout(payload, previouslySelected);
+    };
+
+    const requestCartQuantityUpdate = async (form) => {
+      const buttons = Array.from(form.closest("[data-cart-item]")?.querySelectorAll(".qty-btn") || []);
+      let restoreButtons = true;
+
+      buttons.forEach((button) => {
+        button.disabled = true;
+      });
+
+      try {
+        const response = await fetch(form.getAttribute("action"), {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json"
+          },
+          body: (() => {
+            const params = new URLSearchParams(new FormData(form));
+            params.set("ajax", "1");
+            return params.toString();
+          })()
+        });
+
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          const responseText = await response.text();
+          throw new Error(responseText || "Invalid cart response");
+        }
+
+        const payload = await response.json();
+
+        if (!response.ok || !payload.success) {
+          showCartMessage(payload.message || "Unable to update cart quantity right now.");
+          return;
+        }
+
+        if (!Array.isArray(payload.cartItems)) {
+          throw new Error(payload.message || "Invalid cart items payload");
+        }
+
+        applyCartState(payload);
+        restoreButtons = false;
+      } catch (error) {
+        showCartMessage(error?.message || "Unable to update cart quantity right now.");
+      } finally {
+        if (restoreButtons) {
+          buttons.forEach((button) => {
+            button.disabled = false;
+          });
+        }
+      }
+    };
+
+    cartShell?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-qty-button]");
+      if (!button) return;
+
+      const form = button.closest("[data-cart-qty-form]");
+      if (!form) return;
+
+      event.preventDefault();
+      requestCartQuantityUpdate(form);
+    });
+
+    cartShell?.addEventListener("change", (event) => {
+      if (event.target?.id === "selectAllCartItems") {
+        cartItemCards.forEach((card) => {
+          const checkbox = card.querySelector(".cart-item-checkbox");
+          if (checkbox && !checkbox.disabled) {
+            checkbox.checked = event.target.checked;
+          }
+        });
+
+        syncCartSelection();
+        return;
+      }
+
+      if (event.target?.classList?.contains("cart-item-checkbox")) {
+        syncCartSelection();
       }
     });
 
-    selectAllCartItems?.addEventListener("change", () => {
-      cartItemCards.forEach((card) => {
-        const checkbox = card.querySelector(".cart-item-checkbox");
-        if (checkbox && !checkbox.disabled) {
-          checkbox.checked = selectAllCartItems.checked;
-        }
-      });
-
-      syncCartSelection();
-    });
-
+    refreshCartDomReferences();
     syncCartSelection();
 
     if (cartPageMessage) {

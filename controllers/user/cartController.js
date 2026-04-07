@@ -38,14 +38,19 @@ const getCartFriendlyMessage = (error, fallback) => {
   }
 };
 
-export const getCartController = async (req,res)=>{
-  try{
-    if(!req.user || !req.user._id){
+const isAjaxRequest = (req) =>
+  req.xhr ||
+  req.get("x-requested-with") === "XMLHttpRequest" ||
+  String(req.get("accept") || "").includes("application/json");
+
+export const getCartController = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
       return res.redirect("/api/auth/login");
     }
     const userId = req.user._id;
     const { cartItems, grandTotal, hasUnavailableItems, canCheckout } = await getCartService(userId);
-    return res.render("user/cart",{
+    return res.render("user/cart", {
       cartItems,
       grandTotal,
       hasUnavailableItems,
@@ -53,33 +58,33 @@ export const getCartController = async (req,res)=>{
       checkoutError: req.query.error || null,
       cartMessage: req.query.message || null
     })
-  }catch(error){
-    console.log(error,'Get cart items error') 
-    return res.render("user/cart",{
-      cartItems:[],
-      grandTotal:0,
-      hasUnavailableItems:false,
-      canCheckout:false,
+  } catch (error) {
+    console.log(error, 'Get cart items error')
+    return res.render("user/cart", {
+      cartItems: [],
+      grandTotal: 0,
+      hasUnavailableItems: false,
+      canCheckout: false,
       checkoutError: req.query.error || null,
       cartMessage: req.query.message || null
     })
   }
 }
-export const addToCartController = async (req,res)=>{
-  try{
-    if(!req.user || !req.user._id){
+export const addToCartController = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
       return res.redirect("/api/auth/login");
     }
     const userId = req.user._id;
     const { productId } = req.params;
-    if(!productId){
+    if (!productId) {
       return res.redirect("/api/user/products");
     }
-    await addToCartService(userId,productId)
+    await addToCartService(userId, productId)
     return res.redirect("/api/user/cart");
-  }catch(error){
-    if(!isExpectedCartError(error)){
-      console.log(error,'Add to cart error')
+  } catch (error) {
+    if (!isExpectedCartError(error)) {
+      console.log(error, 'Add to cart error')
     }
     const fallbackUrl = "/api/user/products";
     const referer = req.get("referer");
@@ -95,47 +100,76 @@ export const addToCartController = async (req,res)=>{
     );
   }
 }
-export const removeFromCartController = async (req,res)=>{
-  try{
-    if(!req.user || !req.user._id){
+export const removeFromCartController = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
       return res.redirect("/api/auth/login");
     }
     const userId = req.user._id;
     const { productId } = req.params;
-    if(!productId){
+    if (!productId) {
       return res.redirect("/api/user/cart")
     }
     await removeFromCartService(userId, productId);
     return res.redirect(
       buildRedirectWithMessage("/api/user/cart", "Item removed from your cart.", "message")
     );
-  }catch(error){
-   console.log(error,"Remove from cart error") 
-   return res.redirect(
-    buildRedirectWithMessage(
-      "/api/user/cart",
-      getCartFriendlyMessage(error, "Unable to remove this item right now."),
-      "message"
-    )
-   );
+  } catch (error) {
+    console.log(error, "Remove from cart error")
+    return res.redirect(
+      buildRedirectWithMessage(
+        "/api/user/cart",
+        getCartFriendlyMessage(error, "Unable to remove this item right now."),
+        "message"
+      )
+    );
   }
 }
-export const updateCartQuantityController = async (req,res)=>{
-  try{
-    if(!req.user || !req.user._id){
+export const updateCartQuantityController = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      if (isAjaxRequest(req)) {
+        return res.status(401).json({
+          success: false,
+          message: "Please log in to update your cart."
+        });
+      }
       return res.redirect("/api/auth/login");
     }
     const userId = req.user._id;
-    const {productId} = req.params;
-    const {action} = req.body;
-    if(!productId || !action){
+    const { productId } = req.params;
+    const action = req.body.cartAction || req.body.action;
+    if (!productId || !action) {
+      if (isAjaxRequest(req)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid cart update request."
+        });
+      }
       return res.redirect("/api/user/cart");
     }
     await updateCartQuantityService(userId, productId, action);
+    if (isAjaxRequest(req)) {
+      const { cartItems, grandTotal, hasUnavailableItems, canCheckout } = await getCartService(userId);
+      return res.json({
+        success: true,
+        message: "Cart updated.",
+        cartItems,
+        grandTotal,
+        hasUnavailableItems,
+        canCheckout
+      });
+    }
     return res.redirect("/api/user/cart");
-  }catch(error){
-    if(!isExpectedCartError(error)){
-      console.log(error,'Update cart quantity error')
+  } catch (error) {
+    if (!isExpectedCartError(error)) {
+      console.log(error, 'Update cart quantity error')
+    }
+    if (isAjaxRequest(req)) {
+      return res.status(400).json({
+        success: false,
+        message: getCartFriendlyMessage(error, "Unable to update cart quantity right now.")
+      });
     }
     return res.redirect(
       buildRedirectWithMessage(
@@ -144,6 +178,49 @@ export const updateCartQuantityController = async (req,res)=>{
         "message"
       )
     )
+  }
+}
+
+export const updateCartQuantityAjaxController = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Please log in to update your cart."
+      });
+    }
+
+    const userId = req.user._id;
+    const { productId } = req.params;
+    const { action } = req.body;
+
+    if (!productId || !action) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid cart update request."
+      });
+    }
+
+    await updateCartQuantityService(userId, productId, action);
+    const { cartItems, grandTotal, hasUnavailableItems, canCheckout } = await getCartService(userId);
+
+    return res.json({
+      success: true,
+      message: "Cart updated.",
+      cartItems,
+      grandTotal,
+      hasUnavailableItems,
+      canCheckout
+    });
+  } catch (error) {
+    if (!isExpectedCartError(error)) {
+      console.log(error, "Update cart quantity ajax error");
+    }
+
+    return res.status(400).json({
+      success: false,
+      message: getCartFriendlyMessage(error, "Unable to update cart quantity right now.")
+    });
   }
 }
 
@@ -165,8 +242,8 @@ export const checkoutCartController = async (req, res) => {
       checkoutItems,
       grandTotal,
       selectedProductIds: Array.isArray(selectedProductIds)
-      ? selectedProductIds
-      : [selectedProductIds]
+        ? selectedProductIds
+        : [selectedProductIds]
     });
   } catch (error) {
     if (!isExpectedCartError(error)) {

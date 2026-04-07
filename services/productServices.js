@@ -1,9 +1,22 @@
+import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import Category from "../models/Category.js";
 
-const parseListField = (value) => {
+const PRODUCT_STATUSES = new Set(["active", "inactive"]);
+const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const normalizeSearchTerm = (value = "") => String(value).trim().replace(/\s+/g, " ");
+const createValidationError = (fieldErrors, message = "Please correct the highlighted fields.") => {
+  const error = new Error(message);
+  error.name = "AppValidationError";
+  error.fieldErrors = fieldErrors;
+  return error;
+};
+
+const normalizeListField = (value) => {
   if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean);
+    return value
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
   }
 
   if (typeof value === "string") {
@@ -16,36 +29,52 @@ const parseListField = (value) => {
   return [];
 };
 
-const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const normalizeSearchTerm = (value = "") => String(value).trim().replace(/\s+/g, " ");
+const uniqueValues = (items = []) => {
+  const seen = new Set();
 
-const normalizeOfferPrice = (value, basePrice) => {
+  return items.filter((item) => {
+    const key = String(item).toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const normalizeOfferPrice = (value, basePrice, fieldKey = "offerPrice", fieldErrors = {}) => {
   const parsedValue = Number(value);
 
-  if (value === "" || value === null || value === undefined || Number.isNaN(parsedValue)) {
+  if (value === "" || value === null || value === undefined) {
+    return 0;
+  }
+
+  if (Number.isNaN(parsedValue)) {
+    fieldErrors[fieldKey] = "Offer price must be a valid number.";
     return 0;
   }
 
   if (parsedValue < 0) {
-    throw new Error("Offer price cannot be negative");
+    fieldErrors[fieldKey] = "Offer price cannot be negative.";
+    return 0;
   }
 
   if (parsedValue > 0 && parsedValue >= Number(basePrice)) {
-    throw new Error("Offer price must be lower than the regular price");
+    fieldErrors[fieldKey] = "Offer price must be lower than the regular price.";
+    return 0;
   }
 
   return parsedValue;
 };
 
-const resolveMainImageIndex = ({ mainImageKey, images, remainingImages, uploadedImages }) => {
+const resolveMainImageIndex = (mainImageKey, existingImages, remainingImages, uploadedImages) => {
   if (typeof mainImageKey === "string" && mainImageKey.length > 0) {
     if (mainImageKey.startsWith("existing:")) {
       const originalIndex = Number(mainImageKey.split(":")[1]);
-      if (!Number.isNaN(originalIndex) && Array.isArray(images)) {
+
+      if (!Number.isNaN(originalIndex)) {
         let currentIndex = 0;
 
-        for (let index = 0; index < images.length; index += 1) {
-          if (!remainingImages.includes(images[index])) continue;
+        for (let index = 0; index < existingImages.length; index += 1) {
+          if (!remainingImages.includes(existingImages[index])) continue;
           if (index === originalIndex) return currentIndex;
           currentIndex += 1;
         }
@@ -63,8 +92,303 @@ const resolveMainImageIndex = ({ mainImageKey, images, remainingImages, uploaded
   return 0;
 };
 
-export const getProductService = async (search, category, status, page = 1, limit = 10) => {
+const getLegacyVariant = (product) => ({
+  size: product?.sizes?.[0] || "",
+  color: product?.colors?.[0] || "",
+  price: Number(product?.price) || 0,
+  offerPrice: Number(product?.offerPrice) || 0,
+  stock: Number(product?.stock) || 0,
+  images: Array.isArray(product?.images) ? product.images : [],
+  mainImageIndex: Number(product?.mainImageIndex) || 0
+});
 
+export const buildProductFormValues = (source = {}) => {
+  const sourceVariants = Array.isArray(source?.variants) && source.variants.length
+    ? source.variants
+    : source?.price !== undefined || source?.stock !== undefined || Array.isArray(source?.images)
+      ? [getLegacyVariant(source)]
+      : [];
+
+  return {
+    productName: source?.productName || "",
+    category: String(source?.category?._id || source?.category || ""),
+    status: source?.status || "active",
+    couponCode: source?.couponCode || "",
+    couponDescription: source?.couponDescription || "",
+    description: source?.description || "",
+    shippingInfo: source?.shippingInfo || "",
+    highlights: Array.isArray(source?.highlights)
+      ? source.highlights
+      : normalizeListField(source?.highlights),
+    variants: sourceVariants.map((variant) => ({
+      size: variant?.size || "",
+      color: variant?.color || "",
+      price: variant?.price ?? "",
+      offerPrice: variant?.offerPrice ?? "",
+      stock: variant?.stock ?? "",
+      images: Array.isArray(variant?.images) ? variant.images : [],
+      mainImageIndex: Number.isInteger(variant?.mainImageIndex) ? variant.mainImageIndex : 0
+    }))
+  };
+};
+
+const parseProductVariants = (value) => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    throw createValidationError({
+      variants: "Variant data could not be read. Please add the variants again."
+    });
+  }
+};
+
+const validateProductInput = async (data = {}, existingProductId = null) => {
+  const fieldErrors = {};
+  const productName = String(data.productName || "").trim().replace(/\s+/g, " ");
+  const category = String(data.category || "").trim();
+  const status = String(data.status || "active").trim();
+  const description = typeof data.description === "string"
+    ? data.description.trim()
+    : "";
+  const shippingInfo = typeof data.shippingInfo === "string"
+    ? data.shippingInfo.trim()
+    : "";
+  const couponCode = typeof data.couponCode === "string"
+    ? data.couponCode.trim()
+    : "";
+  const couponDescription = typeof data.couponDescription === "string"
+    ? data.couponDescription.trim()
+    : "";
+  const highlights = uniqueValues(normalizeListField(data.highlights));
+  const variants = parseProductVariants(data.variantsPayload);
+
+  if (!productName) {
+    fieldErrors.productName = "Product name is required.";
+  } else if (productName.length < 3) {
+    fieldErrors.productName = "Product name must be at least 3 characters.";
+  } else if (productName.length > 120) {
+    fieldErrors.productName = "Product name must be 120 characters or less.";
+  }
+
+  if (!category) {
+    fieldErrors.category = "Category is required.";
+  } else if (!mongoose.Types.ObjectId.isValid(category)) {
+    fieldErrors.category = "Select a valid category.";
+  } else {
+    const categoryRecord = await Category.findOne({
+      _id: category,
+      isDeleted: false
+    }).select("_id status");
+
+    if (!categoryRecord) {
+      fieldErrors.category = "Selected category does not exist.";
+    } else if (categoryRecord.status !== "active") {
+      fieldErrors.category = "Selected category must be active.";
+    }
+  }
+
+  if (!PRODUCT_STATUSES.has(status)) {
+    fieldErrors.status = "Select a valid product status.";
+  }
+
+  if (description.length > 1200) {
+    fieldErrors.description = "Description must be 1200 characters or less.";
+  }
+
+  if (shippingInfo.length > 600) {
+    fieldErrors.shippingInfo = "Shipping info must be 600 characters or less.";
+  }
+
+  if (couponCode.length > 40) {
+    fieldErrors.couponCode = "Coupon code must be 40 characters or less.";
+  }
+
+  if (couponDescription.length > 160) {
+    fieldErrors.couponDescription = "Coupon description must be 160 characters or less.";
+  }
+
+  const duplicateNameQuery = {
+    productName: { $regex: `^${escapeRegex(productName)}$`, $options: "i" }
+  };
+
+  if (existingProductId) {
+    duplicateNameQuery._id = { $ne: existingProductId };
+  }
+
+  const [existingActive, existingDeleted] = productName
+    ? await Promise.all([
+        Product.findOne({ ...duplicateNameQuery, isDeleted: false }).select("_id"),
+        Product.findOne({ ...duplicateNameQuery, isDeleted: true }).select("_id productName")
+      ])
+    : [null, null];
+
+  if (existingActive) {
+    fieldErrors.productName = "Product already exists.";
+  }
+
+  if (!existingProductId && existingDeleted) {
+    const error = createValidationError({
+      productName: "A soft-deleted product already uses this name. Restore it from the product list."
+    });
+    error.code = "PRODUCT_SOFT_DELETED";
+    error.productId = existingDeleted._id.toString();
+    error.productName = existingDeleted.productName;
+    throw error;
+  }
+
+  if (!variants.length) {
+    fieldErrors.variants = "Add at least one variant.";
+  }
+
+  const sanitizedVariants = [];
+  const variantKeys = new Set();
+
+  variants.forEach((variant, index) => {
+    const size = String(variant?.size || "").trim();
+    const color = String(variant?.color || "").trim();
+    const priceValue = variant?.price;
+    const stockValue = variant?.stock;
+    const price = Number(priceValue);
+    const stock = Number(stockValue);
+    const existingImages = Array.isArray(variant?.existingImages)
+      ? variant.existingImages.map((image) => String(image || "").trim()).filter(Boolean)
+      : [];
+    const removedImageIndexes = Array.isArray(variant?.removedImageIndexes)
+      ? variant.removedImageIndexes
+          .map((value) => Number(value))
+          .filter((value) => Number.isInteger(value) && value >= 0)
+      : [];
+    const variantFieldPrefix = `variants.${index}`;
+
+    if (!size) {
+      fieldErrors[`${variantFieldPrefix}.size`] = "Size is required.";
+    }
+
+    if (!color) {
+      fieldErrors[`${variantFieldPrefix}.color`] = "Color is required.";
+    }
+
+    if (priceValue === "" || priceValue === null || priceValue === undefined) {
+      fieldErrors[`${variantFieldPrefix}.price`] = "Price is required.";
+    } else if (Number.isNaN(price) || price <= 0) {
+      fieldErrors[`${variantFieldPrefix}.price`] = "Price must be greater than 0.";
+    }
+
+    if (stockValue === "" || stockValue === null || stockValue === undefined) {
+      fieldErrors[`${variantFieldPrefix}.stock`] = "Stock is required.";
+    } else if (!Number.isInteger(stock) || stock < 0) {
+      fieldErrors[`${variantFieldPrefix}.stock`] = "Stock must be a whole number 0 or above.";
+    }
+
+    const offerPrice = normalizeOfferPrice(
+      variant?.offerPrice,
+      price,
+      `${variantFieldPrefix}.offerPrice`,
+      fieldErrors
+    );
+
+    const duplicateKey = `${size.toLowerCase()}::${color.toLowerCase()}`;
+    if (size && color) {
+      if (variantKeys.has(duplicateKey)) {
+        fieldErrors[`${variantFieldPrefix}.size`] = "This size and color combination already exists.";
+        fieldErrors[`${variantFieldPrefix}.color`] = "This size and color combination already exists.";
+      } else {
+        variantKeys.add(duplicateKey);
+      }
+    }
+
+    sanitizedVariants.push({
+      size,
+      color,
+      price: Number.isNaN(price) ? 0 : price,
+      offerPrice,
+      stock: Number.isNaN(stock) ? 0 : stock,
+      existingImages,
+      removedImageIndexes,
+      mainImageKey: typeof variant?.mainImageKey === "string" ? variant.mainImageKey : "",
+      uploadedFieldName: `variantImages-${index}`
+    });
+  });
+
+  if (Object.keys(fieldErrors).length > 0) {
+    throw createValidationError(fieldErrors);
+  }
+
+  return {
+    productName,
+    category,
+    status,
+    description,
+    shippingInfo,
+    couponCode,
+    couponDescription,
+    highlights,
+    variants: sanitizedVariants
+  };
+};
+
+const buildPersistedVariants = (variants, uploadedVariantImagesMap = {}) => {
+  const fieldErrors = {};
+  const persistedVariants = variants.map((variant, index) => {
+    const existingImages = variant.existingImages || [];
+    const removedIndexes = new Set(variant.removedImageIndexes || []);
+    const remainingImages = existingImages.filter((_, imageIndex) => !removedIndexes.has(imageIndex));
+    const uploadedImages = uploadedVariantImagesMap[variant.uploadedFieldName] || [];
+    const images = [...remainingImages, ...uploadedImages];
+
+    if (images.length < 3) {
+      fieldErrors[`variants.${index}.images`] = "Each variant must have at least 3 images.";
+    }
+
+    const mainImageIndex = resolveMainImageIndex(
+      variant.mainImageKey,
+      existingImages,
+      remainingImages,
+      uploadedImages
+    );
+
+    return {
+      size: variant.size,
+      color: variant.color,
+      price: variant.price,
+      offerPrice: variant.offerPrice,
+      stock: variant.stock,
+      images,
+      mainImageIndex: mainImageIndex >= images.length ? 0 : mainImageIndex
+    };
+  });
+
+  if (Object.keys(fieldErrors).length > 0) {
+    throw createValidationError(fieldErrors);
+  }
+
+  return persistedVariants;
+};
+
+const deriveProductFieldsFromVariants = (variants) => {
+  const representativeVariant = variants[0];
+
+  return {
+    price: representativeVariant.price,
+    offerPrice: representativeVariant.offerPrice,
+    stock: variants.reduce((sum, variant) => sum + variant.stock, 0),
+    sizes: uniqueValues(variants.map((variant) => variant.size)),
+    colors: uniqueValues(variants.map((variant) => variant.color)),
+    images: representativeVariant.images,
+    mainImageIndex: representativeVariant.mainImageIndex ?? 0
+  };
+};
+
+export const getProductService = async (search, category, status, page = 1, limit = 10) => {
   const query = {};
   const normalizedSearch = normalizeSearchTerm(search);
 
@@ -112,90 +436,30 @@ export const getProductService = async (search, category, status, page = 1, limi
     totalProducts,
     totalPages: Math.max(1, Math.ceil(totalProducts / limit))
   };
-
 };
 
-export const addProductService = async (data) => {
-
-  const {
-    productName,
-    category,
-    price,
-    stock,
-    status,
-    description,
-    shippingInfo,
-    offerPrice,
-    couponCode,
-    couponDescription,
-    sizes,
-    colors,
-    highlights,
-    images,
-    mainImageKey
-  } = data;
-
-  if (!productName || !category || price === undefined || stock === undefined) {
-    throw new Error("Required fields missing");
-  }
-
-  const normalizedProductName = String(productName).trim();
-
-  const existingActive = await Product.findOne({
-    productName: { $regex: `^${escapeRegex(normalizedProductName)}$`, $options: "i" },
-    isDeleted: false
-  });
-
-  if (existingActive) {
-    throw new Error("Product already exists");
-  }
-
-  const existingDeleted = await Product.findOne({
-    productName: { $regex: `^${escapeRegex(normalizedProductName)}$`, $options: "i" },
-    isDeleted: true
-  });
-
-  if (existingDeleted) {
-    const error = new Error("Product exists in deleted state");
-    error.code = "PRODUCT_SOFT_DELETED";
-    error.productId = existingDeleted._id.toString();
-    error.productName = existingDeleted.productName;
-    throw error;
-  }
-
-  if (!images || images.length < 3) {
-    throw new Error("Minimum 3 images required");
-  }
+export const addProductService = async (data, uploadedVariantImagesMap = {}) => {
+  const validatedData = await validateProductInput(data);
+  const persistedVariants = buildPersistedVariants(validatedData.variants, uploadedVariantImagesMap);
+  const derivedFields = deriveProductFieldsFromVariants(persistedVariants);
 
   const product = new Product({
-    productName: normalizedProductName,
-    category,
-    price,
-    stock,
-    offerPrice: normalizeOfferPrice(offerPrice, price),
-    sizes: parseListField(sizes),
-    colors: parseListField(colors),
-    highlights: parseListField(highlights),
-    status,
-    description,
-    shippingInfo: shippingInfo || "",
-    couponCode: couponCode?.trim() || "",
-    couponDescription: couponDescription?.trim() || "",
-    images,
-    mainImageIndex: resolveMainImageIndex({
-      mainImageKey,
-      images: [],
-      remainingImages: [],
-      uploadedImages: images
-    })
+    productName: validatedData.productName,
+    category: validatedData.category,
+    status: validatedData.status,
+    description: validatedData.description,
+    shippingInfo: validatedData.shippingInfo,
+    couponCode: validatedData.couponCode,
+    couponDescription: validatedData.couponDescription,
+    highlights: validatedData.highlights,
+    variants: persistedVariants,
+    ...derivedFields
   });
 
   return await product.save();
-
 };
 
 export const getProductByIdService = async (id) => {
-
   const product = await Product
     .findById(id)
     .populate("category");
@@ -205,74 +469,40 @@ export const getProductByIdService = async (id) => {
   }
 
   return product;
-
 };
 
-export const editProductService = async (id, data) => {
-
+export const editProductService = async (id, data, uploadedVariantImagesMap = {}) => {
   const product = await Product.findById(id);
 
   if (!product || product.isDeleted) {
     throw new Error("Product not found");
   }
 
-  if (data.productName) product.productName = data.productName;
-  if (data.category) product.category = data.category;
+  const validatedData = await validateProductInput(data, id);
+  const persistedVariants = buildPersistedVariants(validatedData.variants, uploadedVariantImagesMap);
+  const derivedFields = deriveProductFieldsFromVariants(persistedVariants);
 
-  if (data.price !== undefined) product.price = data.price;
-  if (data.stock !== undefined) product.stock = data.stock;
-  product.offerPrice = normalizeOfferPrice(data.offerPrice, data.price ?? product.price);
-
-  product.sizes = parseListField(data.sizes);
-  product.colors = parseListField(data.colors);
-  product.highlights = parseListField(data.highlights);
-
-  if (data.status) product.status = data.status;
-  product.description = data.description || "";
-  product.shippingInfo = data.shippingInfo || "";
-  product.couponCode = data.couponCode?.trim() || "";
-  product.couponDescription = data.couponDescription?.trim() || "";
-
-
-  /* ===== IMAGE MANAGEMENT ===== */
-
-  const removeIndexes = Array.isArray(data.removeImages) ? data.removeImages : [];
-
-  const remainingImages = (product.images || []).filter(
-    (_, index) => !removeIndexes.includes(index)
-  );
-
-  const uploadedImages = Array.isArray(data.newImages) ? data.newImages : [];
-
-  const updatedImages = [...remainingImages, ...uploadedImages];
-
-  
-
-  if (updatedImages.length < 3) {
-    throw new Error("Minimum 3 images required");
-  }
-
-
-  product.mainImageIndex = resolveMainImageIndex({
-    mainImageKey: data.mainImageKey,
-    images: product.images || [],
-    remainingImages,
-    uploadedImages
-  });
-
-  if (product.mainImageIndex >= updatedImages.length) {
-    product.mainImageIndex = 0;
-  }
-
-  product.images = updatedImages;
+  product.productName = validatedData.productName;
+  product.category = validatedData.category;
+  product.status = validatedData.status;
+  product.description = validatedData.description;
+  product.shippingInfo = validatedData.shippingInfo;
+  product.couponCode = validatedData.couponCode;
+  product.couponDescription = validatedData.couponDescription;
+  product.highlights = validatedData.highlights;
+  product.variants = persistedVariants;
+  product.price = derivedFields.price;
+  product.offerPrice = derivedFields.offerPrice;
+  product.stock = derivedFields.stock;
+  product.sizes = derivedFields.sizes;
+  product.colors = derivedFields.colors;
+  product.images = derivedFields.images;
+  product.mainImageIndex = derivedFields.mainImageIndex;
 
   return await product.save();
-
 };
 
-
 export const deleteProductService = async (id) => {
-
   const product = await Product.findById(id);
 
   if (!product || product.isDeleted) {
@@ -282,7 +512,6 @@ export const deleteProductService = async (id) => {
   product.isDeleted = true;
 
   return await product.save();
-
 };
 
 export const restoreProductService = async (id) => {

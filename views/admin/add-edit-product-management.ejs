@@ -6,7 +6,6 @@
 <title><%= pageTitle %></title>
 
 <link rel="stylesheet" href="/css/product-management.css" />
-<link rel="stylesheet" href="/vendor/cropper/cropper.min.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
@@ -14,8 +13,15 @@ href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800
 rel="stylesheet"
 />
 </head>
-
 <body>
+<%
+const productFormData = formData || {};
+const productFieldErrors = validationErrors || {};
+const highlightValues = Array.isArray(productFormData.highlights) ? productFormData.highlights : [];
+const initialVariants = Array.isArray(productFormData.variants) ? productFormData.variants : [];
+const serializedVariants = JSON.stringify(initialVariants).replace(/</g, "\\u003c");
+const getFieldError = (key) => productFieldErrors[key];
+%>
 
 <main class="dashboard-scene">
 <section class="dashboard-card">
@@ -23,7 +29,7 @@ rel="stylesheet"
 <section class="hero-panel add-hero">
 <div class="hero-copy">
 <h1><%= formTitle %></h1>
-<p>Manage product details, variants and image uploads.</p>
+<p>Manage product details, highlights, and variant-specific pricing, stock, and images.</p>
 </div>
 
 <div class="hero-actions">
@@ -41,19 +47,14 @@ class="product-form"
 method="POST"
 action="<%= formAction %>"
 enctype="multipart/form-data"
+novalidate
 >
-<input type="hidden" id="removeImages" name="removeImages" value="">
-<input
-type="hidden"
-id="mainImageKey"
-name="mainImageKey"
-value="<%= product ? `existing:${product?.mainImageIndex ?? 0}` : '' %>"
->
+<input type="hidden" id="variantsPayload" name="variantsPayload" value="">
 
 <div class="panel-head">
 <div>
 <h2>Product Details</h2>
-<p>Fill the basic information for the product.</p>
+<p>Fill the shared product information first. Variant-specific inventory lives below.</p>
 </div>
 </div>
 
@@ -64,59 +65,43 @@ value="<%= product ? `existing:${product?.mainImageIndex ?? 0}` : '' %>"
 type="text"
 name="productName"
 placeholder="Nike Air 212"
-value="<%= product?.productName || '' %>"
-required
+value="<%= productFormData.productName || '' %>"
+data-form-field="productName"
 />
+<% if (getFieldError("productName")) { %>
+<small class="feedback error" data-field-error="productName"><%= getFieldError("productName") %></small>
+<% } %>
 </label>
 
 <label class="field">
 <span>Category</span>
-<select name="category" required>
+<select name="category" data-form-field="category">
 <option value="">Select category</option>
 <% if (Array.isArray(categories) && categories.length > 0) { %>
 <% categories.forEach((category) => { %>
 <option
 value="<%= category._id %>"
-<%= String(product?.category?._id || product?.category || "") === String(category._id) ? "selected" : "" %>
+<%= String(productFormData.category || "") === String(category._id) ? "selected" : "" %>
 >
 <%= category.name %>
 </option>
 <% }) %>
 <% } %>
 </select>
+<% if (getFieldError("category")) { %>
+<small class="feedback error" data-field-error="category"><%= getFieldError("category") %></small>
+<% } %>
 </label>
 
 <label class="field">
-<span>Price</span>
-<input
-type="number"
-name="price"
-placeholder="3695"
-value="<%= product?.price ?? '' %>"
-required
-/>
-</label>
-
-<label class="field">
-<span>Stock</span>
-<input
-type="number"
-name="stock"
-placeholder="60"
-value="<%= product?.stock ?? '' %>"
-required
-/>
-</label>
-
-<label class="field">
-<span>Offer Price</span>
-<input
-type="number"
-name="offerPrice"
-placeholder="2999"
-value="<%= product?.offerPrice ?? '' %>"
-min="0"
-/>
+<span>Status</span>
+<select name="status">
+<option value="active" <%= productFormData.status === "active" || !productFormData.status ? "selected" : "" %>>Active</option>
+<option value="inactive" <%= productFormData.status === "inactive" ? "selected" : "" %>>Inactive</option>
+</select>
+<% if (getFieldError("status")) { %>
+<small class="feedback error"><%= getFieldError("status") %></small>
+<% } %>
 </label>
 
 <label class="field">
@@ -125,63 +110,25 @@ min="0"
 type="text"
 name="couponCode"
 placeholder="SAVE10"
-value="<%= product?.couponCode || '' %>"
+value="<%= productFormData.couponCode || '' %>"
 />
+<% if (getFieldError("couponCode")) { %>
+<small class="feedback error"><%= getFieldError("couponCode") %></small>
+<% } %>
 </label>
 
-<label class="field">
-<span>Status</span>
-<select name="status">
-<option value="active" <%= product?.status === "active" || !product ? "selected" : "" %>>Active</option>
-<option value="inactive" <%= product?.status === "inactive" ? "selected" : "" %>>Inactive</option>
-</select>
-</label>
-
-<label class="field">
+<label class="field field-wide">
 <span>Coupon Description</span>
 <input
 type="text"
 name="couponDescription"
 placeholder="Save more on this item"
-value="<%= product?.couponDescription || '' %>"
+value="<%= productFormData.couponDescription || '' %>"
 />
+<% if (getFieldError("couponDescription")) { %>
+<small class="feedback error"><%= getFieldError("couponDescription") %></small>
+<% } %>
 </label>
-
-<section class="field builder-field">
-<span>Sizes</span>
-<input
-type="hidden"
-name="sizes"
-id="sizesHidden"
-value="<%= Array.isArray(product?.sizes) && product.sizes.length ? product.sizes.join(', ') : (Array.isArray(product?.variants) ? [...new Set(product.variants.map((variant) => variant.size))].join(', ') : '') %>"
-/>
-
-<div class="value-builder">
-  <div class="builder-input-row">
-    <input type="text" id="sizeDraftInput" placeholder="Enter size" />
-    <button type="button" class="btn btn-light builder-add-btn" id="addSizeBtn">+ Add Size</button>
-  </div>
-  <div class="builder-chip-list" id="sizeChipList"></div>
-</div>
-</section>
-
-<section class="field builder-field">
-<span>Colors</span>
-<input
-type="hidden"
-name="colors"
-id="colorsHidden"
-value="<%= Array.isArray(product?.colors) && product.colors.length ? product.colors.join(', ') : (Array.isArray(product?.variants) ? [...new Set(product.variants.map((variant) => variant.color))].join(', ') : '') %>"
-/>
-
-<div class="value-builder">
-  <div class="builder-input-row">
-    <input type="text" id="colorDraftInput" placeholder="Enter color" />
-    <button type="button" class="btn btn-light builder-add-btn" id="addColorBtn">+ Add Color</button>
-  </div>
-  <div class="builder-chip-list" id="colorChipList"></div>
-</div>
-</section>
 
 <section class="field builder-field field-wide">
 <span>Highlights</span>
@@ -189,7 +136,7 @@ value="<%= Array.isArray(product?.colors) && product.colors.length ? product.col
 type="hidden"
 name="highlights"
 id="highlightsHidden"
-value="<%= Array.isArray(product?.highlights) ? product.highlights.join(', ') : '' %>"
+value="<%= highlightValues.join(', ') %>"
 />
 
 <div class="value-builder">
@@ -207,7 +154,10 @@ value="<%= Array.isArray(product?.highlights) ? product.highlights.join(', ') : 
 name="description"
 rows="5"
 placeholder="Write a short description"
-><%= product?.description || '' %></textarea>
+><%= productFormData.description || '' %></textarea>
+<% if (getFieldError("description")) { %>
+<small class="feedback error"><%= getFieldError("description") %></small>
+<% } %>
 </label>
 
 <label class="field field-wide">
@@ -216,58 +166,27 @@ placeholder="Write a short description"
 name="shippingInfo"
 rows="4"
 placeholder="Enter delivery, dispatch, or return information"
-><%= product?.shippingInfo || '' %></textarea>
+><%= productFormData.shippingInfo || '' %></textarea>
+<% if (getFieldError("shippingInfo")) { %>
+<small class="feedback error"><%= getFieldError("shippingInfo") %></small>
+<% } %>
 </label>
 </div>
 
 <section class="inner-panel">
 <div class="panel-head">
 <div>
-<h2>Images</h2>
-<p>Upload minimum 3 images (JPG or PNG). Click existing images to recrop them.</p>
+<h2>Variants</h2>
+<p>Each variant manages its own size, color, price, stock, and minimum 3 images.</p>
 </div>
+<button type="button" class="btn btn-light" id="addVariantBtn">+ Add Variant</button>
 </div>
 
-<input
-id="imageInput"
-type="file"
-name="images"
-multiple
-accept="image/jpeg,image/jpg,image/png"
-/>
-
-<div class="image-preview-row" id="imagePreviewRow">
-<% if (product && product.images && product.images.length) { %>
-<% product.images.forEach((img, index) => { %>
-<div class="image-box existing-image" data-index="<%= index %>" data-original-src="<%= img %>">
-<img
-src="<%= img %>"
-class="product-image-preview recrop-image"
-alt="Product image <%= index + 1 %>"
-/>
-
-<button
-type="button"
-data-index="<%= index %>"
-class="remove-btn"
-title="Remove image"
->
-✕
-</button>
-
-<button
-type="button"
-class="main-image-btn <%= (product?.mainImageIndex ?? 0) === index ? 'active-main' : '' %>"
-data-image-key="existing:<%= index %>"
->
-<%= (product?.mainImageIndex ?? 0) === index ? 'Main Image' : 'Set as Main' %>
-</button>
-</div>
-<% }) %>
+<% if (getFieldError("variants")) { %>
+<p class="feedback error"><%= getFieldError("variants") %></p>
 <% } %>
-</div>
 
-<p id="imageValidationMessage" class="image-validation-message"></p>
+<div id="variantList" class="variant-list-admin"></div>
 </section>
 
 <div class="form-actions end-actions">
@@ -280,25 +199,6 @@ data-image-key="existing:<%= index %>"
 </section>
 </main>
 
-<div class="crop-modal-backdrop" id="cropModal">
-<div class="crop-modal-box">
-<div class="crop-modal-head">
-<h3>Crop Product Image</h3>
-<p>Crop the image to a square. Final output will be saved at 800 x 800.</p>
-</div>
-
-<div class="crop-image-wrap">
-<img id="cropImage" alt="Crop preview" />
-</div>
-
-<div class="crop-modal-actions">
-<button type="button" class="btn btn-light" id="cancelCropBtn">Cancel</button>
-<button type="button" class="btn btn-dark" id="confirmCropBtn">Crop Image</button>
-</div>
-</div>
-</div>
-
-<script src="/vendor/cropper/cropper.min.js"></script>
 <script>
 window.addEventListener("pageshow", function (event) {
   if (event.persisted) {
@@ -316,39 +216,24 @@ window.addEventListener("popstate", () => {
 
 const errorMessage = document.getElementById("errorMessage");
 const productForm = document.querySelector(".product-form");
-const imageInput = document.getElementById("imageInput");
-const imagePreviewRow = document.getElementById("imagePreviewRow");
-const removeImagesInput = document.getElementById("removeImages");
-const imageValidationMessage = document.getElementById("imageValidationMessage");
-const mainImageInput = document.getElementById("mainImageKey");
-const sizesHidden = document.getElementById("sizesHidden");
-const colorsHidden = document.getElementById("colorsHidden");
-const sizeDraftInput = document.getElementById("sizeDraftInput");
-const colorDraftInput = document.getElementById("colorDraftInput");
-const addSizeBtn = document.getElementById("addSizeBtn");
-const addColorBtn = document.getElementById("addColorBtn");
+const variantList = document.getElementById("variantList");
+const addVariantBtn = document.getElementById("addVariantBtn");
+const variantsPayloadInput = document.getElementById("variantsPayload");
+const productNameInput = productForm?.querySelector('[data-form-field="productName"]');
+const categorySelect = productForm?.querySelector('[data-form-field="category"]');
 const highlightsHidden = document.getElementById("highlightsHidden");
 const highlightDraftInput = document.getElementById("highlightDraftInput");
 const addHighlightBtn = document.getElementById("addHighlightBtn");
-const sizeChipList = document.getElementById("sizeChipList");
-const colorChipList = document.getElementById("colorChipList");
 const highlightChipList = document.getElementById("highlightChipList");
 
-const cropModal = document.getElementById("cropModal");
-const cropImage = document.getElementById("cropImage");
-const cancelCropBtn = document.getElementById("cancelCropBtn");
-const confirmCropBtn = document.getElementById("confirmCropBtn");
-
-let selectedFiles = [];
-let pendingFiles = [];
-let cropper = null;
-let currentSourceFile = null;
-let currentReplaceIndex = null;
-let currentNewEditIndex = null;
-let currentFileName = "";
-let sizeValues = parseHiddenList(sizesHidden?.value);
-let colorValues = parseHiddenList(colorsHidden?.value);
-let highlightValues = parseHiddenList(highlightsHidden?.value);
+const fieldErrors = <%- JSON.stringify(productFieldErrors).replace(/</g, "\\u003c") %>;
+const initialVariants = <%- serializedVariants %>;
+let highlightValues = <%- JSON.stringify(highlightValues).replace(/</g, "\\u003c") %>;
+const transientFieldErrors = {};
+const transientFieldErrorTimeouts = {};
+let variantsState = Array.isArray(initialVariants) && initialVariants.length
+  ? initialVariants.map(createVariantState)
+  : [createVariantState()];
 
 if (errorMessage) {
   setTimeout(() => {
@@ -356,519 +241,302 @@ if (errorMessage) {
   }, 3000);
 }
 
-document.querySelectorAll(".remove-btn").forEach((btn) => {
-  btn.addEventListener("click", function () {
-    const index = this.dataset.index;
-    removeImage(index);
-  });
-});
+function createVariantState(variant = {}) {
+  const existingImages = Array.isArray(variant.images)
+    ? variant.images.map((url) => ({ url, removed: false }))
+    : [];
+  const mainImageIndex = Number.isInteger(variant.mainImageIndex) ? variant.mainImageIndex : 0;
 
-document.querySelectorAll(".main-image-btn").forEach((btn) => {
-  btn.addEventListener("click", function () {
-    setMainImage(this.dataset.imageKey);
-  });
-});
-
-document.querySelectorAll(".existing-image .recrop-image").forEach((image) => {
-  image.addEventListener("click", function () {
-    const imageBox = this.closest(".existing-image");
-    if (!imageBox || imageBox.classList.contains("removed-existing")) return;
-    openExistingImageForCrop(imageBox.dataset.index, imageBox.dataset.originalSrc);
-  });
-});
-
-if (imageInput) {
-  imageInput.addEventListener("change", handleImageSelection);
-}
-
-if (cancelCropBtn) {
-  cancelCropBtn.addEventListener("click", closeCropModal);
-}
-
-if (confirmCropBtn) {
-  confirmCropBtn.addEventListener("click", cropCurrentImage);
-}
-
-if (productForm) {
-  productForm.addEventListener("submit", (event) => {
-    if (getTotalImagesCount() < 3) {
-      event.preventDefault();
-      showImageValidation("Minimum 3 images are required.");
-    }
-  });
-}
-
-addSizeBtn?.addEventListener("click", () => addBuilderValue("size"));
-addColorBtn?.addEventListener("click", () => addBuilderValue("color"));
-addHighlightBtn?.addEventListener("click", () => addBuilderValue("highlight"));
-
-sizeDraftInput?.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    addBuilderValue("size");
-  }
-});
-
-colorDraftInput?.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    addBuilderValue("color");
-  }
-});
-
-highlightDraftInput?.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    addBuilderValue("highlight");
-  }
-});
-
-function setMainImage(imageKey) {
-  if (!mainImageInput) return;
-
-  mainImageInput.value = imageKey;
-
-  document.querySelectorAll(".main-image-btn").forEach((button) => {
-    const isActive = button.dataset.imageKey === imageKey;
-    button.classList.toggle("active-main", isActive);
-    button.textContent = isActive ? "Main Image" : "Set as Main";
-  });
-}
-
-function handleImageSelection(event) {
-  const files = Array.from(event.target.files || []);
-  if (!files.length) return;
-
-  pendingFiles = files;
-  showImageValidation("");
-  openNextCrop();
-}
-
-function openNextCrop() {
-  if (!pendingFiles.length) {
-    rebuildFileInput();
-    renderNewImagePreviews();
-    closeCropModal();
-    return;
-  }
-
-  currentSourceFile = pendingFiles.shift();
-  currentReplaceIndex = null;
-  currentNewEditIndex = null;
-  currentFileName = currentSourceFile.name;
-
-  const tempImage = new Image();
-  const fileUrl = URL.createObjectURL(currentSourceFile);
-  
-  tempImage.onload = () => {
-    cropModal.classList.add("show");
-
-    if (cropper) {
-      cropper.destroy();
-      cropper = null;
-    }
-
-    cropImage.onload = () => {
-      if (typeof Cropper === "undefined") {
-        showImageValidation("Cropper did not load. Restart the server and try again.");
-        return;
-      }
-
-      cropper = new Cropper(cropImage, {
-        aspectRatio: 1,
-        viewMode: 1,
-        dragMode: "move",
-        autoCropArea: 1,
-        responsive: true,
-        background: false,
-        guides: true,
-        center: true,
-        highlight: true,
-        cropBoxMovable: true,
-        cropBoxResizable: true,
-        toggleDragModeOnDblclick: false
-      });
-    };
-
-    cropImage.src = fileUrl;
-    cropImage.dataset.objectUrl = fileUrl;
+  return {
+    size: variant.size || "",
+    color: variant.color || "",
+    price: variant.price ?? "",
+    offerPrice: variant.offerPrice ?? "",
+    stock: variant.stock ?? "",
+    existingImages,
+    newImages: [],
+    mainImageKey: existingImages[mainImageIndex]
+      ? `existing:${mainImageIndex}`
+      : existingImages.length
+        ? "existing:0"
+        : ""
   };
-
-  tempImage.src = fileUrl;
 }
 
-function openExistingImageForCrop(index, imageUrl) {
-  currentSourceFile = null;
-  currentReplaceIndex = Number(index);
-  currentNewEditIndex = null;
-  currentFileName = `recrop-${index}.jpg`;
-  showImageValidation("");
+function getStaticFieldErrorNode(key) {
+  return document.querySelector(`[data-field-error="${key}"]`);
+}
 
-  cropModal.classList.add("show");
+function ensureStaticFieldErrorNode(key) {
+  let node = getStaticFieldErrorNode(key);
+  if (node) return node;
 
-  if (cropper) {
-    cropper.destroy();
-    cropper = null;
+  const input = productForm?.querySelector(`[data-form-field="${key}"]`);
+  const fieldWrapper = input?.closest(".field");
+  if (!fieldWrapper) return null;
+
+  node = document.createElement("small");
+  node.className = "feedback error";
+  node.dataset.fieldError = key;
+  fieldWrapper.appendChild(node);
+  return node;
+}
+
+function clearStaticFieldError(key) {
+  const node = getStaticFieldErrorNode(key);
+  if (!node) return;
+
+  if (transientFieldErrorTimeouts[key]) {
+    window.clearTimeout(transientFieldErrorTimeouts[key]);
+    delete transientFieldErrorTimeouts[key];
   }
 
-  cropImage.onload = () => {
-    if (typeof Cropper === "undefined") {
-      showImageValidation("Cropper did not load. Restart the server and try again.");
-      return;
-    }
-
-    cropper = new Cropper(cropImage, {
-      aspectRatio: 1,
-      viewMode: 1,
-      dragMode: "move",
-      autoCropArea: 1,
-      responsive: true,
-      background: false,
-      guides: true,
-      center: true,
-      highlight: true,
-      cropBoxMovable: true,
-      cropBoxResizable: true,
-      toggleDragModeOnDblclick: false
-    });
-  };
-
-  cropImage.src = imageUrl;
-  cropImage.dataset.objectUrl = "";
+  node.remove();
 }
 
-function openNewImageForCrop(index) {
-  const file = selectedFiles[index];
-  if (!file) return;
+function setStaticFieldError(key, message) {
+  const node = ensureStaticFieldErrorNode(key);
+  if (!node) return;
 
-  currentSourceFile = file.originalFile || file;
-  currentReplaceIndex = null;
-  currentNewEditIndex = index;
-  currentFileName = currentSourceFile.name || `new-${index}.jpg`;
-  showImageValidation("");
+  clearStaticFieldError(key);
+  const refreshedNode = ensureStaticFieldErrorNode(key);
+  if (!refreshedNode) return;
+  refreshedNode.textContent = message;
 
-  const fileUrl = URL.createObjectURL(currentSourceFile);
+  transientFieldErrorTimeouts[key] = window.setTimeout(() => {
+    const currentNode = getStaticFieldErrorNode(key);
+    currentNode?.remove();
+    delete transientFieldErrorTimeouts[key];
+  }, 3000);
+}
 
-  cropModal.classList.add("show");
+function getVariantFieldError(index, field) {
+  return transientFieldErrors[`variants.${index}.${field}`] || fieldErrors[`variants.${index}.${field}`] || "";
+}
 
-  if (cropper) {
-    cropper.destroy();
-    cropper = null;
+function clearTransientFieldError(key) {
+  if (transientFieldErrorTimeouts[key]) {
+    window.clearTimeout(transientFieldErrorTimeouts[key]);
+    delete transientFieldErrorTimeouts[key];
   }
 
-  cropImage.onload = () => {
-    if (typeof Cropper === "undefined") {
-      showImageValidation("Cropper did not load. Restart the server and try again.");
-      return;
-    }
-
-    cropper = new Cropper(cropImage, {
-      aspectRatio: 1,
-      viewMode: 1,
-      dragMode: "move",
-      autoCropArea: 1,
-      responsive: true,
-      background: false,
-      guides: true,
-      center: true,
-      highlight: true,
-      cropBoxMovable: true,
-      cropBoxResizable: true,
-      toggleDragModeOnDblclick: false
-    });
-  };
-
-  cropImage.src = fileUrl;
-  cropImage.dataset.objectUrl = fileUrl;
-}
-
-function cropCurrentImage() {
-  if (!cropper) return;
-
-  const canvas = cropper.getCroppedCanvas({
-    width: 800,
-    height: 800,
-    imageSmoothingEnabled: true,
-    imageSmoothingQuality: "high"
-  });
-
-  canvas.toBlob((blob) => {
-    if (!blob) return;
-
-    const croppedFile = new File(
-      [blob],
-      `${Date.now()}-${currentFileName.replace(/\s+/g, "-")}.jpg`,
-      { type: "image/jpeg" }
-    );
-    croppedFile.originalFile = currentSourceFile;
-
-    if (currentReplaceIndex !== null) {
-      selectedFiles = selectedFiles.filter((file) => file.replaceIndex !== currentReplaceIndex);
-      croppedFile.replaceIndex = currentReplaceIndex;
-      forceRemoveExisting(currentReplaceIndex);
-      currentReplaceIndex = null;
-      selectedFiles.push(croppedFile);
-    } else if (currentNewEditIndex !== null) {
-      selectedFiles[currentNewEditIndex] = croppedFile;
-      currentNewEditIndex = null;
-    } else {
-      selectedFiles.push(croppedFile);
-    }
-
-    if (cropper) {
-      cropper.destroy();
-      cropper = null;
-    }
-
-    if (cropImage.dataset.objectUrl) {
-      URL.revokeObjectURL(cropImage.dataset.objectUrl);
-      cropImage.dataset.objectUrl = "";
-    }
-
-    openNextCrop();
-  }, "image/jpeg", 0.9);
-}
-
-function closeCropModal() {
-  cropModal.classList.remove("show");
-
-  if (cropper) {
-    cropper.destroy();
-    cropper = null;
+  if (transientFieldErrors[key]) {
+    delete transientFieldErrors[key];
   }
-
-  cropImage.onload = null;
-  cropImage.src = "";
-    currentSourceFile = null;
-    currentReplaceIndex = null;
-    currentNewEditIndex = null;
-    currentFileName = "";
-    pendingFiles = [];
-    rebuildFileInput();
-  updateRemoveButtonsState();
 }
 
-function rebuildFileInput() {
+function setTransientFieldError(key, message) {
+  clearTransientFieldError(key);
+  transientFieldErrors[key] = message;
+  renderVariants();
+
+  transientFieldErrorTimeouts[key] = window.setTimeout(() => {
+    delete transientFieldErrors[key];
+    delete transientFieldErrorTimeouts[key];
+    renderVariants();
+  }, 3000);
+}
+
+function getActiveVariantImages(variant) {
+  const activeExisting = variant.existingImages
+    .map((image, index) => ({ ...image, kind: "existing", index }))
+    .filter((image) => !image.removed);
+  const activeNew = variant.newImages.map((file, index) => ({
+    file,
+    kind: "new",
+    index
+  }));
+
+  return [...activeExisting, ...activeNew];
+}
+
+function normalizeVariantMainImage(variant) {
+  const activeImages = getActiveVariantImages(variant);
+  const activeKeys = activeImages.map((image) => `${image.kind}:${image.index}`);
+
+  if (!activeKeys.includes(variant.mainImageKey)) {
+    variant.mainImageKey = activeKeys[0] || "";
+  }
+}
+
+function attachSelectedFiles(input, files) {
   const dataTransfer = new DataTransfer();
-  selectedFiles.forEach((file) => dataTransfer.items.add(file));
-  imageInput.files = dataTransfer.files;
+  files.forEach((file) => dataTransfer.items.add(file));
+  input.files = dataTransfer.files;
 }
 
-function renderNewImagePreviews() {
-  document.querySelectorAll(".new-image").forEach((node) => node.remove());
+function renderVariants() {
+  variantList.innerHTML = "";
 
-  selectedFiles.forEach((file, index) => {
-    const reader = new FileReader();
+  variantsState.forEach((variant, index) => {
+    normalizeVariantMainImage(variant);
 
-    reader.onload = (event) => {
-      const imageBox = document.createElement("div");
-      imageBox.className = "image-box new-image";
+    const card = document.createElement("section");
+    card.className = "glass-panel";
+    card.style.marginBottom = "1rem";
+    card.innerHTML = `
+      <div class="panel-head">
+        <div>
+          <h3>Variant ${index + 1}</h3>
+          <p>Set size, color, pricing, stock, and images for this option.</p>
+        </div>
+        <button type="button" class="btn btn-light" data-remove-variant="${index}" ${variantsState.length === 1 ? "disabled" : ""}>Remove</button>
+      </div>
 
-      const image = document.createElement("img");
-      image.src = event.target.result;
-      image.className = "product-image-preview recrop-image";
-      image.alt = file.name;
+      <div class="form-grid">
+        <label class="field">
+          <span>Size</span>
+          <input type="text" value="${escapeHtml(variant.size)}" data-variant-input="${index}" data-field="size" placeholder="8 / M / 42" />
+          ${renderInlineError(getVariantFieldError(index, "size"))}
+        </label>
 
-      if (file.replaceIndex !== undefined) {
-        image.addEventListener("click", () => {
-          const originalSrc = getOriginalExistingSrc(file.replaceIndex);
-          if (originalSrc) {
-            openExistingImageForCrop(file.replaceIndex, originalSrc);
-          }
+        <label class="field">
+          <span>Color</span>
+          <input type="text" value="${escapeHtml(variant.color)}" data-variant-input="${index}" data-field="color" placeholder="Black" />
+          ${renderInlineError(getVariantFieldError(index, "color"))}
+        </label>
+
+        <label class="field">
+          <span>Price</span>
+          <input type="number" min="1" step="0.01" value="${escapeHtml(variant.price)}" data-variant-input="${index}" data-field="price" placeholder="3695" />
+          ${renderInlineError(getVariantFieldError(index, "price"))}
+        </label>
+
+        <label class="field">
+          <span>Offer Price</span>
+          <input type="number" min="0" step="0.01" value="${escapeHtml(variant.offerPrice)}" data-variant-input="${index}" data-field="offerPrice" placeholder="2999" />
+          ${renderInlineError(getVariantFieldError(index, "offerPrice"))}
+        </label>
+
+        <label class="field">
+          <span>Stock</span>
+          <input type="number" min="0" step="1" value="${escapeHtml(variant.stock)}" data-variant-input="${index}" data-field="stock" placeholder="10" />
+          ${renderInlineError(getVariantFieldError(index, "stock"))}
+        </label>
+
+        <label class="field field-wide">
+          <span>Upload Images</span>
+          <input type="file" multiple accept="image/jpeg,image/jpg,image/png" data-variant-file="${index}" name="variantImages-${index}" />
+          ${renderInlineError(getVariantFieldError(index, "images"))}
+        </label>
+      </div>
+
+      <div class="image-preview-row" data-variant-images="${index}"></div>
+    `;
+
+    variantList.appendChild(card);
+
+    const fileInput = card.querySelector(`[data-variant-file="${index}"]`);
+    if (fileInput) {
+      attachSelectedFiles(fileInput, variant.newImages);
+
+      fileInput.addEventListener("change", (event) => {
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
+
+        files.forEach((file) => {
+          file.previewUrl = URL.createObjectURL(file);
+          variant.newImages.push(file);
         });
-      } else {
-        image.addEventListener("click", () => openNewImageForCrop(index));
-      }
+
+        clearTransientFieldError(`variants.${index}.images`);
+        renderVariants();
+      });
+    }
+
+    card.querySelectorAll(`[data-variant-input="${index}"]`).forEach((input) => {
+      input.addEventListener("input", () => {
+        variant[input.dataset.field] = input.value;
+        clearTransientFieldError(`variants.${index}.${input.dataset.field}`);
+      });
+    });
+
+    const previewRow = card.querySelector(`[data-variant-images="${index}"]`);
+    getActiveVariantImages(variant).forEach((image) => {
+      const imageBox = document.createElement("div");
+      imageBox.className = "image-box";
+
+      const imageNode = document.createElement("img");
+      imageNode.src = image.kind === "existing" ? image.url : image.file.previewUrl;
+      imageNode.className = "product-image-preview";
+      imageNode.alt = `Variant ${index + 1} image`;
 
       const removeButton = document.createElement("button");
       removeButton.type = "button";
       removeButton.className = "remove-btn";
-      removeButton.textContent = file.replaceIndex !== undefined ? "↺" : "✕";
-      removeButton.title = file.replaceIndex !== undefined ? "Restore original image" : "Remove image";
-      removeButton.addEventListener("click", () => removeSelectedFile(index));
+      removeButton.textContent = "✕";
+      removeButton.addEventListener("click", () => {
+        if (image.kind === "existing") {
+          variant.existingImages[image.index].removed = true;
+        } else {
+          const [removedImage] = variant.newImages.splice(image.index, 1);
+          if (removedImage?.previewUrl) {
+            URL.revokeObjectURL(removedImage.previewUrl);
+          }
+        }
+
+        normalizeVariantMainImage(variant);
+        clearTransientFieldError(`variants.${index}.images`);
+        renderVariants();
+      });
 
       const mainButton = document.createElement("button");
       mainButton.type = "button";
-      mainButton.className = "main-image-btn";
-      mainButton.dataset.imageKey = `new:${index}`;
-      mainButton.textContent = "Set as Main";
-      mainButton.addEventListener("click", () => setMainImage(mainButton.dataset.imageKey));
+      mainButton.className = `main-image-btn ${variant.mainImageKey === `${image.kind}:${image.index}` ? "active-main" : ""}`;
+      mainButton.textContent = variant.mainImageKey === `${image.kind}:${image.index}` ? "Main Image" : "Set as Main";
+      mainButton.addEventListener("click", () => {
+        variant.mainImageKey = `${image.kind}:${image.index}`;
+        renderVariants();
+      });
 
-      imageBox.appendChild(image);
-
-      if (file.replaceIndex !== undefined) {
-        const badge = document.createElement("span");
-        badge.className = "replacement-badge";
-        badge.textContent = "Recropped";
-        imageBox.appendChild(badge);
-      }
-
+      imageBox.appendChild(imageNode);
       imageBox.appendChild(removeButton);
       imageBox.appendChild(mainButton);
-      imagePreviewRow.appendChild(imageBox);
-      updateRemoveButtonsState();
-    };
+      previewRow.appendChild(imageBox);
+    });
 
-    reader.readAsDataURL(file);
-  });
-
-  normalizeMainImageSelection();
-}
-
-function removeSelectedFile(index) {
-  if (getTotalImagesCount() <= 3) {
-    showImageValidation("Keep at least 3 images before saving.");
-    return;
-  }
-
-  const fileToRemove = selectedFiles[index];
-
-  if (fileToRemove && fileToRemove.replaceIndex !== undefined) {
-    restoreExisting(fileToRemove.replaceIndex);
-  }
-
-  selectedFiles = selectedFiles.filter((_, fileIndex) => fileIndex !== index);
-  rebuildFileInput();
-  renderNewImagePreviews();
-  normalizeMainImageSelection();
-  updateRemoveButtonsState();
-}
-
-function removeImage(index) {
-  if (getTotalImagesCount() <= 3) {
-    showImageValidation("Keep at least 3 images before saving.");
-    return;
-  }
-
-  forceRemoveExisting(index);
-  normalizeMainImageSelection();
-  updateRemoveButtonsState();
-}
-
-function forceRemoveExisting(index) {
-  let removed = removeImagesInput.value ? removeImagesInput.value.split(",") : [];
-
-  if (!removed.includes(String(index))) {
-    removed.push(String(index));
-  }
-
-  removeImagesInput.value = removed.join(",");
-
-  const imgBox = document.querySelector(`.existing-image[data-index="${index}"]`);
-  if (imgBox) {
-    imgBox.style.display = "none";
-    imgBox.classList.add("removed-existing");
-  }
-}
-
-function restoreExisting(index) {
-  let removed = removeImagesInput.value ? removeImagesInput.value.split(",") : [];
-  removed = removed.filter((value) => value !== String(index));
-  removeImagesInput.value = removed.join(",");
-
-  const imgBox = document.querySelector(`.existing-image[data-index="${index}"]`);
-  if (imgBox) {
-    imgBox.style.display = "";
-    imgBox.classList.remove("removed-existing");
-  }
-}
-
-function getRemainingExistingCount() {
-  return document.querySelectorAll(".existing-image:not(.removed-existing)").length;
-}
-
-function getTotalImagesCount() {
-  return getRemainingExistingCount() + selectedFiles.length;
-}
-
-function getOriginalExistingSrc(index) {
-  const existingBox = document.querySelector(`.existing-image[data-index="${index}"]`);
-  return existingBox ? existingBox.dataset.originalSrc : "";
-}
-
-function getFirstAvailableImageKey() {
-  const firstExisting = document.querySelector(".existing-image:not(.removed-existing)");
-  if (firstExisting) {
-    return `existing:${firstExisting.dataset.index}`;
-  }
-
-  if (selectedFiles.length > 0) {
-    return "new:0";
-  }
-
-  return "";
-}
-
-function normalizeMainImageSelection() {
-  const currentKey = mainImageInput.value;
-  const availableKeys = Array.from(document.querySelectorAll(".main-image-btn"))
-    .map((button) => button.dataset.imageKey);
-
-  if (!availableKeys.includes(currentKey)) {
-    const fallbackKey = getFirstAvailableImageKey();
-    if (fallbackKey) {
-      setMainImage(fallbackKey);
-      return;
+    if (!getActiveVariantImages(variant).length) {
+      const emptyMessage = document.createElement("p");
+      emptyMessage.className = "image-validation-message";
+      emptyMessage.textContent = "Upload at least 3 images for this variant.";
+      previewRow.appendChild(emptyMessage);
     }
-  }
+  });
 
-  if (currentKey) {
-    setMainImage(currentKey);
-  }
-}
-
-function updateRemoveButtonsState() {
-  const canRemove = getTotalImagesCount() > 3;
-
-  document.querySelectorAll(".remove-btn").forEach((button) => {
-    button.disabled = !canRemove;
-    button.classList.toggle("remove-btn-disabled", !canRemove);
+  document.querySelectorAll("[data-remove-variant]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.removeVariant);
+      const [removedVariant] = variantsState.splice(index, 1);
+      removedVariant?.newImages?.forEach((file) => {
+        if (file.previewUrl) {
+          URL.revokeObjectURL(file.previewUrl);
+        }
+      });
+      renderVariants();
+    });
   });
 }
 
-function showImageValidation(message) {
-  if (!imageValidationMessage) return;
-  imageValidationMessage.textContent = message;
+function renderInlineError(message) {
+  return message ? `<small class="feedback error">${escapeHtml(message)}</small>` : "";
 }
 
-function parseHiddenList(value) {
-  if (!value) return [];
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-function syncBuilderHidden(type) {
-  if (type === "size" && sizesHidden) {
-    sizesHidden.value = sizeValues.join(", ");
-  }
-
-  if (type === "color" && colorsHidden) {
-    colorsHidden.value = colorValues.join(", ");
-  }
-
-  if (type === "highlight" && highlightsHidden) {
-    highlightsHidden.value = highlightValues.join(", ");
-  }
+function syncHighlights() {
+  highlightsHidden.value = highlightValues.join(", ");
 }
 
-function renderBuilderChips(type) {
-  const values = type === "size"
-    ? sizeValues
-    : type === "color"
-      ? colorValues
-      : highlightValues;
-  const listNode = type === "size"
-    ? sizeChipList
-    : type === "color"
-      ? colorChipList
-      : highlightChipList;
+function renderHighlightChips() {
+  highlightChipList.innerHTML = "";
 
-  if (!listNode) return;
-  listNode.innerHTML = "";
-
-  values.forEach((value) => {
+  highlightValues.forEach((value) => {
     const chip = document.createElement("span");
     chip.className = "builder-chip";
 
@@ -879,58 +547,136 @@ function renderBuilderChips(type) {
     removeBtn.type = "button";
     removeBtn.className = "builder-chip-remove";
     removeBtn.textContent = "✕";
-    removeBtn.addEventListener("click", () => removeBuilderValue(type, value));
+    removeBtn.addEventListener("click", () => {
+      highlightValues = highlightValues.filter((item) => item !== value);
+      syncHighlights();
+      renderHighlightChips();
+    });
 
     chip.appendChild(text);
     chip.appendChild(removeBtn);
-    listNode.appendChild(chip);
+    highlightChipList.appendChild(chip);
   });
 
-  syncBuilderHidden(type);
+  syncHighlights();
 }
 
-function addBuilderValue(type) {
-  const input = type === "size"
-    ? sizeDraftInput
-    : type === "color"
-      ? colorDraftInput
-      : highlightDraftInput;
-  if (!input) return;
+function addHighlightValue() {
+  const value = highlightDraftInput.value.trim();
+  if (!value || highlightValues.includes(value)) return;
+  highlightValues.push(value);
+  highlightDraftInput.value = "";
+  renderHighlightChips();
+}
 
-  const value = input.value.trim();
-  if (!value) return;
+addVariantBtn?.addEventListener("click", () => {
+  variantsState.push(createVariantState());
+  renderVariants();
+});
 
-  const targetValues = type === "size"
-    ? sizeValues
-    : type === "color"
-      ? colorValues
-      : highlightValues;
-  if (!targetValues.includes(value)) {
-    targetValues.push(value);
+addHighlightBtn?.addEventListener("click", addHighlightValue);
+highlightDraftInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addHighlightValue();
+  }
+});
+
+productNameInput?.addEventListener("input", () => {
+  clearStaticFieldError("productName");
+});
+
+categorySelect?.addEventListener("change", () => {
+  clearStaticFieldError("category");
+});
+
+productForm?.addEventListener("submit", (event) => {
+  let hasClientValidationError = false;
+  let firstInvalidElement = null;
+
+  const productNameValue = String(productNameInput?.value || "").trim();
+  const categoryValue = String(categorySelect?.value || "").trim();
+
+  if (!productNameValue) {
+    setStaticFieldError("productName", "Product name is required.");
+    hasClientValidationError = true;
+    firstInvalidElement = firstInvalidElement || productNameInput;
   }
 
-  input.value = "";
-  renderBuilderChips(type);
-}
-
-function removeBuilderValue(type, value) {
-  if (type === "size") {
-    sizeValues = sizeValues.filter((item) => item !== value);
-  } else if (type === "color") {
-    colorValues = colorValues.filter((item) => item !== value);
-  } else {
-    highlightValues = highlightValues.filter((item) => item !== value);
+  if (!categoryValue) {
+    setStaticFieldError("category", "Category is required.");
+    hasClientValidationError = true;
+    firstInvalidElement = firstInvalidElement || categorySelect;
   }
 
-  renderBuilderChips(type);
-}
+  variantsState.forEach((variant, index) => {
+    if (!String(variant.size || "").trim()) {
+      setTransientFieldError(`variants.${index}.size`, "Size is required.");
+      hasClientValidationError = true;
+      firstInvalidElement = firstInvalidElement || variantList.querySelector(`[data-variant-input="${index}"][data-field="size"]`);
+    }
 
-renderBuilderChips("size");
-renderBuilderChips("color");
-renderBuilderChips("highlight");
-normalizeMainImageSelection();
-updateRemoveButtonsState();
+    if (!String(variant.color || "").trim()) {
+      setTransientFieldError(`variants.${index}.color`, "Color is required.");
+      hasClientValidationError = true;
+      firstInvalidElement = firstInvalidElement || variantList.querySelector(`[data-variant-input="${index}"][data-field="color"]`);
+    }
+
+    if (String(variant.price || "").trim() === "") {
+      setTransientFieldError(`variants.${index}.price`, "Price is required.");
+      hasClientValidationError = true;
+      firstInvalidElement = firstInvalidElement || variantList.querySelector(`[data-variant-input="${index}"][data-field="price"]`);
+    }
+
+    if (String(variant.stock || "").trim() === "") {
+      setTransientFieldError(`variants.${index}.stock`, "Stock is required.");
+      hasClientValidationError = true;
+      firstInvalidElement = firstInvalidElement || variantList.querySelector(`[data-variant-input="${index}"][data-field="stock"]`);
+    }
+  });
+
+  const preparedVariants = variantsState.map((variant) => {
+    normalizeVariantMainImage(variant);
+
+    const removedImageIndexes = variant.existingImages
+      .map((image, index) => image.removed ? index : null)
+      .filter((value) => value !== null);
+
+    return {
+      size: variant.size,
+      color: variant.color,
+      price: variant.price,
+      offerPrice: variant.offerPrice,
+      stock: variant.stock,
+      existingImages: variant.existingImages.map((image) => image.url),
+      removedImageIndexes,
+      mainImageKey: variant.mainImageKey
+    };
+  });
+
+  const imageError = preparedVariants.findIndex((variant, index) => {
+    const existingCount = variant.existingImages.filter((_, imageIndex) => !variant.removedImageIndexes.includes(imageIndex)).length;
+    const newCount = variantsState[index].newImages.length;
+    return existingCount + newCount < 3;
+  });
+
+  if (imageError !== -1) {
+    setTransientFieldError(`variants.${imageError}.images`, `Variant ${imageError + 1} needs at least 3 images.`);
+    hasClientValidationError = true;
+    firstInvalidElement = firstInvalidElement || variantList.querySelector(`[data-variant-file="${imageError}"]`);
+  }
+
+  if (hasClientValidationError) {
+    event.preventDefault();
+    firstInvalidElement?.scrollIntoView({ block: "center", behavior: "smooth" });
+    return;
+  }
+
+  variantsPayloadInput.value = JSON.stringify(preparedVariants);
+});
+
+renderVariants();
+renderHighlightChips();
 </script>
-
 </body>
 </html>

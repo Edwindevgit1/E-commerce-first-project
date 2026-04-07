@@ -89,7 +89,7 @@ export const getCartService = async (userId)=>{
     const imageIndex = product.mainImageIndex ?? 0;
     const subtotal = price * item.quantity;
     return {
-      productId:product._id,
+      productId:String(product._id),
       productName:product.productName,
       productImage:
         product.images?.[imageIndex] ||
@@ -323,7 +323,7 @@ export const validateCartForCheckoutService = async (
     const imageIndex = product.mainImageIndex ?? 0;
 
     checkoutItems.push({
-      productId: product._id,
+      productId: String(product._id),
       productName: product.productName,
       productImage:
         product.images?.[imageIndex] ||

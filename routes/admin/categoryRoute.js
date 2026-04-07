@@ -1,5 +1,12 @@
 import express from 'express'
-import { addCategoryController, editCategoryController, getCategoryController, softdeleteCategoryController ,restoreCategoryController} from '../../controllers/admin/categoryController.js'
+import {
+  addCategoryController,
+  editCategoryController,
+  getCategoryController,
+  softdeleteCategoryController,
+  restoreCategoryController,
+  permanentDeleteCategoryController
+} from '../../controllers/admin/categoryController.js'
 import adminMiddleware from '../../middleware/adminauthmiddleware.js';
 import noCache from '../../middleware/noCacheMiddleware.js';
 const router = express.Router()
@@ -9,4 +16,5 @@ router.post("/add-category",adminMiddleware,addCategoryController)
 router.post('/edit-category/:id',adminMiddleware,editCategoryController)
 router.post('/delete-category/:id',adminMiddleware,softdeleteCategoryController)
 router.post("/restore/:id",adminMiddleware,restoreCategoryController);
+router.post("/permanent-delete-category/:id",adminMiddleware,permanentDeleteCategoryController);
 export default router
