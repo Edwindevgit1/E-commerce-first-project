@@ -3,6 +3,10 @@ import Cart from "../../models/Cart.js";
 import Product from "../../models/Product.js";
 import { getEffectiveProductPricing } from "../../utils/pricing.js";
 
+const normalizeVariantValue = (value = "") => String(value || "").trim().toLowerCase();
+const buildCartItemId = (productId, size = "", color = "") =>
+  `${String(productId)}::${normalizeVariantValue(size)}__${normalizeVariantValue(color)}`;
+
 const normalizeColorList = (items = []) => {
   const seen = new Set();
 
@@ -61,6 +65,24 @@ const enrichProductPricing = (product) => {
     hasDiscount: pricing.hasDiscount,
     discountSource: pricing.discountSource,
     categoryOfferPercentage: pricing.categoryOfferPercentage
+  };
+};
+
+const enrichVariantPricing = (product, variant) => {
+  const variantObject =
+    typeof variant?.toObject === "function" ? variant.toObject() : { ...(variant || {}) };
+  const pricing = getEffectiveProductPricing({
+    ...product.toObject(),
+    price: Number(variantObject.price) || 0,
+    offerPrice: Number(variantObject.offerPrice) || 0
+  });
+
+  return {
+    ...variantObject,
+    effectivePrice: pricing.effectivePrice,
+    originalPrice: pricing.basePrice,
+    hasDiscount: pricing.hasDiscount,
+    discountSource: pricing.discountSource
   };
 };
 
@@ -249,13 +271,13 @@ export const getProductDetailsPage = async (req, res) => {
 
     // Cart quantity
     let cartQuantity = 0;
+    let selectedCartItemId = "";
 
     if (req.user?._id) {
       const cart = await Cart.findOne({ user: req.user._id }).lean();
-      const cartItem = cart?.items?.find(
-        (item) => String(item.product) === String(product._id)
-      );
-      cartQuantity = cartItem?.quantity || 0;
+      cartQuantity = (cart?.items || [])
+        .filter((item) => String(item.product) === String(product._id))
+        .reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
     }
 
     // Related products
@@ -273,9 +295,11 @@ export const getProductDetailsPage = async (req, res) => {
     const hasStock = product.stock > 0;
     const categoryAvailability = getCategoryAvailabilityState(product.category);
 
-    const availableVariants = (product.variants || []).filter(
-      (variant) => variant.stock > 0
+    const variantOptions = (product.variants || []).map((variant) =>
+      enrichVariantPricing(product, variant)
     );
+    const availableVariants = variantOptions.filter((variant) => variant.stock > 0);
+    const defaultVariant = availableVariants[0] || variantOptions[0] || null;
 
     const hasVariantStock =
       !product.variants?.length || availableVariants.length > 0;
@@ -328,6 +352,10 @@ export const getProductDetailsPage = async (req, res) => {
       ...availableVariants.map((variant) => variant.color)
     ]);
 
+    if (defaultVariant) {
+      selectedCartItemId = buildCartItemId(product._id, defaultVariant.size, defaultVariant.color);
+    }
+
     // Pricing
     const pricedProduct = enrichProductState(product);
     const pricedRelatedProducts = relatedProducts.map(enrichProductState);
@@ -345,8 +373,11 @@ export const getProductDetailsPage = async (req, res) => {
       isInCart,
       cartQuantity,
       availableVariants,
+      variantOptions,
+      defaultVariant,
       displaySizes,
       displayColors,
+      selectedCartItemId,
       productAvailability,
       categoryAvailability,
       pageMessage: req.query.message || null

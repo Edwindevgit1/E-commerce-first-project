@@ -3,17 +3,19 @@ import Cart from "../models/Cart.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import { getEffectiveProductPricing } from "../utils/pricing.js";
+import { cartVariantHelpers } from "./cartServices.js";
 
+const { buildCartItemId, getProductVariant } = cartVariantHelpers;
 const MAX_CART_QUANTITY = 5;
 
-export const placeOrderService = async (userId, selectedProductIds = []) => {
+export const placeOrderService = async (userId, selectedCartItemIds = []) => {
   if (!userId) {
     throw new Error("User is required");
   }
 
-  const normalizedSelectedIds = (Array.isArray(selectedProductIds)
-    ? selectedProductIds
-    : [selectedProductIds]
+  const normalizedSelectedIds = (Array.isArray(selectedCartItemIds)
+    ? selectedCartItemIds
+    : [selectedCartItemIds]
   )
     .map((id) => String(id || "").trim())
     .filter(Boolean);
@@ -33,12 +35,10 @@ export const placeOrderService = async (userId, selectedProductIds = []) => {
     }
 
     const selectedIdSet = new Set(normalizedSelectedIds);
-
     const itemsToOrder = cart.items.filter((item) =>
-      selectedIdSet.has(String(item.product))
+      selectedIdSet.has(buildCartItemId(item.product, item.size, item.color))
     );
 
-    // ✅ STRICT VALIDATION (NEW)
     if (itemsToOrder.length !== normalizedSelectedIds.length) {
       throw new Error("Some selected items are invalid or not in your cart");
     }
@@ -59,7 +59,6 @@ export const placeOrderService = async (userId, selectedProductIds = []) => {
         throw new Error("One of the cart products no longer exists");
       }
 
-      // ✅ AVAILABILITY VALIDATION
       if (
         product.isDeleted ||
         product.isBlocked ||
@@ -68,18 +67,22 @@ export const placeOrderService = async (userId, selectedProductIds = []) => {
         product.category.isDeleted ||
         product.category.status !== "active"
       ) {
-        throw new Error(
-          `${product.productName} is no longer available`
-        );
+        throw new Error(`${product.productName} is no longer available`);
       }
 
-      if (product.stock <= 0) {
+      const selectedVariant = getProductVariant(product, item.size, item.color);
+
+      if (!selectedVariant) {
+        throw new Error(`${product.productName} selected variant is unavailable`);
+      }
+
+      if (selectedVariant.stock <= 0) {
         throw new Error(`${product.productName} is out of stock`);
       }
 
-      if (item.quantity > product.stock) {
+      if (item.quantity > selectedVariant.stock) {
         throw new Error(
-          `${product.productName} only has ${product.stock} item(s) available`
+          `${product.productName} only has ${selectedVariant.stock} item(s) available`
         );
       }
 
@@ -89,18 +92,24 @@ export const placeOrderService = async (userId, selectedProductIds = []) => {
         );
       }
 
-      // ✅ PRICING
-      const pricing = getEffectiveProductPricing(product);
+      const pricing = getEffectiveProductPricing({
+        ...product.toObject(),
+        price: Number(selectedVariant.price) || 0,
+        offerPrice: Number(selectedVariant.offerPrice) || 0
+      });
       const price = pricing.effectivePrice;
       const subtotal = price * item.quantity;
-
-      const imageIndex = product.mainImageIndex ?? 0;
+      const imageIndex = selectedVariant.mainImageIndex ?? 0;
 
       orderItems.push({
         product: product._id,
         productName: product.productName,
         productImage:
-          product.images?.[imageIndex] || product.images?.[0] || "",
+          selectedVariant.images?.[imageIndex] ||
+          selectedVariant.images?.[0] ||
+          product.images?.[product.mainImageIndex ?? 0] ||
+          product.images?.[0] ||
+          "",
         category: product.category?.name || "",
         price,
         quantity: item.quantity,
@@ -109,26 +118,15 @@ export const placeOrderService = async (userId, selectedProductIds = []) => {
 
       grandTotal += subtotal;
 
-      // ✅ ATOMIC STOCK UPDATE (CRITICAL FIX)
-      const updatedProduct = await Product.findOneAndUpdate(
-        {
-          _id: product._id,
-          stock: { $gte: item.quantity }
-        },
-        {
-          $inc: { stock: -item.quantity }
-        },
-        { new: true, session }
+      selectedVariant.stock -= item.quantity;
+      product.stock = (product.variants || []).reduce(
+        (sum, variant) => sum + (Number(variant.stock) || 0),
+        0
       );
 
-      if (!updatedProduct) {
-        throw new Error(
-          `${product.productName} stock changed. Please try again.`
-        );
-      }
+      await product.save({ session });
     }
 
-    // ✅ CREATE ORDER
     const [order] = await Order.create(
       [
         {
@@ -141,19 +139,16 @@ export const placeOrderService = async (userId, selectedProductIds = []) => {
       { session }
     );
 
-    // ✅ REMOVE PURCHASED ITEMS FROM CART
     cart.items = cart.items.filter(
-      (item) => !selectedIdSet.has(String(item.product))
+      (item) => !selectedIdSet.has(buildCartItemId(item.product, item.size, item.color))
     );
 
     await cart.save({ session });
 
-    // ✅ COMMIT
     await session.commitTransaction();
     session.endSession();
 
     return order;
-
   } catch (error) {
     await session.abortTransaction();
     session.endSession();

@@ -34,6 +34,9 @@
               <div class="cart-item-copy">
                 <h3><%= item.productName %></h3>
                 <p><%= item.category %></p>
+                <% if (item.size || item.color) { %>
+                  <p><%= [item.size ? `Size: ${item.size}` : "", item.color ? `Color: ${item.color}` : ""].filter(Boolean).join(" | ") %></p>
+                <% } %>
                 <span class="cart-item-price">₹<%= item.price %></span>
                 <span class="cart-item-meta">Qty: <%= item.quantity %></span>
               </div>

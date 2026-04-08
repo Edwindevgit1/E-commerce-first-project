@@ -80,7 +80,10 @@ export const addToCartController = async (req, res) => {
     if (!productId) {
       return res.redirect("/api/user/products");
     }
-    await addToCartService(userId, productId)
+    await addToCartService(userId, productId, {
+      size: req.body.size,
+      color: req.body.color
+    })
     return res.redirect("/api/user/cart");
   } catch (error) {
     if (!isExpectedCartError(error)) {
@@ -110,7 +113,10 @@ export const removeFromCartController = async (req, res) => {
     if (!productId) {
       return res.redirect("/api/user/cart")
     }
-    await removeFromCartService(userId, productId);
+    await removeFromCartService(userId, productId, {
+      size: req.body.size,
+      color: req.body.color
+    });
     return res.redirect(
       buildRedirectWithMessage("/api/user/cart", "Item removed from your cart.", "message")
     );
@@ -138,7 +144,7 @@ export const updateCartQuantityController = async (req, res) => {
     }
     const userId = req.user._id;
     const { productId } = req.params;
-    const action = req.body.cartAction || req.body.action;
+    const { action } = req.body;
     if (!productId || !action) {
       if (isAjaxRequest(req)) {
         return res.status(400).json({
@@ -148,7 +154,10 @@ export const updateCartQuantityController = async (req, res) => {
       }
       return res.redirect("/api/user/cart");
     }
-    await updateCartQuantityService(userId, productId, action);
+    await updateCartQuantityService(userId, productId, action, {
+      size: req.body.size,
+      color: req.body.color
+    });
     if (isAjaxRequest(req)) {
       const { cartItems, grandTotal, hasUnavailableItems, canCheckout } = await getCartService(userId);
       return res.json({
@@ -201,7 +210,10 @@ export const updateCartQuantityAjaxController = async (req, res) => {
       });
     }
 
-    await updateCartQuantityService(userId, productId, action);
+    await updateCartQuantityService(userId, productId, action, {
+      size: req.body.size,
+      color: req.body.color
+    });
     const { cartItems, grandTotal, hasUnavailableItems, canCheckout } = await getCartService(userId);
 
     return res.json({
@@ -231,7 +243,7 @@ export const checkoutCartController = async (req, res) => {
     }
 
     const userId = req.user._id;
-    const selectedProductIds = req.body.selectedProductIds || [];
+    const selectedProductIds = req.body.selectedCartItemIds || req.body.selectedProductIds || [];
 
     const { checkoutItems, grandTotal } = await validateCartForCheckoutService(
       userId,
@@ -263,9 +275,10 @@ export const placeOrderController = async (req, res) => {
 
     const userId = req.user._id;
 
-    const selectedProductIds = Array.isArray(req.body.selectedProductIds)
-      ? req.body.selectedProductIds
-      : [req.body.selectedProductIds];
+    const selectedCartItemIds = req.body.selectedCartItemIds || req.body.selectedProductIds;
+    const selectedProductIds = Array.isArray(selectedCartItemIds)
+      ? selectedCartItemIds
+      : [selectedCartItemIds];
 
     if (!selectedProductIds.length || !selectedProductIds[0]) {
       return res.redirect("/api/user/cart?error=No items selected");

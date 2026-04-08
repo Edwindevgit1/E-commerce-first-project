@@ -44,6 +44,7 @@
               <article
                 class="cart-item-card"
                 data-cart-item
+                data-cart-item-id="<%= item.cartItemId %>"
                 data-product-id="<%= item.productId %>"
                 data-subtotal="<%= item.subtotal %>"
                 data-available="<%= item.isAvailable ? '1' : '0' %>"
@@ -63,6 +64,9 @@
                 <div class="cart-item-copy">
                   <h3><%= item.productName %></h3>
                   <p><%= item.category %></p>
+                  <% if (item.size || item.color) { %>
+                    <p><%= [item.size ? `Size: ${item.size}` : "", item.color ? `Color: ${item.color}` : ""].filter(Boolean).join(" | ") %></p>
+                  <% } %>
                   <span class="cart-item-price">₹<%= item.price %></span>
                   <% if (item.hasDiscount) { %>
                     <span class="cart-item-old-price">₹<%= item.originalPrice %></span>
@@ -78,8 +82,10 @@
                 </div>
 
                 <div class="cart-item-actions">
-                  <form action="/api/user/cart/update/<%= item.productId %>" method="POST" class="cart-qty-form" data-cart-qty-form>
-                    <input type="hidden" name="cartAction" value="decrement" />
+                  <form action="/api/user/cart/update-ajax/<%= item.productId %>" method="POST" class="cart-qty-form" data-cart-qty-form>
+                    <input type="hidden" name="action" value="decrement" />
+                    <input type="hidden" name="size" value="<%= item.size || '' %>" />
+                    <input type="hidden" name="color" value="<%= item.color || '' %>" />
                     <button
                       type="button"
                       class="qty-btn"
@@ -92,8 +98,10 @@
 
                   <span class="cart-qty-value" data-cart-quantity><%= item.quantity %></span>
 
-                  <form action="/api/user/cart/update/<%= item.productId %>" method="POST" class="cart-qty-form" data-cart-qty-form>
-                    <input type="hidden" name="cartAction" value="increment" />
+                  <form action="/api/user/cart/update-ajax/<%= item.productId %>" method="POST" class="cart-qty-form" data-cart-qty-form>
+                    <input type="hidden" name="action" value="increment" />
+                    <input type="hidden" name="size" value="<%= item.size || '' %>" />
+                    <input type="hidden" name="color" value="<%= item.color || '' %>" />
                     <button
                       type="button"
                       class="qty-btn"
@@ -109,6 +117,8 @@
                   <strong data-cart-subtotal>₹<%= item.subtotal %></strong>
 
                   <form action="/api/user/cart/remove/<%= item.productId %>" method="POST">
+                    <input type="hidden" name="size" value="<%= item.size || '' %>" />
+                    <input type="hidden" name="color" value="<%= item.color || '' %>" />
                     <button type="submit" class="remove-cart-btn">Remove</button>
                   </form>
                 </div>
@@ -219,11 +229,11 @@
       if (selectedProductInputs) {
         selectedProductInputs.innerHTML = checkedCards
           .map((card) => {
-            const productId = card.dataset.productId;
+            const cartItemId = card.dataset.cartItemId;
 
-            if (!productId) return "";
+            if (!cartItemId) return "";
 
-            return `<input type="hidden" name="selectedProductIds" value="${productId}">`;
+            return `<input type="hidden" name="selectedCartItemIds" value="${cartItemId}">`;
           })
           .join("");
       }
@@ -263,7 +273,7 @@
           const checkbox = card.querySelector(".cart-item-checkbox");
           return checkbox && checkbox.checked && !checkbox.disabled;
         })
-        .map((card) => card.dataset.productId);
+        .map((card) => card.dataset.cartItemId);
 
     const ensureCartMessage = () => {
       let messageNode = document.getElementById("cartPageMessage");
@@ -322,12 +332,13 @@
 
     const renderCartItem = (item, selectedProductIds) => {
       const warningText = getWarningText(item);
-      const isChecked = item.isAvailable && selectedProductIds.has(String(item.productId));
+      const isChecked = item.isAvailable && selectedProductIds.has(String(item.cartItemId));
 
       return `
         <article
           class="cart-item-card"
           data-cart-item
+          data-cart-item-id="${escapeHtml(item.cartItemId)}"
           data-product-id="${escapeHtml(item.productId)}"
           data-subtotal="${escapeHtml(item.subtotal)}"
           data-available="${item.isAvailable ? "1" : "0"}"
@@ -348,14 +359,17 @@
           <div class="cart-item-copy">
             <h3>${escapeHtml(item.productName)}</h3>
             <p>${escapeHtml(item.category)}</p>
+            ${(item.size || item.color) ? `<p>${escapeHtml([item.size ? `Size: ${item.size}` : "", item.color ? `Color: ${item.color}` : ""].filter(Boolean).join(" | "))}</p>` : ""}
             <span class="cart-item-price">₹${escapeHtml(item.price)}</span>
             ${item.hasDiscount ? `<span class="cart-item-old-price">₹${escapeHtml(item.originalPrice)}</span>` : ""}
             ${warningText ? `<span class="cart-item-warning">${escapeHtml(warningText)}</span>` : ""}
           </div>
 
           <div class="cart-item-actions">
-            <form action="/api/user/cart/update/${escapeHtml(item.productId)}" method="POST" class="cart-qty-form" data-cart-qty-form>
-              <input type="hidden" name="cartAction" value="decrement" />
+            <form action="/api/user/cart/update-ajax/${escapeHtml(item.productId)}" method="POST" class="cart-qty-form" data-cart-qty-form>
+              <input type="hidden" name="action" value="decrement" />
+              <input type="hidden" name="size" value="${escapeHtml(item.size || "")}" />
+              <input type="hidden" name="color" value="${escapeHtml(item.color || "")}" />
               <button
                 type="button"
                 class="qty-btn"
@@ -368,8 +382,10 @@
 
             <span class="cart-qty-value" data-cart-quantity>${escapeHtml(item.quantity)}</span>
 
-            <form action="/api/user/cart/update/${escapeHtml(item.productId)}" method="POST" class="cart-qty-form" data-cart-qty-form>
-              <input type="hidden" name="cartAction" value="increment" />
+            <form action="/api/user/cart/update-ajax/${escapeHtml(item.productId)}" method="POST" class="cart-qty-form" data-cart-qty-form>
+              <input type="hidden" name="action" value="increment" />
+              <input type="hidden" name="size" value="${escapeHtml(item.size || "")}" />
+              <input type="hidden" name="color" value="${escapeHtml(item.color || "")}" />
               <button
                 type="button"
                 class="qty-btn"
@@ -385,6 +401,8 @@
             <strong data-cart-subtotal>₹${escapeHtml(item.subtotal)}</strong>
 
             <form action="/api/user/cart/remove/${escapeHtml(item.productId)}" method="POST">
+              <input type="hidden" name="size" value="${escapeHtml(item.size || "")}" />
+              <input type="hidden" name="color" value="${escapeHtml(item.color || "")}" />
               <button type="submit" class="remove-cart-btn">Remove</button>
             </form>
           </div>
