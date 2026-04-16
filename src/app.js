@@ -49,9 +49,9 @@ app.use((req, res, next) => {
   );
   next();
 });
-app.use(loadNavbarCategories);
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(loadNavbarCategories);
 //admin
 app.use('/api/admin',adminAuthrouter);
 app.use('/api/admin',usermanagement)

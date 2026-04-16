@@ -176,6 +176,32 @@
   transition: transform 0.18s ease, opacity 0.18s ease;
 }
 
+.store-icon-cart {
+  position: relative;
+}
+
+.store-cart-badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #e84c3d;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  display: none;
+  box-shadow: 0 6px 16px rgba(232, 76, 61, 0.28);
+}
+
+.store-cart-badge.visible {
+  display: inline-block;
+}
+
 .store-icon:hover {
   transform: translateY(-1px);
   color: #0a2052;

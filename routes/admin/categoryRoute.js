@@ -4,8 +4,7 @@ import {
   editCategoryController,
   getCategoryController,
   softdeleteCategoryController,
-  restoreCategoryController,
-  permanentDeleteCategoryController
+  restoreCategoryController
 } from '../../controllers/admin/categoryController.js'
 import adminMiddleware from '../../middleware/adminauthmiddleware.js';
 import noCache from '../../middleware/noCacheMiddleware.js';
@@ -16,5 +15,4 @@ router.post("/add-category",adminMiddleware,addCategoryController)
 router.post('/edit-category/:id',adminMiddleware,editCategoryController)
 router.post('/delete-category/:id',adminMiddleware,softdeleteCategoryController)
 router.post("/restore/:id",adminMiddleware,restoreCategoryController);
-router.post("/permanent-delete-category/:id",adminMiddleware,permanentDeleteCategoryController);
 export default router

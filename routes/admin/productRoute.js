@@ -15,11 +15,21 @@ import {
 
 const router = express.Router();
 
+const handleProductUpload = (req, res, next) => {
+  upload.any()(req, res, (error) => {
+    if (error) {
+      req.uploadError = error;
+    }
+
+    next();
+  });
+};
+
 router.get("/products",noCache,adminMiddleware,getProductController);
 router.get("/add-product",noCache,adminMiddleware,getAddProductPage);
-router.post("/add-product",adminMiddleware,upload.any(),addProductController);
+router.post("/add-product",adminMiddleware,handleProductUpload,addProductController);
 router.get("/edit-product/:id",noCache,adminMiddleware,getEditProductPage);
-router.post("/edit-product/:id",adminMiddleware,upload.any(),editProductController);
+router.post("/edit-product/:id",adminMiddleware,handleProductUpload,editProductController);
 router.post("/delete-product/:id",adminMiddleware,deleteProductController
 );
 router.post("/restore-product/:id",adminMiddleware,restoreProductController);

@@ -195,6 +195,7 @@
     let selectedProductInputs = document.getElementById("selectedProductInputs");
     const cartShell = document.querySelector(".cart-shell");
     const cartLayout = document.querySelector(".cart-layout");
+    const cartCountBadge = document.querySelector("[data-cart-count-badge]");
 
     const refreshCartDomReferences = () => {
       cartItemCards = Array.from(document.querySelectorAll("[data-cart-item]"));
@@ -213,6 +214,15 @@
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
+
+    const updateCartBadge = (items = []) => {
+      if (!cartCountBadge) return;
+
+      const count = Array.isArray(items) ? items.length : 0;
+
+      cartCountBadge.textContent = String(count);
+      cartCountBadge.classList.toggle("visible", count > 0);
+    };
 
     const syncCartSelection = () => {
       if (!cartItemCards.length) return;
@@ -416,6 +426,7 @@
       const items = Array.isArray(payload.cartItems) ? payload.cartItems : [];
 
       if (!items.length) {
+        updateCartBadge([]);
         renderEmptyCart();
         refreshCartDomReferences();
         return;
@@ -468,6 +479,7 @@
       `;
 
       refreshCartDomReferences();
+      updateCartBadge(items);
       syncCartSelection();
     };
 

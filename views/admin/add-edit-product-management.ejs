@@ -6,6 +6,7 @@
 <title><%= pageTitle %></title>
 
 <link rel="stylesheet" href="/css/product-management.css" />
+<link rel="stylesheet" href="/vendor/cropper/cropper.min.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
@@ -199,6 +200,25 @@ placeholder="Enter delivery, dispatch, or return information"
 </section>
 </main>
 
+<div class="crop-modal-backdrop" id="cropModalBackdrop" aria-hidden="true">
+  <div class="crop-modal-box" role="dialog" aria-modal="true" aria-labelledby="cropModalTitle">
+    <div class="crop-modal-head">
+      <h3 id="cropModalTitle">Crop Image</h3>
+      <p>Adjust the image before adding it to this variant.</p>
+    </div>
+
+    <div class="crop-image-wrap">
+      <img id="cropModalImage" alt="Crop preview" />
+    </div>
+
+    <div class="crop-modal-actions">
+      <button type="button" class="btn btn-light" id="cancelCropBtn">Cancel</button>
+      <button type="button" class="btn btn-dark" id="applyCropBtn">Apply Crop</button>
+    </div>
+  </div>
+</div>
+
+<script src="/vendor/cropper/cropper.min.js"></script>
 <script>
 window.addEventListener("pageshow", function (event) {
   if (event.persisted) {
@@ -225,12 +245,18 @@ const highlightsHidden = document.getElementById("highlightsHidden");
 const highlightDraftInput = document.getElementById("highlightDraftInput");
 const addHighlightBtn = document.getElementById("addHighlightBtn");
 const highlightChipList = document.getElementById("highlightChipList");
+const cropModalBackdrop = document.getElementById("cropModalBackdrop");
+const cropModalImage = document.getElementById("cropModalImage");
+const cancelCropBtn = document.getElementById("cancelCropBtn");
+const applyCropBtn = document.getElementById("applyCropBtn");
 
 const fieldErrors = <%- JSON.stringify(productFieldErrors).replace(/</g, "\\u003c") %>;
 const initialVariants = <%- serializedVariants %>;
 let highlightValues = <%- JSON.stringify(highlightValues).replace(/</g, "\\u003c") %>;
 const transientFieldErrors = {};
 const transientFieldErrorTimeouts = {};
+let cropperInstance = null;
+let cropSession = null;
 let variantsState = Array.isArray(initialVariants) && initialVariants.length
   ? initialVariants.map(createVariantState)
   : [createVariantState()];
@@ -243,7 +269,12 @@ if (errorMessage) {
 
 function createVariantState(variant = {}) {
   const existingImages = Array.isArray(variant.images)
-    ? variant.images.map((url) => ({ url, removed: false }))
+    ? variant.images.map((image) => ({
+        url: typeof image === "string" ? image : (image?.url || ""),
+        originalUrl: typeof image === "string" ? image : (image?.originalUrl || image?.url || ""),
+        cropData: typeof image === "string" ? null : (image?.cropData || null),
+        removed: false
+      }))
     : [];
   const mainImageIndex = Number.isInteger(variant.mainImageIndex) ? variant.mainImageIndex : 0;
 
@@ -361,8 +392,333 @@ function normalizeVariantMainImage(variant) {
 
 function attachSelectedFiles(input, files) {
   const dataTransfer = new DataTransfer();
-  files.forEach((file) => dataTransfer.items.add(file));
+  files.forEach((file) => {
+    const originalFile = file?.originalFile || file?.originalSourceFile || file;
+    if (originalFile) {
+      dataTransfer.items.add(originalFile);
+    }
+  });
   input.files = dataTransfer.files;
+}
+
+const allowedImageMimeTypes = new Set(["image/jpeg", "image/png"]);
+const allowedImageExtensions = new Set(["jpg", "jpeg", "png"]);
+
+function isAllowedImageFile(file) {
+  if (!file) return false;
+
+  const mimeType = String(file.type || "").toLowerCase();
+  if (allowedImageMimeTypes.has(mimeType)) {
+    return true;
+  }
+
+  const fileName = String(file.name || "");
+  const extension = fileName.includes(".")
+    ? fileName.split(".").pop().toLowerCase()
+    : "";
+
+  return allowedImageExtensions.has(extension);
+}
+
+function getInvalidImageUploadMessage() {
+  return "This file can't be added. Only JPG and PNG images are allowed.";
+}
+
+function ensurePreviewUrl(file, key = "previewUrl") {
+  if (!file) return "";
+  if (!file[key]) {
+    file[key] = URL.createObjectURL(file);
+  }
+  return file[key];
+}
+
+function openCropModalWithPreview(previewUrl, cropperOptions = {}, errorKey = "", cropData = null) {
+  if (!previewUrl || !cropModalImage) {
+    throw new Error("Unable to load the image preview for cropping.");
+  }
+
+  cropModalBackdrop?.classList.add("show");
+  cropModalBackdrop?.setAttribute("aria-hidden", "false");
+
+  cropModalImage.onload = null;
+  cropModalImage.onerror = () => {
+    closeCropModal();
+    renderVariants();
+    if (errorKey) {
+      setTransientFieldError(errorKey, "Unable to load the image preview for cropping.");
+    }
+  };
+
+  cropModalImage.onload = () => {
+    if (cropperInstance) {
+      cropperInstance.destroy();
+    }
+
+    cropperInstance = new Cropper(cropModalImage, {
+      aspectRatio: NaN,
+      viewMode: 1,
+      dragMode: "move",
+      autoCropArea: 1,
+      responsive: true,
+      background: false,
+      ready() {
+        if (cropData) {
+          cropperInstance?.setData(cropData);
+        }
+      },
+      ...cropperOptions
+    });
+  };
+
+  cropModalImage.removeAttribute("src");
+  cropModalImage.src = previewUrl;
+
+  if (cropModalImage.complete && cropModalImage.naturalWidth > 0) {
+    cropModalImage.onload();
+  }
+}
+
+function getFileExtension(file) {
+  const name = String(file?.name || "");
+  const match = name.match(/\.([^.]+)$/);
+  return match ? match[1].toLowerCase() : "jpg";
+}
+
+function buildCroppedFileName(file, index) {
+  const baseName = String(file?.name || `variant-image-${Date.now()}-${index}`)
+    .replace(/\.[^.]+$/, "")
+    .replace(/\s+/g, "-");
+  const extension = getFileExtension(file);
+  return `${baseName}-cropped.${extension}`;
+}
+
+async function buildReplacementSourceFile(image, index) {
+  if (image.kind === "new") {
+    const sourceFile = image.file.originalSourceFile || image.file;
+    return {
+      sourceFile,
+      previewUrl:
+        sourceFile.originalPreviewUrl ||
+        ensurePreviewUrl(sourceFile, "originalPreviewUrl") ||
+        sourceFile.previewUrl ||
+        ensurePreviewUrl(sourceFile),
+      cropData: image.file.cropData || null
+    };
+  }
+
+  const response = await fetch(image.originalUrl || image.url);
+  if (!response.ok) {
+    throw new Error("Unable to load the selected image for cropping.");
+  }
+
+  const blob = await response.blob();
+  const extension = blob.type === "image/png" ? "png" : "jpg";
+  const file = new File(
+    [blob],
+    `variant-existing-${Date.now()}-${index}.${extension}`,
+    { type: blob.type || "image/jpeg", lastModified: Date.now() }
+  );
+
+  file.previewUrl = ensurePreviewUrl(file);
+  file.originalPreviewUrl = image.originalUrl || image.url || file.previewUrl;
+  file.isTemporaryReplacementSource = true;
+  return {
+    sourceFile: file,
+    previewUrl: file.originalPreviewUrl || file.previewUrl,
+    cropData: image.cropData || null
+  };
+}
+
+function revokeCropPreviewUrl() {
+  if (cropSession?.previewUrl && !cropSession?.keepPreviewUrl) {
+    URL.revokeObjectURL(cropSession.previewUrl);
+  }
+}
+
+function closeCropModal() {
+  if (cropperInstance) {
+    cropperInstance.destroy();
+    cropperInstance = null;
+  }
+
+  revokeCropPreviewUrl();
+
+  if (cropModalImage) {
+    cropModalImage.removeAttribute("src");
+  }
+
+  cropModalBackdrop?.classList.remove("show");
+  cropModalBackdrop?.setAttribute("aria-hidden", "true");
+  cropSession = null;
+}
+
+async function applyCropAndContinue() {
+  if (!cropSession || !cropperInstance) return;
+
+  const { variantIndex, mode, fileIndex = 0 } = cropSession;
+  const sourceFile =
+    mode === "replace"
+      ? cropSession.sourceFile
+      : cropSession.files[cropSession.fileIndex];
+
+  const canvas = cropperInstance.getCroppedCanvas({
+    maxWidth: 1600,
+    maxHeight: 1600,
+    imageSmoothingEnabled: true,
+    imageSmoothingQuality: "high"
+  });
+
+  if (!canvas) {
+    closeCropModal();
+    return;
+  }
+
+  const outputType = sourceFile.type === "image/png" ? "image/png" : "image/jpeg";
+  const blob = await new Promise((resolve) => {
+    canvas.toBlob(resolve, outputType, 0.92);
+  });
+
+  if (!blob) {
+    closeCropModal();
+    return;
+  }
+
+  const croppedFile = new File(
+    [blob],
+    buildCroppedFileName(sourceFile, fileIndex),
+    { type: outputType, lastModified: Date.now() }
+  );
+
+  const cropData = cropperInstance.getData(true);
+  const pendingImage = {
+    originalFile: sourceFile.originalSourceFile || sourceFile,
+    originalSourceFile: sourceFile.originalSourceFile || sourceFile,
+    cropData,
+    previewUrl: ensurePreviewUrl(croppedFile),
+    originalPreviewUrl:
+      (sourceFile.originalSourceFile || sourceFile)?.originalPreviewUrl ||
+      ensurePreviewUrl(sourceFile.originalSourceFile || sourceFile, "originalPreviewUrl") ||
+      (sourceFile.originalSourceFile || sourceFile)?.previewUrl ||
+      ensurePreviewUrl(sourceFile.originalSourceFile || sourceFile)
+  };
+
+  if (mode === "replace") {
+    const variant = variantsState[variantIndex];
+    const targetImage = cropSession.targetImage;
+    const wasMainImage = variant.mainImageKey === `${targetImage.kind}:${targetImage.index}`;
+
+    if (targetImage.kind === "existing") {
+      variant.existingImages[targetImage.index].removed = true;
+      variant.newImages.push(pendingImage);
+      if (wasMainImage) {
+        variant.mainImageKey = `new:${variant.newImages.length - 1}`;
+      }
+    } else {
+      const previousFile = variant.newImages[targetImage.index];
+      if (previousFile?.previewUrl) {
+        URL.revokeObjectURL(previousFile.previewUrl);
+      }
+
+      variant.newImages.splice(targetImage.index, 1, pendingImage);
+      if (wasMainImage) {
+        variant.mainImageKey = `new:${targetImage.index}`;
+      }
+    }
+
+    if (
+      sourceFile?.isTemporaryReplacementSource &&
+      sourceFile.previewUrl &&
+      sourceFile.previewUrl !== sourceFile.originalPreviewUrl
+    ) {
+      URL.revokeObjectURL(sourceFile.previewUrl);
+    }
+
+    clearTransientFieldError(`variants.${variantIndex}.images`);
+    closeCropModal();
+    renderVariants();
+    return;
+  }
+
+  cropSession.acceptedFiles.push(pendingImage);
+  openCropModalForFile(
+    variantIndex,
+    cropSession.files,
+    cropSession.fileIndex + 1,
+    cropSession.acceptedFiles
+  );
+}
+
+function openCropModalForFile(variantIndex, files, fileIndex = 0, acceptedFiles = []) {
+  const nextFile = files[fileIndex];
+
+  if (!nextFile) {
+    if (acceptedFiles.length) {
+      variantsState[variantIndex].newImages.push(...acceptedFiles);
+      clearTransientFieldError(`variants.${variantIndex}.images`);
+      renderVariants();
+    }
+
+    closeCropModal();
+    return;
+  }
+
+  if (cropperInstance) {
+    cropperInstance.destroy();
+    cropperInstance = null;
+  }
+
+  revokeCropPreviewUrl();
+
+  if (!nextFile.originalPreviewUrl) {
+    nextFile.originalPreviewUrl = ensurePreviewUrl(nextFile, "originalPreviewUrl");
+  }
+
+  const previewUrl = nextFile.originalPreviewUrl;
+  cropSession = {
+    variantIndex,
+    files,
+    fileIndex,
+    acceptedFiles,
+    previewUrl,
+    keepPreviewUrl: true
+  };
+
+  openCropModalWithPreview(previewUrl, {}, `variants.${variantIndex}.images`);
+}
+
+function openCropModalForReplacement(variantIndex, image, sourceFile, previewUrl = "", cropData = null) {
+  if (cropperInstance) {
+    cropperInstance.destroy();
+    cropperInstance = null;
+  }
+
+  revokeCropPreviewUrl();
+
+  const resolvedPreviewUrl =
+    previewUrl ||
+    sourceFile?.previewUrl ||
+    image?.file?.previewUrl ||
+    sourceFile?.originalPreviewUrl ||
+    image?.file?.originalPreviewUrl ||
+    image?.originalUrl ||
+    image?.url ||
+    "";
+  cropSession = {
+    mode: "replace",
+    variantIndex,
+    targetImage: image,
+    sourceFile,
+    previewUrl: resolvedPreviewUrl,
+    cropData: cropData || image?.file?.cropData || null,
+    keepPreviewUrl: true
+  };
+
+  openCropModalWithPreview(
+    resolvedPreviewUrl,
+    {},
+    `variants.${variantIndex}.images`,
+    cropData || image?.file?.cropData || null
+  );
 }
 
 function renderVariants() {
@@ -433,14 +789,22 @@ function renderVariants() {
       fileInput.addEventListener("change", (event) => {
         const files = Array.from(event.target.files || []);
         if (!files.length) return;
+        event.target.value = "";
 
-        files.forEach((file) => {
-          file.previewUrl = URL.createObjectURL(file);
-          variant.newImages.push(file);
-        });
+        const validFiles = files.filter(isAllowedImageFile);
+        const hasInvalidFiles = validFiles.length !== files.length;
 
-        clearTransientFieldError(`variants.${index}.images`);
-        renderVariants();
+        if (hasInvalidFiles) {
+          setTransientFieldError(`variants.${index}.images`, getInvalidImageUploadMessage());
+        } else {
+          clearTransientFieldError(`variants.${index}.images`);
+        }
+
+        if (!validFiles.length) {
+          return;
+        }
+
+        openCropModalForFile(index, validFiles);
       });
     }
 
@@ -457,9 +821,26 @@ function renderVariants() {
       imageBox.className = "image-box";
 
       const imageNode = document.createElement("img");
-      imageNode.src = image.kind === "existing" ? image.url : image.file.previewUrl;
-      imageNode.className = "product-image-preview";
+      imageNode.src = image.kind === "existing"
+        ? image.url
+        : (image.file.previewUrl || image.file.originalPreviewUrl || "");
+      imageNode.className = "product-image-preview recrop-image";
       imageNode.alt = `Variant ${index + 1} image`;
+      imageNode.title = "Click to crop again";
+      imageNode.addEventListener("click", async () => {
+        try {
+          const replacementSource = await buildReplacementSourceFile(image, index);
+          openCropModalForReplacement(
+            index,
+            image,
+            replacementSource.sourceFile,
+            replacementSource.previewUrl,
+            replacementSource.cropData
+          );
+        } catch (error) {
+          setTransientFieldError(`variants.${index}.images`, error.message || "Unable to open the crop tool for this image.");
+        }
+      });
 
       const removeButton = document.createElement("button");
       removeButton.type = "button";
@@ -472,6 +853,12 @@ function renderVariants() {
           const [removedImage] = variant.newImages.splice(image.index, 1);
           if (removedImage?.previewUrl) {
             URL.revokeObjectURL(removedImage.previewUrl);
+          }
+          if (
+            removedImage?.originalFile?.originalPreviewUrl &&
+            removedImage.originalFile !== removedImage
+          ) {
+            URL.revokeObjectURL(removedImage.originalFile.originalPreviewUrl);
           }
         }
 
@@ -510,6 +897,12 @@ function renderVariants() {
       removedVariant?.newImages?.forEach((file) => {
         if (file.previewUrl) {
           URL.revokeObjectURL(file.previewUrl);
+        }
+        if (
+          file?.originalFile?.originalPreviewUrl &&
+          file.originalFile !== file
+        ) {
+          URL.revokeObjectURL(file.originalFile.originalPreviewUrl);
         }
       });
       renderVariants();
@@ -590,6 +983,28 @@ categorySelect?.addEventListener("change", () => {
   clearStaticFieldError("category");
 });
 
+cancelCropBtn?.addEventListener("click", () => {
+  closeCropModal();
+  renderVariants();
+});
+
+applyCropBtn?.addEventListener("click", async () => {
+  applyCropBtn.disabled = true;
+
+  try {
+    await applyCropAndContinue();
+  } finally {
+    applyCropBtn.disabled = false;
+  }
+});
+
+cropModalBackdrop?.addEventListener("click", (event) => {
+  if (event.target === cropModalBackdrop) {
+    closeCropModal();
+    renderVariants();
+  }
+});
+
 productForm?.addEventListener("submit", (event) => {
   let hasClientValidationError = false;
   let firstInvalidElement = null;
@@ -648,8 +1063,15 @@ productForm?.addEventListener("submit", (event) => {
       price: variant.price,
       offerPrice: variant.offerPrice,
       stock: variant.stock,
-      existingImages: variant.existingImages.map((image) => image.url),
+      existingImages: variant.existingImages.map((image) => ({
+        url: image.url,
+        originalUrl: image.originalUrl || image.url,
+        cropData: image.cropData || null
+      })),
       removedImageIndexes,
+      newImagesMeta: variant.newImages.map((image) => ({
+        cropData: image.cropData || null
+      })),
       mainImageKey: variant.mainImageKey
     };
   });

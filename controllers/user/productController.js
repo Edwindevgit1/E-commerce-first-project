@@ -134,15 +134,24 @@ export const getProductListingPage = async (req, res) => {
       isDeleted: false,
       isBlocked: false
     };
-
     if (search) {
-      const searchPattern = search
-        .split(" ")
-        .map((term) => escapeRegex(term))
-        .join("\\s+");
-
-      query.productName = { $regex: searchPattern, $options: "i" };
+      const searchPattern = new RegExp(
+        search
+          .split(" ")
+          .map((term) => escapeRegex(term))
+          .join("\\s+"),
+        "i"
+      );
+    
+      andConditions.push({
+        $or: [
+          { productName: searchPattern },
+          { colors: searchPattern },
+          { "variants.color": searchPattern }
+        ]
+      });
     }
+    
 
     if (category) {
       query.category = category;
@@ -248,17 +257,12 @@ export const getProductListingPage = async (req, res) => {
 };
 export const getProductDetailsPage = async (req, res) => {
   try {
-    // Fetch product WITHOUT filtering
     const product = await Product.findById(req.params.id).populate("category");
-
-    // Case 1: Product not found
     if (!product) {
       return res.render("user/product-unavailable", {
         message: "This product does not exist or may have been removed."
       });
     }
-
-    // Case 2: Blocked / Deleted / Inactive
     if (
       product.isDeleted === true ||
       product.isBlocked === true
@@ -268,8 +272,6 @@ export const getProductDetailsPage = async (req, res) => {
       });
     }
     
-
-    // Cart quantity
     let cartQuantity = 0;
     let selectedCartItemId = "";
 
@@ -280,7 +282,6 @@ export const getProductDetailsPage = async (req, res) => {
         .reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
     }
 
-    // Related products
     const relatedProducts = await Product.find({
       _id: { $ne: product._id },
       category: product.category?._id,
@@ -291,7 +292,6 @@ export const getProductDetailsPage = async (req, res) => {
       .limit(4)
       .sort({ createdAt: -1 });
 
-    // Stock logic
     const hasStock = product.stock > 0;
     const categoryAvailability = getCategoryAvailabilityState(product.category);
 

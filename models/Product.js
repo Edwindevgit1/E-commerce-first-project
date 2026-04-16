@@ -20,6 +20,14 @@ const variantSchema = new mongoose.Schema(
       default: [],
       validate: [arr => arr.length >= 3, "Each variant needs at least 3 images"]
     },
+    imageOriginals: {
+      type: [String],
+      default: []
+    },
+    imageCropData: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: []
+    },
     mainImageIndex: {
       type: Number,
       default: 0

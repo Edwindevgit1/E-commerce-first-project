@@ -99,6 +99,8 @@ const getLegacyVariant = (product) => ({
   offerPrice: Number(product?.offerPrice) || 0,
   stock: Number(product?.stock) || 0,
   images: Array.isArray(product?.images) ? product.images : [],
+  imageOriginals: Array.isArray(product?.images) ? product.images : [],
+  imageCropData: Array.isArray(product?.images) ? product.images.map(() => null) : [],
   mainImageIndex: Number(product?.mainImageIndex) || 0
 });
 
@@ -126,7 +128,29 @@ export const buildProductFormValues = (source = {}) => {
       price: variant?.price ?? "",
       offerPrice: variant?.offerPrice ?? "",
       stock: variant?.stock ?? "",
-      images: Array.isArray(variant?.images) ? variant.images : [],
+      images: Array.isArray(variant?.images)
+        ? variant.images.map((image, index) => {
+            if (typeof image === "string") {
+              return {
+                url: image,
+                originalUrl: Array.isArray(variant?.imageOriginals) ? (variant.imageOriginals[index] || image) : image,
+                cropData: Array.isArray(variant?.imageCropData) ? (variant.imageCropData[index] || null) : null
+              };
+            }
+
+            return {
+              url: image?.url || "",
+              originalUrl: image?.originalUrl || image?.url || "",
+              cropData: image?.cropData || null
+            };
+          })
+        : Array.isArray(variant?.existingImages)
+          ? variant.existingImages.map((image) => ({
+              url: typeof image === "string" ? image : (image?.url || ""),
+              originalUrl: typeof image === "string" ? image : (image?.originalUrl || image?.url || ""),
+              cropData: typeof image === "string" ? null : (image?.cropData || null)
+            }))
+          : [],
       mainImageIndex: Number.isInteger(variant?.mainImageIndex) ? variant.mainImageIndex : 0
     }))
   };
@@ -260,7 +284,23 @@ const validateProductInput = async (data = {}, existingProductId = null) => {
     const price = Number(priceValue);
     const stock = Number(stockValue);
     const existingImages = Array.isArray(variant?.existingImages)
-      ? variant.existingImages.map((image) => String(image || "").trim()).filter(Boolean)
+      ? variant.existingImages
+          .map((image) => {
+            if (typeof image === "string") {
+              const url = String(image || "").trim();
+              return url ? { url, originalUrl: url, cropData: null } : null;
+            }
+
+            const url = String(image?.url || "").trim();
+            if (!url) return null;
+
+            return {
+              url,
+              originalUrl: String(image?.originalUrl || url).trim() || url,
+              cropData: image?.cropData || null
+            };
+          })
+          .filter(Boolean)
       : [];
     const removedImageIndexes = Array.isArray(variant?.removedImageIndexes)
       ? variant.removedImageIndexes
@@ -314,6 +354,11 @@ const validateProductInput = async (data = {}, existingProductId = null) => {
       stock: Number.isNaN(stock) ? 0 : stock,
       existingImages,
       removedImageIndexes,
+      newImagesMeta: Array.isArray(variant?.newImagesMeta)
+        ? variant.newImagesMeta.map((image) => ({
+            cropData: image?.cropData || null
+          }))
+        : [],
       mainImageKey: typeof variant?.mainImageKey === "string" ? variant.mainImageKey : "",
       uploadedFieldName: `variantImages-${index}`
     });
@@ -343,7 +388,18 @@ const buildPersistedVariants = (variants, uploadedVariantImagesMap = {}) => {
     const removedIndexes = new Set(variant.removedImageIndexes || []);
     const remainingImages = existingImages.filter((_, imageIndex) => !removedIndexes.has(imageIndex));
     const uploadedImages = uploadedVariantImagesMap[variant.uploadedFieldName] || [];
-    const images = [...remainingImages, ...uploadedImages];
+    const images = [
+      ...remainingImages.map((image) => image.url),
+      ...uploadedImages.map((image) => image.url)
+    ];
+    const imageOriginals = [
+      ...remainingImages.map((image) => image.originalUrl || image.url),
+      ...uploadedImages.map((image) => image.originalUrl || image.url)
+    ];
+    const imageCropData = [
+      ...remainingImages.map((image) => image.cropData || null),
+      ...uploadedImages.map((image) => image.cropData || null)
+    ];
 
     if (images.length < 3) {
       fieldErrors[`variants.${index}.images`] = "Each variant must have at least 3 images.";
@@ -363,6 +419,8 @@ const buildPersistedVariants = (variants, uploadedVariantImagesMap = {}) => {
       offerPrice: variant.offerPrice,
       stock: variant.stock,
       images,
+      imageOriginals,
+      imageCropData,
       mainImageIndex: mainImageIndex >= images.length ? 0 : mainImageIndex
     };
   });

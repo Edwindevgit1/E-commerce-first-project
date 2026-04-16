@@ -3,8 +3,7 @@ import {
   addCategoryService,
   editCategoryService,
   deleteCatrgoryService,
-  restoreCategoryService,
-  permanentDeleteCategoryService
+  restoreCategoryService
 } from "../../services/categoryServices.js";
 const isValidationError = (error) => Boolean(error?.fieldErrors && typeof error.fieldErrors === "object");
 
@@ -115,16 +114,5 @@ export const restoreCategoryController = async (req, res) => {
     return res.redirect("/api/admin/category");
   } catch (error) {
     return res.redirect("/api/admin/category");
-  }
-};
-
-export const permanentDeleteCategoryController = async (req, res) => {
-  try {
-    await permanentDeleteCategoryService(req.params.id);
-    return res.redirect("/api/admin/category");
-  } catch (error) {
-    return await renderCategoryPage(res, {
-      listError: error.message
-    });
   }
 };

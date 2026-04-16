@@ -12,19 +12,71 @@ import {
   buildProductFormValues
 } from "../../services/productServices.js";
 const isValidationError = (error) => Boolean(error?.fieldErrors && typeof error.fieldErrors === "object");
+const getUploadErrorMessage = (error) => {
+  if (!error) return null;
+  if (error.code === "INVALID_FILE_TYPE") {
+    return error.message;
+  }
+  return "Unable to upload the selected file. Only JPG and PNG images are allowed.";
+};
 
-const processProductImage = async (file) => {
+const normalizeCropData = (cropData = {}, metadata = {}) => {
+  const width = Number(cropData?.width);
+  const height = Number(cropData?.height);
+  const left = Number(cropData?.x);
+  const top = Number(cropData?.y);
+
+  if (
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    return null;
+  }
+
+  const maxWidth = Number(metadata.width) || 0;
+  const maxHeight = Number(metadata.height) || 0;
+  if (!maxWidth || !maxHeight) return null;
+
+  const boundedLeft = Math.max(0, Math.min(Math.round(left), maxWidth - 1));
+  const boundedTop = Math.max(0, Math.min(Math.round(top), maxHeight - 1));
+  const boundedWidth = Math.max(1, Math.min(Math.round(width), maxWidth - boundedLeft));
+  const boundedHeight = Math.max(1, Math.min(Math.round(height), maxHeight - boundedTop));
+
+  return {
+    left: boundedLeft,
+    top: boundedTop,
+    width: boundedWidth,
+    height: boundedHeight
+  };
+};
+
+const processProductImage = async (file, cropData = null) => {
   const metadata = await sharp(file.buffer).metadata();
 
   if (!metadata.width || !metadata.height) {
     throw new Error("Invalid image file");
   }
 
-  return await sharp(file.buffer)
-    .resize(800, 800, { fit: "cover" })
+  let pipeline = sharp(file.buffer);
+  const normalizedCrop = normalizeCropData(cropData, metadata);
+
+  if (normalizedCrop) {
+    pipeline = pipeline.extract(normalizedCrop);
+  }
+
+  return await pipeline
+    .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: 80 })
     .toBuffer();
 };
+
+const processOriginalProductImage = async (file) =>
+  await sharp(file.buffer)
+    .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
+    .jpeg({ quality: 85 })
+    .toBuffer();
 
 const uploadImageBuffer = async (buffer) =>
   await new Promise((resolve, reject) => {
@@ -39,21 +91,37 @@ const uploadImageBuffer = async (buffer) =>
     stream.end(buffer);
   });
 
-const processVariantUploads = async (files = []) => {
+const processVariantUploads = async (files = [], variantsPayload = []) => {
   const groupedUploads = {};
+  const uploadCounters = {};
 
   await Promise.all(
     files.map(async (file) => {
       if (!file.fieldname.startsWith("variantImages-")) return;
 
-      const processedBuffer = await processProductImage(file);
-      const imageUrl = await uploadImageBuffer(processedBuffer);
+      const variantIndex = Number(file.fieldname.split("variantImages-")[1]);
+      const uploadIndex = uploadCounters[file.fieldname] || 0;
+      uploadCounters[file.fieldname] = uploadIndex + 1;
+
+      const cropData = variantsPayload?.[variantIndex]?.newImagesMeta?.[uploadIndex]?.cropData || null;
+      const [processedBuffer, originalBuffer] = await Promise.all([
+        processProductImage(file, cropData),
+        processOriginalProductImage(file)
+      ]);
+      const [imageUrl, originalUrl] = await Promise.all([
+        uploadImageBuffer(processedBuffer),
+        uploadImageBuffer(originalBuffer)
+      ]);
 
       if (!groupedUploads[file.fieldname]) {
         groupedUploads[file.fieldname] = [];
       }
 
-      groupedUploads[file.fieldname].push(imageUrl);
+      groupedUploads[file.fieldname].push({
+        url: imageUrl,
+        originalUrl,
+        cropData
+      });
     })
   );
 
@@ -164,7 +232,24 @@ export const getAddProductPage = async (req, res) => {
 
 export const addProductController = async (req, res) => {
   try {
-    const uploadedVariantImagesMap = await processVariantUploads(req.files || []);
+    if (req.uploadError) {
+      return await renderProductForm(res, {
+        pageTitle: "Add Product",
+        formTitle: "Add Product",
+        formAction: "/api/admin/add-product",
+        submitLabel: "Save Product",
+        product: null,
+        formData: buildProductFormValues({
+          ...req.body,
+          variants: safeParseVariantsPayload(req.body.variantsPayload)
+        }),
+        error: getUploadErrorMessage(req.uploadError),
+        validationErrors: {}
+      });
+    }
+
+    const parsedVariantsPayload = safeParseVariantsPayload(req.body.variantsPayload);
+    const uploadedVariantImagesMap = await processVariantUploads(req.files || [], parsedVariantsPayload);
     await addProductService(req.body, uploadedVariantImagesMap);
 
     res.redirect("/api/admin/products");
@@ -241,7 +326,27 @@ export const getEditProductPage = async (req, res) => {
 
 export const editProductController = async (req, res) => {
   try {
-    const uploadedVariantImagesMap = await processVariantUploads(req.files || []);
+    if (req.uploadError) {
+      const product = await getProductByIdService(req.params.id);
+
+      return await renderProductForm(res, {
+        pageTitle: "Edit Product",
+        formTitle: "Edit Product",
+        formAction: `/api/admin/edit-product/${req.params.id}`,
+        submitLabel: "Update Product",
+        product,
+        formData: buildProductFormValues({
+          ...product.toObject(),
+          ...req.body,
+          variants: safeParseVariantsPayload(req.body.variantsPayload)
+        }),
+        error: getUploadErrorMessage(req.uploadError),
+        validationErrors: {}
+      });
+    }
+
+    const parsedVariantsPayload = safeParseVariantsPayload(req.body.variantsPayload);
+    const uploadedVariantImagesMap = await processVariantUploads(req.files || [], parsedVariantsPayload);
     await editProductService(req.params.id, req.body, uploadedVariantImagesMap);
 
     res.redirect("/api/admin/products");

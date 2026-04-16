@@ -1,5 +1,4 @@
 import Category from "../models/Category.js";
-import Product from "../models/Product.js";
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const normalizeSearchTerm = (value = "") => String(value).trim().replace(/\s+/g, " ");
@@ -74,16 +73,6 @@ const normalizeOfferPercentage = (value) => {
   }
 
   return offerPercentage;
-};
-
-const ensureCategoryHasNoProducts = async (categoryId) => {
-  const linkedProductsCount = await Product.countDocuments({
-    category: categoryId
-  });
-
-  if (linkedProductsCount > 0) {
-    throw new Error("This category has products. Remove or reassign them before deleting.");
-  }
 };
 
 export const getCategoryService = async (search,page,limit,sort) => {
@@ -188,15 +177,3 @@ export const restoreCategoryService = async (id) => {
   category.status="active";
   return await category.save();
 }
-
-export const permanentDeleteCategoryService = async (id) => {
-  const category = await Category.findById(id);
-
-  if (!category) {
-    throw new Error("Category not found");
-  }
-
-  await ensureCategoryHasNoProducts(id);
-
-  await Category.findByIdAndDelete(id);
-};

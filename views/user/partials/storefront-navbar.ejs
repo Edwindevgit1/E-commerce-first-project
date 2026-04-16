@@ -9,6 +9,10 @@
     typeof navbarCategories !== "undefined" && Array.isArray(navbarCategories)
       ? navbarCategories
       : [];
+  const cartCount =
+    typeof navbarCartCount !== "undefined" && Number.isFinite(Number(navbarCartCount))
+      ? Number(navbarCartCount)
+      : 0;
 %>
 
 <header class="store-navbar">
@@ -65,7 +69,13 @@
 
       <a href="/api/user/profile" class="store-icon" aria-label="Profile">👤</a>
       <a href="/api/user/wishlist" class="store-icon" aria-label="Wishlist">♡</a>
-      <a href="/api/user/cart" class="store-icon" aria-label="Cart">🛒</a>
+      <a href="/api/user/cart" class="store-icon store-icon-cart" aria-label="Cart">
+        <span aria-hidden="true">🛒</span>
+        <span
+          class="store-cart-badge <%= cartCount > 0 ? 'visible' : '' %>"
+          data-cart-count-badge
+        ><%= cartCount %></span>
+      </a>
     </div>
   </div>
 </header>
