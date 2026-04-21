@@ -1,0 +1,41 @@
+<style>
+  .auth-footer {
+    margin: 18px auto 0;
+    padding: 14px 12px 18px;
+    color: #6f7480;
+    font-family: "Sora", sans-serif;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .auth-footer__links {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .auth-footer a {
+    color: #5e6472;
+    text-decoration: none;
+  }
+
+  .auth-footer a:hover {
+    color: #111827;
+  }
+
+  .auth-footer p {
+    margin: 0;
+  }
+</style>
+
+<footer class="auth-footer">
+  <nav class="auth-footer__links" aria-label="Auth footer navigation">
+    <a href="#">Terms</a>
+    <span>|</span>
+    <a href="#">Privacy</a>
+    <span>|</span>
+    <a href="#">Help</a>
+  </nav>
+  <p>&copy; <%= new Date().getFullYear() %> YourStore</p>
+</footer>

@@ -30,23 +30,6 @@
         </div>
       </section>
 
-      <section class="featured glass section-card">
-        <h2>Featured</h2>
-        <div class="featured-grid">
-          <article class="card glass-inner">
-            <img src="/images/shoe.png" alt="Shoe" />
-            <p>Exclusive Nike Shoes</p>
-            <button>Shoes</button>
-          </article>
-
-          <article class="card glass-inner">
-            <img src="/images/jacket.png" alt="Jacket" />
-            <p>Best of outfits</p>
-            <button>Shop</button>
-          </article>
-        </div>
-      </section>
-
       <section class="summer-banner glass">
         <img src="/images/secondbanner.png" alt="Summer banner" />
         <div class="banner-text glass-inner">
@@ -54,52 +37,9 @@
           <button>Hot Deals</button>
         </div>
       </section>
-
-      <section class="workout glass section-card">
-        <h2>Work-Out Outfits</h2>
-        <div class="workout-grid">
-          <article class="card glass-inner">
-            <img src="/images/mens.png" alt="Mens" />
-            <button>Shop Men's</button>
-          </article>
-
-          <article class="card glass-inner">
-            <img src="/images/womens.png" alt="Womens" />
-            <button>Shop Women's</button>
-          </article>
-
-          <article class="card glass-inner">
-            <img src="/images/kids.png" alt="Kids" />
-            <button>Shoes</button>
-          </article>
-        </div>
-      </section>
     </main>
 
-    <footer class="footer glass">
-      <div class="footer-grid">
-        <div>
-          <h4>Iconic</h4>
-          <p>Air Force 1</p>
-          <p>Air Max 90</p>
-        </div>
-        <div>
-          <h4>Shoes</h4>
-          <p>All Shoes</p>
-          <p>Nike Shoes</p>
-        </div>
-        <div>
-          <h4>Clothing</h4>
-          <p>All Clothing</p>
-          <p>Hoodies & Pullovers</p>
-        </div>
-        <div>
-          <h4>Kids</h4>
-          <p>Infant Shoes</p>
-          <p>Kids Shoes</p>
-        </div>
-      </div>
-    </footer>
+    <%- include("partials/site-footer") %>
     <script>
       window.addEventListener("pageshow", function (event) {
       if (event.persisted) {
