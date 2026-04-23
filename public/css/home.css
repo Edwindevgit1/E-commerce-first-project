@@ -165,9 +165,10 @@ body {
   color: var(--muted);
   font-size: 13px;
 }
-.hero-text button,
-.card button,
-.banner-text button {
+.hero-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 10px;
   min-height: 36px;
   padding: 0 14px;
@@ -177,6 +178,7 @@ body {
   color: #eef4ff;
   font-size: 12px;
   font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -188,31 +190,129 @@ body {
   margin-bottom: 10px;
 }
 
-.featured-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+.home-section {
+  padding: 18px;
 }
-.workout-grid {
+
+.home-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.home-section-head h2 {
+  margin-bottom: 4px;
+  font-size: 22px;
+}
+
+.home-section-head p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.section-link {
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.category-grid-home,
+.product-grid-home {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
-.card {
+.category-grid-home,
+.product-grid-home {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.category-card-home {
+  min-height: 110px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.category-card-home:hover,
+.product-card-home:hover {
+  transform: translateY(-3px);
+}
+
+.category-card-home span {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.category-card-home small {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.product-card-home {
+  position: relative;
   padding: 12px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 180ms ease, box-shadow 180ms ease;
 }
-.card img {
+
+.product-card-home img {
   width: 100%;
-  height: 170px;
+  height: 180px;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 14px;
   display: block;
+  margin-bottom: 12px;
 }
-.card p {
-  margin-top: 8px;
-  font-size: 13px;
-  font-weight: 600;
+
+.product-card-home h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.product-card-home p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.price-row-home {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.price-row-home strong {
+  font-size: 14px;
+}
+
+.price-row-home span {
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: line-through;
+}
+
+.offer-badge-home {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 1;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #05163f;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .summer-banner {
@@ -268,8 +368,11 @@ body {
   .nav-icons {
     justify-content: flex-start;
   }
-  .featured-grid,
-  .workout-grid,
+  .home-section-head {
+    flex-direction: column;
+  }
+  .category-grid-home,
+  .product-grid-home,
   .footer-grid {
     grid-template-columns: 1fr;
   }

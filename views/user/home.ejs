@@ -24,17 +24,114 @@
       <section class="hero glass">
         <img src="/images/bannerimg.jpg.png" alt="Hero" />
         <div class="hero-text glass-inner">
-          <h1>SUMMER IS HERE, AND IT'S TIME TO GET OUT AND ENJOY THE SUN!</h1>
-          <p>The best way to beat the heat is to buy new clothes.</p>
-          <button>Hot Deals</button>
+          <h1>Find your next pair.</h1>
+          <p>Explore active categories, new arrivals, and real offers from the store.</p>
+          <a href="/api/user/products" class="hero-action">Shop Now</a>
         </div>
       </section>
+
+      <% if (Array.isArray(categories) && categories.length > 0) { %>
+        <section class="home-section glass section-card">
+          <div class="home-section-head">
+            <div>
+              <h2>Shop by Category</h2>
+              <p>Explore active categories from our store.</p>
+            </div>
+            <a href="/api/user/products" class="section-link">View All</a>
+          </div>
+
+          <div class="category-grid-home">
+            <% categories.forEach((category) => { %>
+              <a
+                href="/api/user/products?category=<%= category._id %>"
+                class="category-card-home glass-inner"
+              >
+                <span><%= category.name %></span>
+                <% if (Number(category.offerPercentage) > 0) { %>
+                  <small><%= category.offerPercentage %>% offer</small>
+                <% } else { %>
+                  <small>Shop now</small>
+                <% } %>
+              </a>
+            <% }) %>
+          </div>
+        </section>
+      <% } %>
+
+      <% if (Array.isArray(latestProducts) && latestProducts.length > 0) { %>
+        <section class="home-section glass section-card">
+          <div class="home-section-head">
+            <div>
+              <h2>New Arrivals</h2>
+              <p>Recently added products from active categories.</p>
+            </div>
+            <a href="/api/user/products" class="section-link">View All</a>
+          </div>
+
+          <div class="product-grid-home">
+            <% latestProducts.forEach((product) => { %>
+              <a href="/api/user/products/<%= product._id %>" class="product-card-home glass-inner">
+                <img src="<%= product.image %>" alt="<%= product.productName %>" />
+                <div>
+                  <h3><%= product.productName %></h3>
+                  <p><%= product.categoryName %></p>
+
+                  <div class="price-row-home">
+                    <strong>&#8377;<%= product.price %></strong>
+                    <% if (product.hasDiscount) { %>
+                      <span>&#8377;<%= product.originalPrice %></span>
+                    <% } %>
+                  </div>
+                </div>
+              </a>
+            <% }) %>
+          </div>
+        </section>
+      <% } %>
+
+      <% if (Array.isArray(offerProducts) && offerProducts.length > 0) { %>
+        <section class="home-section glass section-card">
+          <div class="home-section-head">
+            <div>
+              <h2>Offers & Deals</h2>
+              <p>Real discounts currently available in the store.</p>
+            </div>
+            <a href="/api/user/products" class="section-link">View All</a>
+          </div>
+
+          <div class="product-grid-home">
+            <% offerProducts.forEach((product) => { %>
+              <a href="/api/user/products/<%= product._id %>" class="product-card-home glass-inner">
+                <span class="offer-badge-home">
+                  <% if (product.discountSource === "category" && product.categoryOfferPercentage > 0) { %>
+                    <%= product.categoryOfferPercentage %>% OFF
+                  <% } else { %>
+                    DEAL
+                  <% } %>
+                </span>
+
+                <img src="<%= product.image %>" alt="<%= product.productName %>" />
+
+                <div>
+                  <h3><%= product.productName %></h3>
+                  <p><%= product.categoryName %></p>
+
+                  <div class="price-row-home">
+                    <strong>&#8377;<%= product.price %></strong>
+                    <span>&#8377;<%= product.originalPrice %></span>
+                  </div>
+                </div>
+              </a>
+            <% }) %>
+          </div>
+        </section>
+      <% } %>
 
       <section class="summer-banner glass">
         <img src="/images/secondbanner.png" alt="Summer banner" />
         <div class="banner-text glass-inner">
           <h1>SUMMER POSSIBILITIES</h1>
-          <button>Hot Deals</button>
+          <a href="/api/user/products" class="hero-action">Explore More</a>
         </div>
       </section>
     </main>
