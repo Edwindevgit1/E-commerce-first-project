@@ -292,17 +292,18 @@ export const getProductDetailsPage = async (req, res) => {
       .limit(4)
       .sort({ createdAt: -1 });
 
-    const hasStock = product.stock > 0;
+    const hasStock = Number(product.stock) > 0;
     const categoryAvailability = getCategoryAvailabilityState(product.category);
 
-    const variantOptions = (product.variants || []).map((variant) =>
+    const productVariants = Array.isArray(product.variants) ? product.variants : [];
+    const variantOptions = productVariants.map((variant) =>
       enrichVariantPricing(product, variant)
     );
     const availableVariants = variantOptions.filter((variant) => variant.stock > 0);
     const defaultVariant = availableVariants[0] || variantOptions[0] || null;
 
     const hasVariantStock =
-      !product.variants?.length || availableVariants.length > 0;
+      !productVariants.length || availableVariants.length > 0;
 
     const isLowStock = hasStock && product.stock < 4;
     const productAvailability = product.status === "active" ? "active" : "inactive";
@@ -343,13 +344,13 @@ export const getProductDetailsPage = async (req, res) => {
     const displaySizes = [
       ...new Set([
         ...(product.sizes || []),
-        ...availableVariants.map((variant) => variant.size)
+        ...variantOptions.map((variant) => variant.size)
       ])
     ].filter(Boolean);
 
     const displayColors = normalizeColorList([
       ...(product.colors || []),
-      ...availableVariants.map((variant) => variant.color)
+      ...variantOptions.map((variant) => variant.color)
     ]);
 
     if (defaultVariant) {
@@ -359,11 +360,77 @@ export const getProductDetailsPage = async (req, res) => {
     // Pricing
     const pricedProduct = enrichProductState(product);
     const pricedRelatedProducts = relatedProducts.map(enrichProductState);
+    const productImages = Array.isArray(pricedProduct.images)
+      ? pricedProduct.images.filter(Boolean)
+      : [];
+    const productReviews = Array.isArray(pricedProduct.reviews) ? pricedProduct.reviews : [];
+    const productHighlights = Array.isArray(pricedProduct.highlights)
+      ? pricedProduct.highlights
+      : [];
+    const fallbackProductImage = "https://placehold.co/900x900?text=Product";
+    const categoryName = pricedProduct.category?.name || "Shoes";
+    const categoryId = pricedProduct.category?._id || "";
+    const initialGalleryImages =
+      defaultVariant && Array.isArray(defaultVariant.images) && defaultVariant.images.length
+        ? defaultVariant.images.filter(Boolean)
+        : productImages;
+    const initialMainImageIndex = Number.isInteger(defaultVariant?.mainImageIndex)
+      ? defaultVariant.mainImageIndex
+      : (pricedProduct.mainImageIndex || 0);
+    const selectedVariantLabelText = [
+      defaultVariant?.size ? `Size ${defaultVariant.size}` : "",
+      defaultVariant?.color ? `Color ${defaultVariant.color}` : ""
+    ].filter(Boolean).join(" | ") || "Default option";
+    const selectedVariantSize = defaultVariant?.size || "";
+    const selectedVariantColor = defaultVariant?.color || "";
+    const addToCartLabel =
+      availabilityState === "product_inactive"
+        ? "Temporarily unavailable"
+        : availabilityState === "category_deleted"
+        ? "Unavailable"
+        : availabilityState === "category_inactive"
+        ? "Temporarily unavailable"
+        : availabilityState === "sold_out"
+        ? "Sold out"
+        : availabilityState === "variant_unavailable"
+        ? "Unavailable"
+        : "Add to cart";
+    const variantPayload = (variantOptions || availableVariants || productVariants || []).map((variant) => ({
+      size: variant.size,
+      color: variant.color,
+      price: Number(variant.effectivePrice ?? variant.price) || 0,
+      originalPrice: Number(variant.originalPrice ?? variant.price) || 0,
+      hasDiscount: Boolean(variant.hasDiscount),
+      stock: Number(variant.stock) || 0,
+      images: variant.images || [],
+      mainImageIndex: Number.isInteger(variant.mainImageIndex) ? variant.mainImageIndex : 0
+    }));
+    const productDetailJson = JSON.stringify({
+      canAddToCart,
+      variants: variantPayload,
+      productImages,
+      initialButtonLabel: addToCartLabel,
+      availabilityMessage
+    }).replace(/</g, "\\u003c");
 
     // Render page
     return res.render("user/product-detail", {
       product: pricedProduct,
       relatedProducts: pricedRelatedProducts,
+      relatedProductList: pricedRelatedProducts,
+      productImages,
+      productReviews,
+      productHighlights,
+      fallbackProductImage,
+      categoryName,
+      categoryId,
+      initialGalleryImages,
+      initialMainImageIndex,
+      selectedVariantLabelText,
+      selectedVariantSize,
+      selectedVariantColor,
+      addToCartLabel,
+      productDetailJson,
       hasStock,
       hasVariantStock,
       isLowStock,

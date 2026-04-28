@@ -3,15 +3,14 @@ import Cart from "../models/Cart.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import { generateOrderId } from "../utils/orderId.js";
 import { getEffectiveProductPricing } from "../utils/pricing.js";
 import { cartVariantHelpers } from "./cartServices.js";
-import { generateOrderId } from "../utils/orderId.js";
-
 
 const { buildCartItemId, getProductVariant } = cartVariantHelpers;
 const MAX_CART_QUANTITY = 5;
 
-export const placeOrderService = async (userId, selectedCartItemIds = [],addressId) => {
+export const placeOrderService = async (userId, selectedCartItemIds = [], addressId) => {
   if (!userId) {
     throw new Error("User is required");
   }
@@ -129,15 +128,19 @@ export const placeOrderService = async (userId, selectedCartItemIds = [],address
 
       await product.save({ session });
     }
-    const user = await User.findById(userId).session(session)
-    if(!user){
-      throw new Error("User not found")
+    const user = await User.findById(userId).session(session);
+
+    if (!user) {
+      throw new Error("User not found");
     }
-    const selectedAddress = user.addresses.id(addressId)
-    if(!selectedAddress){
-      throw new Error("Please select a delivery address")
+
+    const selectedAddress = user.addresses.id(addressId);
+
+    if (!selectedAddress) {
+      throw new Error("Please select a delivery address");
     }
-    const orderId = await generateOrderId()
+
+    const orderId = await generateOrderId();
     const shippingCharge = grandTotal >= 1000 ? 0 : 50;
     const tax = 0;
     const discount = 0;
@@ -147,20 +150,20 @@ export const placeOrderService = async (userId, selectedCartItemIds = [],address
       [
         {
           orderId,
-          user:userId,
-          address:selectedAddress.toObject(),
-          items:orderItems,
-          subtotal,
+          user: userId,
+          address: selectedAddress.toObject(),
+          items: orderItems,
+          subtotal: grandTotal,
           discount,
           tax,
           shippingCharge,
-          grandTotal:finalTotal,
-          paymentMethod:"COD",
-          paymentStatus:"pending",
-          status:"pending"
+          grandTotal: finalTotal,
+          paymentMethod: "COD",
+          status: "pending"
         }
-      ],{session}
-    )
+      ],
+      { session }
+    );
 
     cart.items = cart.items.filter(
       (item) => !selectedIdSet.has(buildCartItemId(item.product, item.size, item.color))

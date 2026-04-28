@@ -26,6 +26,7 @@ import productRoutes from "../routes/admin/productRoute.js";
 import userProductRoute from "../routes/user/productRoute.js";
 import userCartRoutes from "../routes/user/cartRoute.js";
 import userWishlistRoutes from "../routes/user/wishlistRoute.js";
+import checkoutRoutes from "../routes/user/checkout.route.js";
 
 
 const app = express();
@@ -77,5 +78,6 @@ app.use('/api/user',userAuth,logout)
 app.use('/api/user',userAuth,profileemailverify)
 app.use('/api/user',userAuth,userCartRoutes)
 app.use('/api/user',userAuth,userWishlistRoutes)
+app.use('/api/user',checkoutRoutes)
 
 export default app;

@@ -13,6 +13,7 @@
     />
   </head>
   <body>
+    <% const redirectValue = redirect || ""; %>
     <main class="neo-scene">
       <section class="neo-card">
         <header class="top-strip">
@@ -34,6 +35,11 @@
             <div class="head-text">
               <h1>Address Management</h1>
               <p>Add, edit, remove and set your default address</p>
+              <% if (redirectValue && redirectValue.startsWith("/api/user/checkout")) { %>
+                <p style="margin-top: 12px;">
+                  <a href="<%= redirectValue %>" class="chip">Back to Checkout</a>
+                </p>
+              <% } %>
             </div>
 
             <div class="mini-avatar">
@@ -64,6 +70,7 @@
                     <div class="address-actions">
                       <% if (!address.isDefault) { %>
                         <form action="/api/user/set-default/<%= address._id %>" method="POST">
+                          <input type="hidden" name="redirect" value="<%= redirectValue %>" />
                           <button type="submit" class="btn btn-light">Set default</button>
                         </form>
                       <% } %>
@@ -77,6 +84,7 @@
                         method="POST"
                         onsubmit="return confirm('Remove this address?')"
                       >
+                        <input type="hidden" name="redirect" value="<%= redirectValue %>" />
                         <button type="submit" class="btn btn-danger">Remove</button>
                       </form>
                     </div>
@@ -84,6 +92,7 @@
 
                   <div id="edit-<%= address._id %>" class="address-edit" style="display:none;">
                     <form action="/api/user/update-address/<%= address._id %>" method="POST" class="edit-form">
+                      <input type="hidden" name="redirect" value="<%= redirectValue %>" />
                       <div class="field field-light">
                         <input type="text" name="type" value="<%= address.type %>" required />
                       </div>
@@ -118,6 +127,7 @@
           <section class="add-new">
             <h3>Add New Address</h3>
             <form action="/api/user/add-address" method="POST" class="add-form">
+              <input type="hidden" name="redirect" value="<%= redirectValue %>" />
               <div class="field field-light">
                 <input type="text" name="type" placeholder="Home / Office" required />
               </div>

@@ -6,7 +6,8 @@ import {
   updateCartQuantityController,
   updateCartQuantityAjaxController,
   checkoutCartController,
-  placeOrderController
+  placeOrderController,
+  getOrderSuccessController
 } from "../../controllers/user/cartController.js";
 import noCache from "../../middleware/noCacheMiddleware.js";
 
@@ -19,5 +20,6 @@ router.post("/cart/update/:productId",updateCartQuantityController)
 router.post("/cart/update-ajax/:productId",updateCartQuantityAjaxController)
 router.post("/cart/checkout", checkoutCartController)
 router.post("/cart/place-order", placeOrderController);
+router.get("/order-success/:orderId", noCache, getOrderSuccessController);
 
 export default router

@@ -3,6 +3,13 @@ import User from '../../models/User.js'
 
 const router = express.Router()
 
+const getRedirectTarget = (req)=>{
+  const redirectTo = req.body.redirect || req.query.redirect;
+  if(redirectTo && redirectTo.startsWith("/api/user/checkout")){
+    return redirectTo
+  }
+  return "/api/user/adress"
+}
 
 router.get('/adress', async (req, res) => {
 
@@ -18,9 +25,10 @@ router.get('/adress', async (req, res) => {
       return res.redirect('/api/auth/login')
     }
 
-    res.render('user/adress-management', {
+                    res.render('user/adress-management', {
       user,
-      addresses: user.addresses || []
+      addresses: user.addresses || [],
+      redirect: req.query.redirect || ""
     })
 
   } catch (error) {
@@ -54,11 +62,11 @@ router.post('/add-address', async (req, res) => {
 
     await user.save()
 
-    res.redirect('/api/user/adress')
+    res.redirect(getRedirectTarget(req))
 
   } catch (error) {
     console.log('Add address error:', error)
-    res.redirect('/api/user/adress')
+    res.redirect(getRedirectTarget(req))
   }
 })
 
@@ -76,7 +84,7 @@ router.post('/delete-address/:id', async (req, res) => {
 
     const addressToDelete = user.addresses.id(addressId)
     if (!addressToDelete) {
-      return res.redirect('/api/user/adress')
+      return res.redirect(getRedirectTarget(req))
     }
 
     const wasDefault = addressToDelete.isDefault
@@ -92,11 +100,11 @@ router.post('/delete-address/:id', async (req, res) => {
 
     await user.save()
 
-    res.redirect('/api/user/adress')
+    res.redirect(getRedirectTarget(req))
 
   } catch (error) {
     console.log('Delete address error:', error)
-    res.redirect('/api/user/adress')
+    res.redirect(getRedirectTarget(req))
   }
 })
 
@@ -116,11 +124,11 @@ router.post('/set-default/:id', async (req, res) => {
 
     await user.save()
 
-    res.redirect('/api/user/adress')
+    res.redirect(getRedirectTarget(req))
 
   } catch (error) {
     console.log('Set default error:', error)
-    res.redirect('/api/user/adress')
+    res.redirect(getRedirectTarget(req))
   }
 })
 
@@ -134,11 +142,12 @@ router.get('/edit-address/:id', async (req, res) => {
   if (!user) return res.redirect('/api/auth/login')
 
   const address = user.addresses.id(req.params.id)
-  if (!address) return res.redirect('/api/user/adress')
+  if (!address) return res.redirect(getRedirectTarget(req))
 
   res.render('user/edit-address', {
     user,
-    address
+    address,
+    redirect: req.query.redirect || ""
   })
 })
 
@@ -153,7 +162,7 @@ router.post('/update-address/:id', async (req, res) => {
   if (!user) return res.redirect('/api/auth/login')
 
   const address = user.addresses.id(req.params.id)
-  if (!address) return res.redirect('/api/user/adress')
+  if (!address) return res.redirect(getRedirectTarget(req))
 
   const { type, street, city, state, pincode } = req.body
 
@@ -165,7 +174,7 @@ router.post('/update-address/:id', async (req, res) => {
 
   await user.save()
 
-  res.redirect('/api/user/adress')
+  return res.redirect(getRedirectTarget(req))
 })
 
 export default router

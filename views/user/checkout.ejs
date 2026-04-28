@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Checkout</title>
   <link rel="stylesheet" href="/css/storefront-navbar.css" />
-  <link rel="stylesheet" href="/css/cart.css" />
+  <link rel="stylesheet" href="/css/checkout.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -16,53 +16,163 @@
 <body>
   <%- include("partials/storefront-navbar") %>
 
-  <main class="shop-shell">
-    <section class="cart-shell">
-      <div class="cart-head">
-        <h1>Checkout</h1>
-        <p>Your selected items were revalidated successfully before checkout.</p>
-      </div>
+  <%
+    const savedAddresses = Array.isArray(addresses) ? addresses : [];
+    const selectedItems = Array.isArray(selectedProductIds)
+      ? selectedProductIds
+      : [selectedProductIds].filter(Boolean);
+    const subtotal = Number(grandTotal) || 0;
+    const discount = 0;
+    const tax = 0;
+    const shipping = subtotal >= 1000 ? 0 : 50;
+    const finalTotal = subtotal + shipping + tax - discount;
+    const redirectQuery = selectedItems
+      .map(function(itemId) {
+        return "selectedCartItemIds=" + encodeURIComponent(itemId);
+      })
+      .join("&");
+    const checkoutRedirectUrl = "/api/user/checkout" + (redirectQuery ? "?" + redirectQuery : "");
+  %>
 
-      <div class="cart-layout">
-        <div class="cart-list">
-          <% checkoutItems.forEach((item) => { %>
-            <article class="cart-item-card">
-              <div class="cart-item-image">
-                <img src="<%= item.productImage %>" alt="<%= item.productName %>" />
-              </div>
+  <main class="checkout-page">
+    <header class="checkout-header">
+      <h1>Checkout</h1>
+      <p>Choose your delivery address, review your products, and place your Cash on Delivery order.</p>
+    </header>
 
-              <div class="cart-item-copy">
-                <h3><%= item.productName %></h3>
-                <p><%= item.category %></p>
-                <% if (item.size || item.color) { %>
-                  <p><%= [item.size ? `Size: ${item.size}` : "", item.color ? `Color: ${item.color}` : ""].filter(Boolean).join(" | ") %></p>
-                <% } %>
-                <span class="cart-item-price">₹<%= item.price %></span>
-                <span class="cart-item-meta">Qty: <%= item.quantity %></span>
-              </div>
-
-              <div class="cart-item-subtotal">
-                <strong>₹<%= item.subtotal %></strong>
-              </div>
-            </article>
-          <% }) %>
-        </div>
-
-        <aside class="cart-summary">
-          <h2>Order Summary</h2>
-          <div class="cart-summary-row">
-            <span>Total</span>
-            <strong>₹<%= grandTotal %></strong>
+    <section class="checkout-grid">
+      <div class="checkout-main">
+        <section class="checkout-panel">
+          <div class="checkout-panel-head">
+            <h2>Delivery Address</h2>
+            <a href="/api/user/adress?redirect=<%= encodeURIComponent(checkoutRedirectUrl) %>" class="checkout-link">Add / Edit Address</a>
           </div>
 
-          <button type="button" class="cart-checkout-btn" disabled>
-            Place Order
-          </button>
-        </aside>
-        
+          <% if (!savedAddresses.length) { %>
+            <p class="empty-address">No saved address found. Please add an address before placing the order.</p>
+          <% } else { %>
+            <form id="placeOrderForm" action="/api/user/cart/place-order" method="POST">
+              <% selectedItems.forEach(function(itemId) { %>
+                <input type="hidden" name="selectedCartItemIds" value="<%= itemId %>" />
+              <% }); %>
+              <input type="hidden" name="paymentMethod" value="COD" />
+
+              <div class="address-list">
+                <% savedAddresses.forEach(function(address, index) { %>
+                  <label class="address-option">
+                    <input
+                      type="radio"
+                      name="addressId"
+                      value="<%= address._id %>"
+                      <%= address.isDefault || index === 0 ? "checked" : "" %>
+                      required
+                    />
+                    <span>
+                      <strong>
+                        <%= address.type || "Address" %>
+                        <% if (address.isDefault) { %>
+                          <span class="default-badge">Default</span>
+                        <% } %>
+                      </strong>
+                      <%= address.street %>,
+                      <%= address.city %>,
+                      <%= address.state %> -
+                      <%= address.pincode %>
+                    </span>
+                  </label>
+                <% }); %>
+              </div>
+            </form>
+          <% } %>
+        </section>
+
+        <section class="checkout-panel">
+          <div class="checkout-panel-head">
+            <h2>Products</h2>
+          </div>
+
+          <div class="checkout-item-list">
+            <% checkoutItems.forEach(function(item) { %>
+              <article class="checkout-item">
+                <div class="checkout-item-image">
+                  <img src="<%= item.productImage %>" alt="<%= item.productName %>" />
+                </div>
+
+                <div>
+                  <h3><%= item.productName %></h3>
+                  <p><%= item.category %></p>
+                  <% if (item.size || item.color) { %>
+                    <span>
+                      <%= [
+                        item.size ? "Size: " + item.size : "",
+                        item.color ? "Color: " + item.color : ""
+                      ].filter(Boolean).join(" | ") %>
+                    </span>
+                  <% } %>
+                  <span>Price: ₹<%= item.price %></span>
+                  <span>Quantity: <%= item.quantity %></span>
+                </div>
+
+                <div class="checkout-item-price">
+                  ₹<%= item.subtotal %>
+                </div>
+              </article>
+            <% }); %>
+          </div>
+        </section>
+
+        <section class="checkout-panel">
+          <div class="checkout-panel-head">
+            <h2>Payment Method</h2>
+          </div>
+
+          <div class="payment-box">
+            <strong>Cash on Delivery</strong>
+            <span>Pay in cash when your order reaches your delivery address.</span>
+          </div>
+        </section>
       </div>
+
+      <aside class="checkout-summary">
+        <h2>Price Details</h2>
+
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <strong>₹<%= subtotal %></strong>
+        </div>
+
+        <div class="summary-row">
+          <span>Discount</span>
+          <strong>- ₹<%= discount %></strong>
+        </div>
+
+        <div class="summary-row">
+          <span>Tax</span>
+          <strong>₹<%= tax %></strong>
+        </div>
+
+        <div class="summary-row">
+          <span>Shipping</span>
+          <strong><%= shipping === 0 ? "Free" : "₹" + shipping %></strong>
+        </div>
+
+        <div class="summary-row summary-total">
+          <span>Final Price</span>
+          <strong>₹<%= finalTotal %></strong>
+        </div>
+
+        <button
+          type="submit"
+          form="placeOrderForm"
+          class="checkout-submit"
+          <%= !savedAddresses.length ? "disabled" : "" %>
+        >
+          Place COD Order
+        </button>
+      </aside>
     </section>
   </main>
-<%- include("partials/site-footer") %>
+
+  <%- include("partials/site-footer") %>
 </body>
 </html>

@@ -7,6 +7,8 @@ import {
   validateCartForCheckoutService
 } from "../../services/cartServices.js";
 import { placeOrderService } from "../../services/orderServices.js";
+import User from "../../models/User.js";
+import Order from "../../models/Order.js";
 
 const buildRedirectWithMessage = (target, message, key = "error") => {
   const encodedMessage = encodeURIComponent(
@@ -250,9 +252,12 @@ export const checkoutCartController = async (req, res) => {
       selectedProductIds
     );
 
+    const user = await User.findById(userId);
+
     return res.render("user/checkout", {
       checkoutItems,
       grandTotal,
+      addresses: user?.addresses || [],
       selectedProductIds: Array.isArray(selectedProductIds)
         ? selectedProductIds
         : [selectedProductIds]
@@ -274,6 +279,7 @@ export const placeOrderController = async (req, res) => {
     }
 
     const userId = req.user._id;
+    const { addressId } = req.body;
 
     const selectedCartItemIds = req.body.selectedCartItemIds || req.body.selectedProductIds;
     const selectedProductIds = Array.isArray(selectedCartItemIds)
@@ -284,9 +290,9 @@ export const placeOrderController = async (req, res) => {
       return res.redirect("/api/user/cart?error=No items selected");
     }
 
-    await placeOrderService(userId, selectedProductIds);
+    const order = await placeOrderService(userId, selectedProductIds, addressId);
 
-    return res.redirect("/api/user/cart?message=Order%20placed%20successfully.");
+    return res.redirect(`/api/user/order-success/${order._id}`);
 
   } catch (error) {
     console.log(error, "Place order error");
@@ -296,5 +302,30 @@ export const placeOrderController = async (req, res) => {
     );
 
     return res.redirect(`/api/user/cart?error=${message}`);
+  }
+};
+
+export const getOrderSuccessController = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.redirect("/api/auth/login");
+    }
+
+    const { orderId } = req.params;
+    const order = await Order.findOne({
+      _id: orderId,
+      user: req.user._id
+    });
+
+    if (!order) {
+      return res.redirect("/api/user/cart?error=Order not found");
+    }
+
+    return res.render("user/order-success", {
+      order
+    });
+  } catch (error) {
+    console.log(error, "Get order success page error");
+    return res.redirect("/api/user/cart?error=Unable to load order success page");
   }
 };

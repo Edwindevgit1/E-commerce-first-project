@@ -20,7 +20,7 @@
     <nav class="breadcrumb">
       <a href="/api/user/products" class="breadcrumb-back" aria-label="Back to products">←</a>
       <a href="/api/user/products">Home</a> /
-      <span><%= product.category?.name || "Shoes" %></span> /
+      <span><%= categoryName %></span> /
       <strong><%= product.productName %></strong>
     </nav>
 
@@ -29,20 +29,18 @@
     <% } %>
 
     <section class="details-grid">
-      <% const initialGalleryImages = (defaultVariant?.images?.length ? defaultVariant.images : product.images) || []; %>
-      <% const initialMainImageIndex = Number.isInteger(defaultVariant?.mainImageIndex) ? defaultVariant.mainImageIndex : (product.mainImageIndex || 0); %>
       <section class="detail-gallery">
         <div class="main-preview-frame">
           <img
             id="mainPreview"
-            src="<%= initialGalleryImages[initialMainImageIndex] || initialGalleryImages[0] || product.images[product.mainImageIndex || 0] || product.images[0] %>"
+            src="<%= initialGalleryImages[initialMainImageIndex] || initialGalleryImages[0] || productImages[product.mainImageIndex || 0] || productImages[0] || fallbackProductImage %>"
             class="main-preview"
             alt="<%= product.productName %>"
           />
         </div>
 
         <div class="thumb-row" id="thumbRow">
-          <% initialGalleryImages.forEach((image) => { %>
+          <% initialGalleryImages.forEach(function(image) { %>
             <button type="button" class="thumb-button" data-thumb-src="<%= image %>">
               <img
                 src="<%= image %>"
@@ -50,7 +48,7 @@
                 alt="thumb"
               />
             </button>
-          <% }) %>
+          <% }); %>
         </div>
 
         <div class="detail-tabs">
@@ -65,29 +63,29 @@
               <p><%= product.description %></p>
             <% } %>
 
-            <% if (product.highlights?.length) { %>
+            <% if (productHighlights.length) { %>
               <ul class="highlights detail-highlights">
-                <% product.highlights.forEach(item => { %>
+                <% productHighlights.forEach(function(item) { %>
                   <li><%= item %></li>
-                <% }) %>
+                <% }); %>
               </ul>
             <% } %>
 
-            <% if (!product.description && !product.highlights?.length) { %>
+            <% if (!product.description && !productHighlights.length) { %>
               <p>Product details will be available soon.</p>
             <% } %>
           </div>
           <div class="detail-copy-panel" data-detail-panel="reviews">
-            <% if (!product.reviews.length) { %>
+            <% if (!productReviews.length) { %>
               <p>No reviews yet.</p>
             <% } %>
 
-            <% product.reviews.forEach(review => { %>
+            <% productReviews.forEach(function(review) { %>
               <article class="review-card">
                 <strong><%= review.userName %></strong>
                 <p><%= review.comment %></p>
               </article>
-            <% }) %>
+            <% }); %>
           </div>
           <div class="detail-copy-panel" data-detail-panel="shipping">
             <p><%= product.shippingInfo || "Standard delivery timelines and shipping updates will be shown here for this product." %></p>
@@ -163,7 +161,7 @@
         <% if (displaySizes.length || displayColors.length) { %>
           <p class="detail-selected-variant" id="selectedVariantLabel">
             Selected:
-            <%= [defaultVariant?.size ? `Size ${defaultVariant.size}` : "", defaultVariant?.color ? `Color ${defaultVariant.color}` : ""].filter(Boolean).join(" | ") || "Default option" %>
+            <%= selectedVariantLabelText %>
           </p>
         <% } %>
 
@@ -171,13 +169,13 @@
           <div class="variant-box">
             <h3>size</h3>
             <div class="variant-list">
-              <% displaySizes.forEach((size) => { %>
+              <% displaySizes.forEach(function(size) { %>
                 <button
                   type="button"
                   class="variant-pill <%= defaultVariant && defaultVariant.size === size ? 'active' : '' %>"
                   data-size-option="<%= size %>"
                 ><%= size %></button>
-              <% }) %>
+              <% }); %>
             </div>
           </div>
         <% } %>
@@ -186,32 +184,22 @@
           <div class="highlight-box detail-color-box">
             <h3>color</h3>
             <div class="color-list">
-              <% displayColors.forEach((color) => { %>
+              <% displayColors.forEach(function(color) { %>
                 <button type="button" class="color-pill <%= defaultVariant && defaultVariant.color && defaultVariant.color.toLowerCase() === color.toLowerCase() ? 'active' : '' %>" data-color-option="<%= color %>">
                   <span class="color-dot" style="--detail-color: <%= color.toLowerCase() %>;"></span>
                   <%= color %>
                 </button>
-              <% }) %>
+              <% }); %>
             </div>
           </div>
         <% } %>
 
         <div class="detail-action-row">
           <form action="/api/user/cart/add/<%= product._id %>" method="POST">
-            <input type="hidden" name="size" id="selectedVariantSize" value="<%= defaultVariant?.size || '' %>">
-            <input type="hidden" name="color" id="selectedVariantColor" value="<%= defaultVariant?.color || '' %>">
+            <input type="hidden" name="size" id="selectedVariantSize" value="<%= selectedVariantSize %>">
+            <input type="hidden" name="color" id="selectedVariantColor" value="<%= selectedVariantColor %>">
             <button class="cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
-              <%= availabilityState === "product_inactive"
-                ? "Temporarily unavailable"
-                : availabilityState === "category_deleted"
-                ? "Unavailable"
-                : availabilityState === "category_inactive"
-                ? "Temporarily unavailable"
-                : availabilityState === "sold_out"
-                ? "Sold out"
-                : availabilityState === "variant_unavailable"
-                ? "Unavailable"
-                : "Add to cart" %>
+              <%= addToCartLabel %>
             </button>
           </form>
           <a
@@ -225,262 +213,33 @@
       </section>
     </section>
 
-    <% if (relatedProducts?.length) { %>
+    <% if (relatedProductList.length) { %>
       <section class="detail-related-section">
         <div class="detail-related-head">
           <h2>You may also like</h2>
-          <a href="/api/user/products?category=<%= product.category?._id || '' %>">View more</a>
+          <a href="/api/user/products?category=<%= categoryId %>">View more</a>
         </div>
 
         <div class="detail-related-grid">
-          <% relatedProducts.forEach((item) => { %>
+          <% relatedProductList.forEach(function(item) { %>
             <a href="/api/user/products/<%= item._id %>" class="detail-related-card">
               <div class="detail-related-card__image">
                 <img
-                  src="<%= item.images[item.mainImageIndex || 0] || item.images[0] %>"
+                  src="<%= (item.images || [])[item.mainImageIndex || 0] || (item.images || [])[0] || fallbackProductImage %>"
                   alt="<%= item.productName %>"
                 />
               </div>
               <h3><%= item.productName %></h3>
               <strong>₹<%= item.displayPrice %></strong>
             </a>
-          <% }) %>
+          <% }); %>
         </div>
       </section>
     <% } %>
   </main>
 
-  <script>
-    const mainPreview = document.getElementById("mainPreview");
-    const mainPreviewFrame = document.querySelector(".main-preview-frame");
-    const thumbRow = document.getElementById("thumbRow");
-    const detailTabs = document.querySelectorAll("[data-detail-tab]");
-    const detailPanels = document.querySelectorAll("[data-detail-panel]");
-    const detailPageMessage = document.querySelector(".detail-page-message");
-    const sizeButtons = document.querySelectorAll("[data-size-option]");
-    const colorButtons = document.querySelectorAll("[data-color-option]");
-    const selectedVariantSizeInput = document.getElementById("selectedVariantSize");
-    const selectedVariantColorInput = document.getElementById("selectedVariantColor");
-    const selectedVariantPrice = document.getElementById("selectedVariantPrice");
-    const selectedVariantOriginalPrice = document.getElementById("selectedVariantOriginalPrice");
-    const selectedVariantStockBox = document.querySelector(".stock-box");
-    const selectedVariantStatusMessage = document.querySelector(".detail-status-message p");
-    const selectedVariantLabel = document.getElementById("selectedVariantLabel");
-    const addToCartButton = document.querySelector(".detail-action-row .cart-btn");
-    const detailPageCanSell = <%= canAddToCart ? "true" : "false" %>;
-
-    const variants = <%- JSON.stringify((variantOptions || availableVariants || product.variants || []).map((variant) => ({
-      size: variant.size,
-      color: variant.color,
-      price: Number(variant.effectivePrice ?? variant.price) || 0,
-      originalPrice: Number(variant.originalPrice ?? variant.price) || 0,
-      hasDiscount: Boolean(variant.hasDiscount),
-      stock: Number(variant.stock) || 0,
-      images: variant.images || [],
-      mainImageIndex: Number.isInteger(variant.mainImageIndex) ? variant.mainImageIndex : 0
-    }))).replace(/</g, "\\u003c") %>;
-
-    const productImages = <%- JSON.stringify((product.images || []).map((image) => String(image || ""))).replace(/</g, "\\u003c") %>;
-    const normalizeValue = (value) => String(value || "").trim().toLowerCase();
-    const initialButtonLabel = <%- JSON.stringify(
-      availabilityState === "product_inactive"
-        ? "Temporarily unavailable"
-        : availabilityState === "category_deleted"
-        ? "Unavailable"
-        : availabilityState === "category_inactive"
-        ? "Temporarily unavailable"
-        : availabilityState === "sold_out"
-        ? "Sold out"
-        : availabilityState === "variant_unavailable"
-        ? "Unavailable"
-        : "Add to cart"
-    ) %>;
-
-    const getCurrentVariant = () => variants.find((variant) =>
-      normalizeValue(variant.size) === normalizeValue(selectedVariantSizeInput?.value) &&
-      normalizeValue(variant.color) === normalizeValue(selectedVariantColorInput?.value)
-    ) || null;
-
-    const findVariantBySelection = ({ size, color, changedField } = {}) => {
-      const normalizedSize = normalizeValue(size);
-      const normalizedColor = normalizeValue(color);
-
-      return variants.find((variant) =>
-        normalizeValue(variant.size) === normalizedSize &&
-        normalizeValue(variant.color) === normalizedColor
-      ) || (
-        changedField === "size"
-          ? variants.find((variant) => normalizeValue(variant.size) === normalizedSize)
-          : changedField === "color"
-            ? variants.find((variant) => normalizeValue(variant.color) === normalizedColor)
-            : null
-      ) || variants[0] || null;
-    };
-
-    const renderVariantThumbs = (variant) => {
-      if (!thumbRow) return;
-
-      const variantImages = Array.isArray(variant?.images) && variant.images.length
-        ? variant.images
-        : productImages;
-      const primaryImage = variantImages[variant?.mainImageIndex || 0] || variantImages[0] || "";
-
-      if (primaryImage && mainPreview) {
-        mainPreview.src = primaryImage;
-      }
-
-      thumbRow.innerHTML = variantImages
-        .map((image) => `
-          <button type="button" class="thumb-button" data-thumb-src="${image}">
-            <img src="${image}" class="thumb-item" alt="thumb" />
-          </button>
-        `)
-        .join("");
-    };
-
-    const syncVariantUi = (nextVariant) => {
-      const variant = nextVariant || getCurrentVariant() || variants[0] || null;
-      if (!variant) return;
-
-      sizeButtons.forEach((button) => {
-        button.classList.toggle("active", normalizeValue(button.dataset.sizeOption) === normalizeValue(variant.size));
-      });
-
-      colorButtons.forEach((button) => {
-        button.classList.toggle("active", normalizeValue(button.dataset.colorOption) === normalizeValue(variant.color));
-      });
-
-      selectedVariantSizeInput.value = variant.size || "";
-      selectedVariantColorInput.value = variant.color || "";
-
-      if (selectedVariantPrice) {
-        selectedVariantPrice.textContent = `₹${variant.price}`;
-      }
-
-      if (selectedVariantOriginalPrice) {
-        if (variant.hasDiscount && variant.originalPrice > variant.price) {
-          selectedVariantOriginalPrice.hidden = false;
-          selectedVariantOriginalPrice.textContent = `₹${variant.originalPrice}`;
-        } else {
-          selectedVariantOriginalPrice.hidden = true;
-          selectedVariantOriginalPrice.textContent = "";
-        }
-      }
-
-      renderVariantThumbs(variant);
-
-      if (selectedVariantLabel) {
-        const labelParts = [];
-
-        if (variant.size) {
-          labelParts.push(`Size ${variant.size}`);
-        }
-
-        if (variant.color) {
-          labelParts.push(`Color ${variant.color}`);
-        }
-
-        selectedVariantLabel.textContent = `Selected: ${labelParts.join(" | ") || "Default option"}`;
-      }
-
-      if (selectedVariantStockBox && detailPageCanSell) {
-        if (variant.stock <= 0) {
-          selectedVariantStockBox.innerHTML = '<span class="danger-text">Sold out</span>';
-        } else if (variant.stock < 4) {
-          selectedVariantStockBox.innerHTML = `<span class="low-stock-text">Only ${variant.stock} left</span>`;
-        } else {
-          selectedVariantStockBox.innerHTML = '<span class="success-text">In stock</span>';
-        }
-      }
-
-      if (selectedVariantStatusMessage) {
-        if (!detailPageCanSell) {
-          selectedVariantStatusMessage.textContent = <%- JSON.stringify(availabilityMessage) %>;
-        } else {
-          selectedVariantStatusMessage.textContent = variant.stock <= 0
-            ? "This selected variant is currently sold out."
-            : variant.stock < 4
-              ? "Almost few pieces left. Hurry up."
-              : "Ready to order.";
-        }
-      }
-
-      if (addToCartButton) {
-        addToCartButton.disabled = !detailPageCanSell || variant.stock <= 0;
-        addToCartButton.textContent = !detailPageCanSell
-          ? initialButtonLabel
-          : variant.stock <= 0
-            ? "Sold out"
-            : "Add to cart";
-      }
-    };
-
-    mainPreviewFrame?.addEventListener("mousemove", (event) => {
-      const rect = mainPreviewFrame.getBoundingClientRect();
-      const originX = ((event.clientX - rect.left) / rect.width) * 100;
-      const originY = ((event.clientY - rect.top) / rect.height) * 100;
-
-      mainPreview.style.transformOrigin = `${originX}% ${originY}%`;
-      mainPreview.style.transform = "scale(3.22)";
-    });
-
-    mainPreviewFrame?.addEventListener("mouseleave", () => {
-      mainPreview.style.transform = "scale(1)";
-      mainPreview.style.transformOrigin = "center center";
-    });
-
-    detailTabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        const target = tab.dataset.detailTab;
-
-        detailTabs.forEach((item) => item.classList.toggle("active", item === tab));
-        detailPanels.forEach((panel) => {
-          panel.classList.toggle("active", panel.dataset.detailPanel === target);
-        });
-      });
-    });
-
-    colorButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const variant = findVariantBySelection({
-          size: selectedVariantSizeInput?.value,
-          color: button.dataset.colorOption || "",
-          changedField: "color"
-        });
-        syncVariantUi(variant);
-      });
-    });
-
-    sizeButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const variant = findVariantBySelection({
-          size: button.dataset.sizeOption || "",
-          color: selectedVariantColorInput?.value,
-          changedField: "size"
-        });
-        syncVariantUi(variant);
-      });
-    });
-
-    thumbRow?.addEventListener("click", (event) => {
-      const thumbButton = event.target.closest("[data-thumb-src]");
-      if (!thumbButton || !mainPreview) return;
-      mainPreview.src = thumbButton.dataset.thumbSrc || mainPreview.src;
-    });
-
-    syncVariantUi(getCurrentVariant() || variants[0] || null);
-
-    if (detailPageMessage) {
-      window.setTimeout(() => {
-        detailPageMessage.remove();
-
-        const nextUrl = new URL(window.location.href);
-        nextUrl.searchParams.delete("message");
-
-        window.history.replaceState({}, "", nextUrl.pathname + nextUrl.search);
-      }, 3000);
-    }
-  </script>
+  <template id="productDetailData"><%- productDetailJson %></template>
+  <script src="/script/product-detail.js"></script>
 <%- include("partials/site-footer") %>
 </body>
 </html>

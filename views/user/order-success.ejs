@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Successful</title>
+  <link rel="stylesheet" href="/css/storefront-navbar.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --page-bg: #eef5ff;
+      --panel-bg: rgba(255, 255, 255, 0.88);
+      --panel-border: #c8d8fb;
+      --text-main: #183b7a;
+      --text-soft: #5f7fb8;
+      --accent: #244b93;
+      --accent-soft: #dce9ff;
+      --success: #3ba76d;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Sora", sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(138, 180, 255, 0.22), transparent 25%),
+        linear-gradient(180deg, #f7fbff 0%, var(--page-bg) 100%);
+      color: var(--text-main);
+    }
+    .success-shell {
+      max-width: 1200px;
+      margin: 32px auto 72px;
+      padding: 0 20px;
+    }
+    .success-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 32px;
+      box-shadow: 0 28px 60px rgba(36, 75, 147, 0.12);
+      padding: 28px;
+    }
+    .crumb {
+      color: var(--text-soft);
+      font-size: 15px;
+      margin-bottom: 24px;
+    }
+    .success-panel {
+      border: 1px solid var(--panel-border);
+      border-radius: 28px;
+      padding: 56px 24px;
+      text-align: center;
+      background: linear-gradient(180deg, rgba(255,255,255,0.75), rgba(237,244,255,0.9));
+    }
+    .checkmark {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      color: #2d62bb;
+      display: grid;
+      place-items: center;
+      font-size: 72px;
+      font-weight: 800;
+      margin: 0 auto 28px;
+    }
+    h1 {
+      margin: 0 0 14px;
+      font-size: clamp(36px, 5vw, 56px);
+      line-height: 1.05;
+      color: var(--accent);
+    }
+    .subtitle {
+      max-width: 760px;
+      margin: 0 auto 34px;
+      font-size: 17px;
+      line-height: 1.6;
+      color: var(--text-soft);
+    }
+    .meta-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 36px;
+    }
+    .meta-pill {
+      min-width: 180px;
+      padding: 14px 18px;
+      border-radius: 20px;
+      border: 1px solid var(--panel-border);
+      background: #fff;
+    }
+    .meta-pill--accent {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .meta-label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+      opacity: 0.8;
+    }
+    .meta-value {
+      display: block;
+      font-weight: 700;
+      font-size: 16px;
+    }
+    .meta-value--success {
+      color: var(--success);
+    }
+    .action-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .success-btn {
+      min-width: 220px;
+      padding: 16px 22px;
+      border-radius: 18px;
+      border: 1px solid var(--panel-border);
+      background: #fff;
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .success-btn--primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    @media (max-width: 768px) {
+      .success-card { padding: 18px; }
+      .success-panel { padding: 36px 18px; }
+      .meta-pill, .success-btn { width: 100%; min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <%- include("partials/storefront-navbar") %>
+
+  <main class="success-shell">
+    <section class="success-card">
+      <div class="crumb">Home / order success</div>
+
+      <div class="success-panel">
+        <div class="checkmark">✓</div>
+        <h1>Order successful</h1>
+        <p class="subtitle">
+          Thank you! Your order has been placed successfully and is now being prepared for shipment.
+        </p>
+
+        <div class="meta-row">
+          <div class="meta-pill">
+            <span class="meta-label">Order ID</span>
+            <span class="meta-value"><%= order.orderId %></span>
+          </div>
+          <div class="meta-pill">
+            <span class="meta-label">Payment</span>
+            <span class="meta-value <%= order.paymentMethod === 'COD' ? '' : 'meta-value--success' %>">
+              <%= order.paymentMethod === "COD" ? "Cash on Delivery" : order.paymentStatus %>
+            </span>
+          </div>
+          <div class="meta-pill meta-pill--accent">
+            <span class="meta-label">Status</span>
+            <span class="meta-value"><%= order.status %></span>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <a href="/api/user/cart" class="success-btn">Go to Cart</a>
+          <a href="/api/user/products" class="success-btn success-btn--primary">Continue Shopping</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
