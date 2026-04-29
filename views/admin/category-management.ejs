@@ -18,6 +18,10 @@
       const addFormData = formData || {};
       const editFieldErrors = editValidationErrors || {};
       const editData = editFormData || null;
+      const editDuplicatePopupMessage =
+        editData?.id && listError && /already exists/i.test(listError)
+          ? listError
+          : "";
     %>
     <main class="neo-scene">
       <section class="neo-card">
@@ -131,7 +135,7 @@
               </div>
             </div>
 
-            <% if (listError) { %>
+            <% if (listError && !editDuplicatePopupMessage) { %>
               <p id="listErrorMessage" class="feedback error"><%= listError %></p>
             <% } %>
 
@@ -286,6 +290,10 @@
       <div class="modal-box">
         <h3>Edit Category</h3>
 
+        <% if (editDuplicatePopupMessage) { %>
+          <p class="modal-popup-error" id="editPopupErrorMessage"><%= editDuplicatePopupMessage %></p>
+        <% } %>
+
         <form id="editCategoryForm" method="POST" class="category-form modal-form" novalidate>
           <label class="field">
             <span>Name</span>
@@ -376,6 +384,7 @@
       const editCategoryStatus = document.getElementById("editCategoryStatus");
       const editCategoryDescription = document.getElementById("editCategoryDescription");
       const editCategoryOfferPercentage = document.getElementById("editCategoryOfferPercentage");
+      const editPopupErrorMessage = document.getElementById("editPopupErrorMessage");
 
       const deleteCategoryForm = document.getElementById("deleteCategoryForm");
       const deleteModalText = document.getElementById("deleteModalText");
@@ -486,9 +495,20 @@
         }, 3000);
       });
 
+      if (editPopupErrorMessage) {
+        setTimeout(() => {
+          editPopupErrorMessage.remove();
+        }, 3000);
+      }
+
       if (editFormData?.id) {
         editCategoryForm.action = `/api/admin/edit-category/${editFormData.id}`;
         editModal.classList.add("show");
+
+        if (<%- JSON.stringify(Boolean(editDuplicatePopupMessage)) %>) {
+          editCategoryName?.focus();
+          editCategoryName?.select();
+        }
       }
     </script>
   </body>

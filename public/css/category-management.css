@@ -509,6 +509,18 @@ body {
   line-height: 1.5;
 }
 
+.modal-popup-error {
+  margin: 12px 0 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #f2b5b5;
+  background: linear-gradient(180deg, #fff8f8, #ffefef);
+  color: #8a1c1c;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
 .modal-form {
   margin-top: 10px;
 }
