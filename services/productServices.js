@@ -446,7 +446,7 @@ const deriveProductFieldsFromVariants = (variants) => {
   };
 };
 
-export const getProductService = async (search, category, status, page = 1, limit = 10) => {
+export const getProductService = async (search, category, status, stockFilter = "", page = 1, limit = 10) => {
   const query = {};
   const normalizedSearch = normalizeSearchTerm(search);
 
@@ -471,6 +471,14 @@ export const getProductService = async (search, category, status, page = 1, limi
   } else if (status) {
     query.isDeleted = false;
     query.status = status;
+  }
+
+  if (stockFilter === "out_of_stock") {
+    query.stock = 0;
+  } else if (stockFilter === "low_stock") {
+    query.stock = { $gt: 0, $lte: 5 };
+  } else if (stockFilter === "in_stock") {
+    query.stock = { $gt: 0 };
   }
 
   const skip = (page - 1) * limit;

@@ -133,6 +133,19 @@ Soft Deleted
 
 </select>
 
+<select name="stock" class="toolbar-select">
+<option value="">All Stock</option>
+<option value="in_stock" <%= selectedStock === "in_stock" ? "selected" : "" %>>
+In Stock
+</option>
+<option value="low_stock" <%= selectedStock === "low_stock" ? "selected" : "" %>>
+Low Stock
+</option>
+<option value="out_of_stock" <%= selectedStock === "out_of_stock" ? "selected" : "" %>>
+Out of Stock
+</option>
+</select>
+
 <button type="submit" class="btn btn-dark">
 Search
 </button>
@@ -317,21 +330,21 @@ title="Delete Options"
 <% if (currentPage > 1) { %>
 <a
 class="page-btn"
-href="/api/admin/products?page=<%= currentPage - 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= selectedCategory ? '&category=' + encodeURIComponent(selectedCategory) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %>"
+href="/api/admin/products?page=<%= currentPage - 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= selectedCategory ? '&category=' + encodeURIComponent(selectedCategory) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %><%= selectedStock ? '&stock=' + encodeURIComponent(selectedStock) : '' %>"
 >Prev</a>
 <% } %>
 
 <% paginationItems.forEach(i => { %>
 <a
 class="page-btn <%= i === currentPage ? 'active' : '' %>"
-href="/api/admin/products?page=<%= i %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= selectedCategory ? '&category=' + encodeURIComponent(selectedCategory) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %>"
+href="/api/admin/products?page=<%= i %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= selectedCategory ? '&category=' + encodeURIComponent(selectedCategory) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %><%= selectedStock ? '&stock=' + encodeURIComponent(selectedStock) : '' %>"
 ><%= i %></a>
 <% }) %>
 
 <% if (currentPage < totalPages) { %>
 <a
 class="page-btn"
-href="/api/admin/products?page=<%= currentPage + 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= selectedCategory ? '&category=' + encodeURIComponent(selectedCategory) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %>"
+href="/api/admin/products?page=<%= currentPage + 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= selectedCategory ? '&category=' + encodeURIComponent(selectedCategory) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %><%= selectedStock ? '&stock=' + encodeURIComponent(selectedStock) : '' %>"
 >Next</a>
 <% } %>
 

@@ -170,6 +170,7 @@ export const getProductController = async (req, res) => {
     const search = req.query.search || "";
     const selectedCategory = req.query.category || "";
     const selectedStatus = req.query.status || "";
+    const selectedStock = req.query.stock || "";
     const currentPage = Math.max(1, Number(req.query.page) || 1);
     const limit = 5;
 
@@ -177,6 +178,7 @@ export const getProductController = async (req, res) => {
       search,
       selectedCategory,
       selectedStatus,
+      selectedStock,
       currentPage,
       limit
     );
@@ -189,6 +191,7 @@ export const getProductController = async (req, res) => {
       search,
       selectedCategory,
       selectedStatus,
+      selectedStock,
       currentPage,
       limit,
       paginationItems: buildPaginationItems(currentPage, totalPages || 1),
@@ -206,6 +209,7 @@ export const getProductController = async (req, res) => {
       search: "",
       selectedCategory: "",
       selectedStatus: "",
+      selectedStock: "",
       currentPage: 1,
       limit: 5,
       paginationItems: [1],
@@ -260,6 +264,7 @@ export const addProductController = async (req, res) => {
       const search = "";
       const selectedCategory = "";
       const selectedStatus = "";
+      const selectedStock = "";
       const currentPage = 1;
       const limit = 5;
 
@@ -267,6 +272,7 @@ export const addProductController = async (req, res) => {
         search,
         selectedCategory,
         selectedStatus,
+        selectedStock,
         currentPage,
         limit
       );
@@ -279,6 +285,7 @@ export const addProductController = async (req, res) => {
         search,
         selectedCategory,
         selectedStatus,
+        selectedStock,
         currentPage,
         limit,
         paginationItems: buildPaginationItems(currentPage, totalPages || 1),

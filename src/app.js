@@ -27,6 +27,9 @@ import userProductRoute from "../routes/user/productRoute.js";
 import userCartRoutes from "../routes/user/cartRoute.js";
 import userWishlistRoutes from "../routes/user/wishlistRoute.js";
 import checkoutRoutes from "../routes/user/checkout.route.js";
+import userOrderRoutes from "../routes/user/order.route.js";
+import adminOrderRoutes from "../routes/admin/orderRoute.js";
+
 
 
 const app = express();
@@ -60,6 +63,7 @@ app.use('/api/admin',promotedemoteAdmin)
 app.use('/api/admin',blockunblock)
 app.use('/api/admin',categoryRoutes)
 app.use('/api/admin',productRoutes)
+app.use('/api/admin',adminOrderRoutes)
 //products
 app.use('/api/user',userProductRoute)
 //user
@@ -78,6 +82,8 @@ app.use('/api/user',userAuth,logout)
 app.use('/api/user',userAuth,profileemailverify)
 app.use('/api/user',userAuth,userCartRoutes)
 app.use('/api/user',userAuth,userWishlistRoutes)
-app.use('/api/user',checkoutRoutes)
+app.use('/api/user',userAuth,checkoutRoutes)
+app.use('/api/user', userAuth, userOrderRoutes)
+
 
 export default app;

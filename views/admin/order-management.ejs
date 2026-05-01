@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Management</title>
+  <link rel="stylesheet" href="/css/product-management.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+</head>
+<body>
+<main class="dashboard-scene">
+  <section class="dashboard-card">
+    <header class="top-strip">
+      <div class="chip-row">
+        <a href="/api/admin/dashboard" class="chip">Dashboard</a>
+        <a href="/api/admin/products" class="chip">Products</a>
+        <a href="/api/admin/category" class="chip">Categories</a>
+        <a href="/api/admin/orders" class="chip chip-dark">Orders</a>
+        <a href="/api/admin/adminusermanagement" class="chip">Users</a>
+      </div>
+
+      <form action="/api/admin/adminlogout" method="POST">
+        <button type="submit" class="logout-pill">Logout</button>
+      </form>
+    </header>
+
+    <section class="hero-panel">
+      <div class="hero-copy">
+        <h1>Order Management</h1>
+        <p>Review customer orders, update fulfillment status, and track order activity with search, filters, and pagination.</p>
+      </div>
+
+      <div class="hero-stats">
+        <article class="stat-card">
+          <span>Total Orders</span>
+          <strong><%= totalOrders || 0 %></strong>
+        </article>
+        <article class="stat-card">
+          <span>Current Page</span>
+          <strong><%= currentPage || 1 %></strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="content-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Order List</h2>
+          <p>Orders are shown in descending order by date by default.</p>
+        </div>
+      </div>
+
+      <% if (message) { %>
+        <p class="feedback success"><%= message %></p>
+      <% } %>
+      <% if (error) { %>
+        <p class="feedback error"><%= error %></p>
+      <% } %>
+
+      <form method="GET" action="/api/admin/orders" class="toolbar-grid">
+        <input
+          type="text"
+          name="search"
+          class="search-input"
+          placeholder="Search by order ID, customer name, or email"
+          value="<%= search || '' %>"
+        />
+
+        <select name="status" class="toolbar-select">
+          <option value="">All Statuses</option>
+          <option value="pending" <%= selectedStatus === "pending" ? "selected" : "" %>>Pending</option>
+          <option value="shipped" <%= selectedStatus === "shipped" ? "selected" : "" %>>Shipped</option>
+          <option value="out_for_delivery" <%= selectedStatus === "out_for_delivery" ? "selected" : "" %>>Out for delivery</option>
+          <option value="delivered" <%= selectedStatus === "delivered" ? "selected" : "" %>>Delivered</option>
+          <option value="cancelled" <%= selectedStatus === "cancelled" ? "selected" : "" %>>Cancelled</option>
+          <option value="returned" <%= selectedStatus === "returned" ? "selected" : "" %>>Returned</option>
+        </select>
+
+        <select name="sort" class="toolbar-select">
+          <option value="newest" <%= sort === "newest" ? "selected" : "" %>>Newest first</option>
+          <option value="oldest" <%= sort === "oldest" ? "selected" : "" %>>Oldest first</option>
+          <option value="amount_high" <%= sort === "amount_high" ? "selected" : "" %>>Amount high to low</option>
+          <option value="amount_low" <%= sort === "amount_low" ? "selected" : "" %>>Amount low to high</option>
+          <option value="status_az" <%= sort === "status_az" ? "selected" : "" %>>Status A to Z</option>
+        </select>
+
+        <button type="submit" class="btn btn-dark">Apply</button>
+        <a href="/api/admin/orders" class="btn btn-light">Clear</a>
+      </form>
+
+      <div class="table-wrap">
+        <table class="product-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Order ID</th>
+              <th>Order Date</th>
+              <th>User Details</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Update</th>
+              <th>Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!orders || !orders.length) { %>
+              <tr>
+                <td colspan="8" class="empty-cell">No orders found.</td>
+              </tr>
+            <% } else { %>
+              <% orders.forEach((order, index) => { %>
+                <tr>
+                  <td><%= ((currentPage - 1) * 8) + index + 1 %></td>
+                  <td><strong><%= order.orderId %></strong></td>
+                  <td><%= order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-IN") : "--" %></td>
+                  <td>
+                    <div class="product-name">
+                      <strong><%= order.user?.name || "Unknown User" %></strong>
+                      <span><%= order.user?.email || "No email" %></span>
+                    </div>
+                  </td>
+                  <td>₹<%= order.grandTotal %></td>
+                  <td>
+                    <span class="status-badge <%= order.status === 'delivered' ? 'active' : order.status === 'cancelled' ? 'soft-deleted' : 'inactive' %>">
+                      <%= order.status %>
+                    </span>
+                  </td>
+                  <td>
+                    <form method="POST" action="/api/admin/orders/<%= order._id %>/status" style="display:flex;gap:6px;align-items:center;">
+                      <input type="hidden" name="redirectTo" value="list" />
+                      <select name="status" class="toolbar-select" style="min-width:150px;">
+                        <option value="pending" <%= order.status === "pending" ? "selected" : "" %>>Pending</option>
+                        <option value="shipped" <%= order.status === "shipped" ? "selected" : "" %>>Shipped</option>
+                        <option value="out_for_delivery" <%= order.status === "out_for_delivery" ? "selected" : "" %>>Out for delivery</option>
+                        <option value="delivered" <%= order.status === "delivered" ? "selected" : "" %>>Delivered</option>
+                        <option value="cancelled" <%= order.status === "cancelled" ? "selected" : "" %>>Cancelled</option>
+                      </select>
+                      <button type="submit" class="btn btn-light">Save</button>
+                    </form>
+                  </td>
+                  <td>
+                    <a href="/api/admin/orders/<%= order._id %>" class="btn btn-dark">View Detail</a>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <% if (currentPage > 1) { %>
+          <a
+            href="/api/admin/orders?page=<%= currentPage - 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %><%= sort ? '&sort=' + encodeURIComponent(sort) : '' %>"
+            class="page-btn"
+          >Prev</a>
+        <% } %>
+
+        <% paginationItems.forEach((pageNumber) => { %>
+          <a
+            href="/api/admin/orders?page=<%= pageNumber %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %><%= sort ? '&sort=' + encodeURIComponent(sort) : '' %>"
+            class="page-btn <%= pageNumber === currentPage ? 'active' : '' %>"
+          ><%= pageNumber %></a>
+        <% }) %>
+
+        <% if (currentPage < totalPages) { %>
+          <a
+            href="/api/admin/orders?page=<%= currentPage + 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= selectedStatus ? '&status=' + encodeURIComponent(selectedStatus) : '' %><%= sort ? '&sort=' + encodeURIComponent(sort) : '' %>"
+            class="page-btn"
+          >Next</a>
+        <% } %>
+      </div>
+    </section>
+  </section>
+</main>
+</body>
+</html>

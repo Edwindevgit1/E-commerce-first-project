@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Detail</title>
+  <link rel="stylesheet" href="/css/product-management.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    .detail-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1.1fr 0.9fr;
+    }
+    .detail-card {
+      border-radius: 12px;
+      background: #edf3fc;
+      box-shadow: inset 3px 3px 8px rgba(126, 149, 178, 0.16), inset -3px -3px 8px rgba(255, 255, 255, 0.82);
+      padding: 12px;
+    }
+    .detail-card h3 {
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    .detail-list {
+      display: grid;
+      gap: 8px;
+      font-size: 12px;
+      color: #2f3e5b;
+    }
+    .item-card {
+      display: grid;
+      grid-template-columns: 70px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #ffffff, #edf2fb);
+      border: 1px solid #d6deeb;
+      margin-bottom: 8px;
+    }
+    .item-card img {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 10px;
+      background: #fff;
+    }
+    .item-card p {
+      font-size: 11px;
+      color: #4e5f7c;
+      margin-top: 2px;
+    }
+    @media (max-width: 900px) {
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+      .item-card {
+        grid-template-columns: 1fr;
+      }
+      .item-card img {
+        width: 100%;
+        height: 180px;
+      }
+    }
+  </style>
+</head>
+<body>
+<main class="dashboard-scene">
+  <section class="dashboard-card">
+    <header class="top-strip">
+      <div class="chip-row">
+        <a href="/api/admin/dashboard" class="chip">Dashboard</a>
+        <a href="/api/admin/products" class="chip">Products</a>
+        <a href="/api/admin/category" class="chip">Categories</a>
+        <a href="/api/admin/orders" class="chip chip-dark">Orders</a>
+        <a href="/api/admin/adminusermanagement" class="chip">Users</a>
+      </div>
+
+      <form action="/api/admin/adminlogout" method="POST">
+        <button type="submit" class="logout-pill">Logout</button>
+      </form>
+    </header>
+
+    <section class="hero-panel">
+      <div class="hero-copy">
+        <h1>Order Detail</h1>
+        <p>Review customer, shipping, item, and order status information for this order.</p>
+      </div>
+      <div class="hero-actions">
+        <a href="/api/admin/orders" class="btn btn-light">Back to Orders</a>
+      </div>
+    </section>
+
+    <% if (message) { %>
+      <p class="feedback success"><%= message %></p>
+    <% } %>
+    <% if (error) { %>
+      <p class="feedback error"><%= error %></p>
+    <% } %>
+
+    <section class="detail-grid">
+      <div class="detail-card">
+        <h3>Items</h3>
+        <% order.items.forEach((item) => { %>
+          <article class="item-card">
+            <img src="<%= item.productImage || 'https://placehold.co/140x140?text=Item' %>" alt="<%= item.productName %>" />
+            <div>
+              <strong><%= item.productName %></strong>
+              <p>Qty: <%= item.quantity %></p>
+              <p>Price: ₹<%= item.price %></p>
+              <p>Subtotal: ₹<%= item.subtotal %></p>
+              <p>Status: <%= item.status %></p>
+              <% if (item.cancellationReason) { %>
+                <p>Cancel reason: <%= item.cancellationReason %></p>
+              <% } %>
+              <% if (item.returnReason) { %>
+                <p>Return reason: <%= item.returnReason %></p>
+              <% } %>
+            </div>
+            <span class="status-badge <%= item.status === 'delivered' ? 'active' : item.status === 'cancelled' ? 'soft-deleted' : 'inactive' %>">
+              <%= item.status %>
+            </span>
+          </article>
+        <% }) %>
+      </div>
+
+      <div class="detail-card">
+        <h3>Order Summary</h3>
+        <div class="detail-list">
+          <div><strong>Order ID:</strong> <%= order.orderId %></div>
+          <div><strong>Order Date:</strong> <%= order.createdAt ? new Date(order.createdAt).toLocaleString("en-IN") : "--" %></div>
+          <div><strong>Status:</strong> <%= order.status %></div>
+          <div><strong>Payment Method:</strong> <%= order.paymentMethod %></div>
+          <div><strong>Payment Status:</strong> <%= order.paymentStatus %></div>
+          <div><strong>Subtotal:</strong> ₹<%= order.subtotal %></div>
+          <div><strong>Shipping:</strong> ₹<%= order.shippingCharge %></div>
+          <div><strong>Tax:</strong> ₹<%= order.tax %></div>
+          <div><strong>Discount:</strong> ₹<%= order.discount %></div>
+          <div><strong>Grand Total:</strong> ₹<%= order.grandTotal %></div>
+        </div>
+
+        <h3 style="margin-top: 16px;">Customer Details</h3>
+        <div class="detail-list">
+          <div><strong>Name:</strong> <%= order.user?.name || "Unknown User" %></div>
+          <div><strong>Email:</strong> <%= order.user?.email || "No email" %></div>
+        </div>
+
+        <h3 style="margin-top: 16px;">Shipping Address</h3>
+        <div class="detail-list">
+          <div><strong>Type:</strong> <%= order.address?.type || order.address?.addressType || "Address" %></div>
+          <div><strong>Street:</strong> <%= order.address?.street || "--" %></div>
+          <div><strong>City:</strong> <%= order.address?.city || "--" %></div>
+          <div><strong>State:</strong> <%= order.address?.state || "--" %></div>
+          <div><strong>Pincode:</strong> <%= order.address?.pincode || "--" %></div>
+        </div>
+
+        <form method="POST" action="/api/admin/orders/<%= order._id %>/status" style="margin-top:16px;display:grid;gap:8px;">
+          <input type="hidden" name="redirectTo" value="detail" />
+          <label class="field">
+            <span>Update Order Status</span>
+            <select name="status" class="toolbar-select">
+              <option value="pending" <%= order.status === "pending" ? "selected" : "" %>>Pending</option>
+              <option value="shipped" <%= order.status === "shipped" ? "selected" : "" %>>Shipped</option>
+              <option value="out_for_delivery" <%= order.status === "out_for_delivery" ? "selected" : "" %>>Out for delivery</option>
+              <option value="delivered" <%= order.status === "delivered" ? "selected" : "" %>>Delivered</option>
+              <option value="cancelled" <%= order.status === "cancelled" ? "selected" : "" %>>Cancelled</option>
+            </select>
+          </label>
+          <button type="submit" class="btn btn-dark">Save Status</button>
+        </form>
+      </div>
+    </section>
+  </section>
+</main>
+</body>
+</html>
