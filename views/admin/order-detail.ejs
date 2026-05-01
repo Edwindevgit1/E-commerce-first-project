@@ -133,14 +133,15 @@
       </div>
       <div class="hero-actions">
         <a href="/api/admin/orders" class="btn btn-light">Back to Orders</a>
+        <a href="/api/admin/orders/<%= order._id %>/invoice" class="btn btn-dark">Download Invoice</a>
       </div>
     </section>
 
     <% if (message) { %>
-      <p class="feedback success"><%= message %></p>
+      <p class="feedback success" data-flash-message><%= message %></p>
     <% } %>
     <% if (error) { %>
-      <p class="feedback error"><%= error %></p>
+      <p class="feedback error" data-flash-message><%= error %></p>
     <% } %>
 
     <section class="detail-grid">
@@ -231,21 +232,50 @@
           <div><strong>Pincode:</strong> <%= order.address?.pincode || "--" %></div>
         </div>
 
-        <form method="POST" action="/api/admin/orders/<%= order._id %>/status" style="margin-top:16px;display:grid;gap:8px;">
-          <input type="hidden" name="redirectTo" value="detail" />
-          <label class="field">
-            <span>Update Order Status</span>
-            <select name="status" class="toolbar-select">
-              <option value="pending" <%= order.status === "pending" ? "selected" : "" %>>Pending</option>
-              <option value="shipped" <%= order.status === "shipped" ? "selected" : "" %>>Shipped</option>
-              <option value="out_for_delivery" <%= order.status === "out_for_delivery" ? "selected" : "" %>>Out for delivery</option>
-              <option value="delivered" <%= order.status === "delivered" ? "selected" : "" %>>Delivered</option>
-              <option value="cancelled" <%= order.status === "cancelled" ? "selected" : "" %>>Cancelled</option>
-              <option value="return_requested" <%= order.status === "return_requested" ? "selected" : "" %>>Return requested</option>
-            </select>
-          </label>
-          <button type="submit" class="btn btn-dark">Save Status</button>
-        </form>
+        <%
+          const detailStatusLabels = {
+            pending: "Pending",
+            shipped: "Shipped",
+            out_for_delivery: "Out for delivery",
+            delivered: "Delivered",
+            cancelled: "Cancelled",
+            return_requested: "Return requested",
+            returned: "Returned",
+            return_rejected: "Return rejected"
+          };
+          const detailTransitions = {
+            pending:          ["shipped", "cancelled"],
+            shipped:          ["out_for_delivery", "cancelled"],
+            out_for_delivery: ["delivered", "cancelled"],
+            delivered:        ["return_requested"],
+            return_requested: ["returned", "return_rejected"],
+            cancelled:        [],
+            returned:         [],
+            return_rejected:  []
+          };
+          const detailAllowed = detailTransitions[order.status] || [];
+        %>
+        <% if (detailAllowed.length) { %>
+          <form method="POST" action="/api/admin/orders/<%= order._id %>/status" style="margin-top:16px;display:grid;gap:8px;">
+            <input type="hidden" name="redirectTo" value="detail" />
+            <label class="field">
+              <span>Update Order Status</span>
+              <select name="status" class="toolbar-select">
+                <option value="<%= order.status %>" selected disabled><%= detailStatusLabels[order.status] || order.status %></option>
+                <% detailAllowed.forEach(function(s) { %>
+                  <option value="<%= s %>"><%= detailStatusLabels[s] || s %></option>
+                <% }) %>
+              </select>
+            </label>
+            <button type="submit" class="btn btn-dark">Save Status</button>
+          </form>
+        <% } else { %>
+          <div style="margin-top:16px;">
+            <span class="status-badge <%= order.status === 'delivered' ? 'active' : order.status === 'cancelled' ? 'soft-deleted' : 'inactive' %>">
+              <%= detailStatusLabels[order.status] || order.status %> (final)
+            </span>
+          </div>
+        <% } %>
       </div>
     </section>
   </section>
@@ -303,6 +333,9 @@
       pendingRestockForm.submit();
     }
   });
+  setTimeout(() => {
+    document.querySelectorAll("[data-flash-message]").forEach((msg) => msg.remove());
+  }, 3000);
 </script>
 </body>
 </html>

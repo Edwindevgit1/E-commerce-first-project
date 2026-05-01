@@ -97,16 +97,22 @@ export const returnOrderService = async (userId, orderId, reason = "") => {
     throw new Error("Only delivered orders can be returned");
   }
 
-  if (!String(reason).trim()) {
-    throw new Error("Return reason is required");
+  const trimmedReason = String(reason || "").trim();
+
+  if (!trimmedReason) {
+    throw new Error("Please provide a reason for the return request.");
+  }
+
+  if (trimmedReason.length < 5) {
+    throw new Error("Return reason must be at least 5 characters long.");
   }
 
   order.status = "return_requested";
-  order.cancellationReason = reason.trim();
+  order.cancellationReason = trimmedReason;
 
   for (const item of order.items) {
     item.status = "return_requested";
-    item.returnReason = reason.trim();
+    item.returnReason = trimmedReason;
     item.stockRestored = false;
     item.restockVerifiedAt = null;
   }

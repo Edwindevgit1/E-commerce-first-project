@@ -95,11 +95,20 @@
         <% } %>
 
         <div class="orders-pagination">
-          <% for (let i = 1; i <= totalPages; i++) { %>
+          <% if (currentPage > 1) { %>
             <a
-              href="/api/user/orders?page=<%= i %>&search=<%= search %>"
-              class="orders-page-link <%= i === currentPage ? 'active' : '' %>"
-            ><%= i %></a>
+              href="/api/user/orders?page=<%= currentPage - 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
+              class="orders-page-link"
+            >Prev</a>
+          <% } %>
+
+          <span class="orders-page-link active"><%= currentPage %></span>
+
+          <% if (currentPage < totalPages) { %>
+            <a
+              href="/api/user/orders?page=<%= currentPage + 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
+              class="orders-page-link"
+            >Next</a>
           <% } %>
         </div>
       </section>

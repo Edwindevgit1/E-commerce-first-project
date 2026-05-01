@@ -2,14 +2,17 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
 
-const ADMIN_ORDER_STATUSES = new Set([
-  "pending",
-  "shipped",
-  "out_for_delivery",
-  "delivered",
-  "cancelled",
-  "return_requested"
-]);
+// Defines which statuses each order status can transition to
+const STATUS_TRANSITIONS = {
+  pending:          ["shipped", "cancelled"],
+  shipped:          ["out_for_delivery", "cancelled"],
+  out_for_delivery: ["delivered", "cancelled"],
+  delivered:        ["return_requested"],
+  return_requested: ["returned", "return_rejected"],
+  cancelled:        [],
+  returned:         [],
+  return_rejected:  []
+};
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const normalizeSearchTerm = (value = "") => String(value).trim().replace(/\s+/g, " ");
@@ -138,29 +141,29 @@ export const getAdminOrderByIdService = async (id) => {
 };
 
 export const updateAdminOrderStatusService = async (id, status) => {
-  if (!ADMIN_ORDER_STATUSES.has(status)) {
-    throw new Error("Select a valid order status.");
-  }
-
   const order = await Order.findById(id);
 
   if (!order) {
     throw new Error("Order not found");
   }
 
-  if (["returned", "return_rejected"].includes(order.status)) {
-    throw new Error("Finalized return orders cannot be changed.");
+  const allowedTransitions = STATUS_TRANSITIONS[order.status] || [];
+
+  if (!allowedTransitions.length) {
+    throw new Error(`Orders with status "${order.status}" cannot be changed.`);
   }
 
-  if (order.status === "return_requested" && status !== "return_requested") {
+  if (!allowedTransitions.includes(status)) {
+    throw new Error(
+      `Cannot change status from "${order.status}" to "${status}". Allowed: ${allowedTransitions.join(", ")}.`
+    );
+  }
+
+  if (order.status === "return_requested" && ["returned", "return_rejected"].includes(status)) {
     throw new Error("Accept or reject the return request from the order detail page.");
   }
 
-  if (order.status === "cancelled" && status !== "cancelled") {
-    throw new Error("Cancelled orders cannot be changed.");
-  }
-
-  if (status === "cancelled" && order.status !== "cancelled") {
+  if (status === "cancelled") {
     for (const item of order.items) {
       if (item.status !== "cancelled") {
         item.status = "cancelled";

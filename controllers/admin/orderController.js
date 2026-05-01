@@ -5,6 +5,7 @@ import {
   verifyAndRestockOrderItemService,
   rejectReturnRequestService
 } from "../../services/adminOrderServices.js";
+import { buildInvoicePdfBuffer } from "../user/orderController.js";
 
 const buildPaginationItems = (currentPage, totalPages) => {
   const startPage = Math.max(1, currentPage - 1);
@@ -23,7 +24,7 @@ const renderAdminOrdersPage = async (res, options = {}) => {
   const selectedStatus = options.selectedStatus || "";
   const sort = options.sort || "newest";
   const currentPage = options.currentPage || 1;
-  const limit = 8;
+  const limit = 5;
 
   const { orders, totalOrders, totalPages } = await getAdminOrdersService({
     search,
@@ -126,5 +127,20 @@ export const rejectReturnRequestController = async (req, res) => {
     return res.redirect(
       `/api/admin/orders/${req.params.id}?error=${encodeURIComponent(error.message || "Unable to reject return request")}`
     );
+  }
+};
+
+export const downloadAdminInvoiceController = async (req, res) => {
+  try {
+    const order = await getAdminOrderByIdService(req.params.id);
+    const pdfBuffer = await buildInvoicePdfBuffer(order);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${order.orderId}.pdf"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    return res.end(pdfBuffer);
+  } catch (error) {
+    console.log(error, "Admin invoice download error");
+    return res.redirect(`/api/admin/orders/${req.params.id}?error=Unable to download invoice`);
   }
 };

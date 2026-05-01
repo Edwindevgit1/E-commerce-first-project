@@ -117,7 +117,7 @@
             <% } else { %>
               <% orders.forEach((order, index) => { %>
                 <tr>
-                  <td><%= ((currentPage - 1) * 8) + index + 1 %></td>
+                  <td><%= ((currentPage - 1) * 5) + index + 1 %></td>
                   <td><strong><%= order.orderId %></strong></td>
                   <td><%= order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-IN") : "--" %></td>
                   <td>
@@ -133,18 +133,45 @@
                     </span>
                   </td>
                   <td>
-                    <form method="POST" action="/api/admin/orders/<%= order._id %>/status" style="display:flex;gap:6px;align-items:center;">
-                      <input type="hidden" name="redirectTo" value="list" />
-                      <select name="status" class="toolbar-select" style="min-width:150px;">
-                        <option value="pending" <%= order.status === "pending" ? "selected" : "" %>>Pending</option>
-                        <option value="shipped" <%= order.status === "shipped" ? "selected" : "" %>>Shipped</option>
-                        <option value="out_for_delivery" <%= order.status === "out_for_delivery" ? "selected" : "" %>>Out for delivery</option>
-                        <option value="delivered" <%= order.status === "delivered" ? "selected" : "" %>>Delivered</option>
-                        <option value="cancelled" <%= order.status === "cancelled" ? "selected" : "" %>>Cancelled</option>
-                        <option value="return_requested" <%= order.status === "return_requested" ? "selected" : "" %>>Return requested</option>
-                      </select>
-                      <button type="submit" class="btn btn-light">Save</button>
-                    </form>
+                    <%
+                      const statusLabels = {
+                        pending: "Pending",
+                        shipped: "Shipped",
+                        out_for_delivery: "Out for delivery",
+                        delivered: "Delivered",
+                        cancelled: "Cancelled",
+                        return_requested: "Return requested",
+                        returned: "Returned",
+                        return_rejected: "Return rejected"
+                      };
+                      const transitions = {
+                        pending:          ["shipped", "cancelled"],
+                        shipped:          ["out_for_delivery", "cancelled"],
+                        out_for_delivery: ["delivered", "cancelled"],
+                        delivered:        ["return_requested"],
+                        return_requested: ["returned", "return_rejected"],
+                        cancelled:        [],
+                        returned:         [],
+                        return_rejected:  []
+                      };
+                      const allowed = transitions[order.status] || [];
+                    %>
+                    <% if (allowed.length) { %>
+                      <form method="POST" action="/api/admin/orders/<%= order._id %>/status" style="display:flex;gap:6px;align-items:center;">
+                        <input type="hidden" name="redirectTo" value="list" />
+                        <select name="status" class="toolbar-select" style="min-width:150px;">
+                          <option value="<%= order.status %>" selected disabled><%= statusLabels[order.status] || order.status %></option>
+                          <% allowed.forEach(function(s) { %>
+                            <option value="<%= s %>"><%= statusLabels[s] || s %></option>
+                          <% }) %>
+                        </select>
+                        <button type="submit" class="btn btn-light">Save</button>
+                      </form>
+                    <% } else { %>
+                      <span class="status-badge <%= order.status === 'delivered' ? 'active' : order.status === 'cancelled' ? 'soft-deleted' : 'inactive' %>" style="font-size:11px;">
+                        <%= statusLabels[order.status] || order.status %> (final)
+                      </span>
+                    <% } %>
                   </td>
                   <td>
                     <a href="/api/admin/orders/<%= order._id %>" class="btn btn-dark">View Detail</a>

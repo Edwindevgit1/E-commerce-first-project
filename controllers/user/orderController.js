@@ -99,7 +99,9 @@ const buildInvoiceSvg = async (order) => {
   const { default: sharp } = await import("sharp");
   const userName = order.user?.name || order.address?.fullName || "Customer";
   const userEmail = order.user?.email || "customer@example.com";
-  const paymentStatus = order.paymentStatus === "paid" ? "Paid" : titleizeOrderValue(order.status || "pending");
+  const userMobile = order.address?.mobile || "N/A";
+  const orderStatusLabel = titleizeOrderValue(order.status || "pending");
+  const paymentStatusLabel = titleizeOrderValue(order.paymentStatus || "pending");
   const addressLines = [
     order.address?.street || "",
     [order.address?.city, order.address?.state].filter(Boolean).join(", "),
@@ -175,23 +177,25 @@ const buildInvoiceSvg = async (order) => {
       <text x="114" y="234" fill="#173B80" font-size="50" font-weight="900">Invoice</text>
       <text x="114" y="272" fill="#5A78AF" font-size="23" font-weight="800">Order ID ${escapeXml(order.orderId || "")}</text>
 
-      <rect x="610" y="188" width="690" height="220" rx="24" fill="#FFFFFF" stroke="#CFE0FB"/>
+      <rect x="610" y="188" width="690" height="252" rx="24" fill="#FFFFFF" stroke="#CFE0FB"/>
       <text x="638" y="240" fill="#173B80" font-size="25" font-weight="900">Invoice Details</text>
-      <text x="638" y="284" fill="#5A78AF" font-size="18">Invoice number</text>
-      <text x="858" y="284" fill="#142340" font-size="18" font-weight="800">: ${escapeXml(order.orderId || "N/A")}</text>
-      <text x="638" y="318" fill="#5A78AF" font-size="18">Order date</text>
-      <text x="858" y="318" fill="#142340" font-size="18" font-weight="800">: ${escapeXml(new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }))}</text>
-      <text x="638" y="352" fill="#5A78AF" font-size="18">Payment method</text>
-      <text x="858" y="352" fill="#142340" font-size="18" font-weight="800">: ${escapeXml(order.paymentMethod || "COD")}</text>
-      <text x="638" y="386" fill="#5A78AF" font-size="18">Status</text>
-      <text x="858" y="386" fill="#142340" font-size="18" font-weight="800">: ${escapeXml(paymentStatus)}</text>
+      <text x="638" y="280" fill="#5A78AF" font-size="17">Invoice number</text>
+      <text x="858" y="280" fill="#142340" font-size="17" font-weight="800">: ${escapeXml(order.orderId || "N/A")}</text>
+      <text x="638" y="310" fill="#5A78AF" font-size="17">Order date</text>
+      <text x="858" y="310" fill="#142340" font-size="17" font-weight="800">: ${escapeXml(new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }))}</text>
+      <text x="638" y="340" fill="#5A78AF" font-size="17">Payment method</text>
+      <text x="858" y="340" fill="#142340" font-size="17" font-weight="800">: ${escapeXml(order.paymentMethod || "COD")}</text>
+      <text x="638" y="370" fill="#5A78AF" font-size="17">Payment status</text>
+      <text x="858" y="370" fill="#142340" font-size="17" font-weight="800">: ${escapeXml(paymentStatusLabel)}</text>
+      <text x="638" y="400" fill="#5A78AF" font-size="17">Order status</text>
+      <text x="858" y="400" fill="#142340" font-size="17" font-weight="800">: ${escapeXml(orderStatusLabel)}</text>
 
       <rect x="114" y="316" width="458" height="236" rx="22" fill="#FFFFFF" stroke="#CFE0FB"/>
       <text x="142" y="362" fill="#173B80" font-size="22" font-weight="900">Billing information</text>
-      <text x="142" y="405" fill="#142340" font-size="17" font-weight="800">${escapeXml(userName)}</text>
-      <text x="142" y="430" fill="#5A78AF" font-size="16">${escapeXml(userEmail)}</text>
-      <text x="142" y="479" fill="#173B80" font-size="21" font-weight="900">Shipping Address</text>
-      ${svgTextLines(addressLines, 142, 508, "#5A78AF", 16, 400, 25)}
+      <text x="142" y="400" fill="#142340" font-size="17" font-weight="800">${escapeXml(userName)}</text>
+      <text x="142" y="422" fill="#5A78AF" font-size="16">${escapeXml(userEmail)}</text>
+      <text x="142" y="462" fill="#173B80" font-size="21" font-weight="900">Shipping Address</text>
+      ${svgTextLines(addressLines, 142, 490, "#5A78AF", 16, 400, 25)}
 
       <rect x="114" y="585" width="690" height="360" rx="22" fill="#FFFFFF" stroke="#CFE0FB"/>
       <text x="142" y="634" fill="#173B80" font-size="22" font-weight="900">Items</text>
@@ -209,8 +213,10 @@ const buildInvoiceSvg = async (order) => {
       <text x="742" y="870" fill="#2F9D61" font-size="16" font-weight="800" text-anchor="end">${escapeXml(formatCurrency(order.discount))}</text>
       <text x="470" y="894" fill="#5A78AF" font-size="15">Shipping</text>
       <text x="742" y="894" fill="#142340" font-size="16" font-weight="800" text-anchor="end">${escapeXml(formatCurrency(order.shippingCharge))}</text>
-      <text x="470" y="925" fill="#173B80" font-size="18" font-weight="900">Grand Total</text>
-      <text x="742" y="925" fill="#173B80" font-size="24" font-weight="900" text-anchor="end">${escapeXml(formatCurrency(order.grandTotal))}</text>
+      <text x="470" y="918" fill="#5A78AF" font-size="15">Tax</text>
+      <text x="742" y="918" fill="#142340" font-size="16" font-weight="800" text-anchor="end">${escapeXml(formatCurrency(order.tax))}</text>
+      <text x="470" y="949" fill="#173B80" font-size="18" font-weight="900">Grand Total</text>
+      <text x="742" y="949" fill="#173B80" font-size="24" font-weight="900" text-anchor="end">${escapeXml(formatCurrency(order.grandTotal))}</text>
 
       <rect x="847" y="455" width="452" height="432" rx="24" fill="url(#thankYou)"/>
       <text x="1073" y="604" fill="#FFFFFF" font-size="34" font-weight="900" text-anchor="middle">Thank you for</text>
@@ -223,7 +229,7 @@ const buildInvoiceSvg = async (order) => {
   `;
 };
 
-const buildInvoicePdfBuffer = async (order) => {
+export const buildInvoicePdfBuffer = async (order) => {
   const { default: sharp } = await import("sharp");
   const svgMarkup = await buildInvoiceSvg(order);
   const jpegBuffer = await sharp(Buffer.from(svgMarkup))

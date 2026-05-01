@@ -103,7 +103,7 @@
 
             <% if (order.status === "delivered") { %>
               <form method="POST" action="/api/user/orders/<%= order._id %>/return" class="orders-action-group">
-                <input type="text" name="reason" placeholder="Return reason" required />
+                <input type="text" name="reason" placeholder="Return reason" />
                 <button type="submit" class="orders-btn">Return Order</button>
               </form>
             <% } %>
@@ -114,5 +114,10 @@
   </main>
 
   <%- include("partials/site-footer") %>
+<script>
+  setTimeout(() => {
+    document.querySelectorAll(".orders-message").forEach((msg) => msg.remove());
+  }, 3000);
+</script>
 </body>
 </html>

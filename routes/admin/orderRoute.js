@@ -6,7 +6,8 @@ import {
   getAdminOrderDetailController,
   updateAdminOrderStatusController,
   verifyAndRestockOrderItemController,
-  rejectReturnRequestController
+  rejectReturnRequestController,
+  downloadAdminInvoiceController
 } from "../../controllers/admin/orderController.js";
 
 const router = express.Router();
@@ -16,5 +17,6 @@ router.get("/orders/:id", noCache, adminMiddleware, getAdminOrderDetailControlle
 router.post("/orders/:id/status", adminMiddleware, updateAdminOrderStatusController);
 router.post("/orders/:id/items/:itemIndex/restock", adminMiddleware, verifyAndRestockOrderItemController);
 router.post("/orders/:id/items/:itemIndex/reject-return", adminMiddleware, rejectReturnRequestController);
+router.get("/orders/:id/invoice", adminMiddleware, downloadAdminInvoiceController);
 
 export default router;
