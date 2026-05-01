@@ -3,7 +3,8 @@ import {
   getOrderDetailService,
   cancelOrderService,
   cancelOrderItemService,
-  returnOrderService
+  returnOrderService,
+  returnOrderItemService
 } from "../../services/userOrderServices.js";
 
 const formatCurrency = (amount = 0) => `₹${Number(amount || 0).toLocaleString("en-IN")}`;
@@ -381,6 +382,21 @@ export const returnOrderController = async (req, res) => {
   } catch (error) {
     console.log(error, "Return order error");
     return res.redirect(`/api/user/orders/${req.params.orderId}?error=${encodeURIComponent(error.message || "Unable to return order")}`);
+  }
+};
+
+export const returnOrderItemController = async (req, res) => {
+  try {
+    await returnOrderItemService(
+      req.user._id,
+      req.params.orderId,
+      req.params.itemIndex,
+      req.body.reason || ""
+    );
+    return res.redirect(`/api/user/orders/${req.params.orderId}?message=Return request submitted for this item`);
+  } catch (error) {
+    console.log(error, "Return order item error");
+    return res.redirect(`/api/user/orders/${req.params.orderId}?error=${encodeURIComponent(error.message || "Unable to return item")}`);
   }
 };
 

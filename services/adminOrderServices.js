@@ -7,7 +7,7 @@ const STATUS_TRANSITIONS = {
   pending:              ["shipped", "cancelled"],
   shipped:              ["out_for_delivery", "cancelled"],
   out_for_delivery:     ["delivered", "cancelled"],
-  delivered:            ["return_requested"],
+  delivered:            [],
   partially_cancelled:  ["shipped", "out_for_delivery", "delivered", "cancelled"],
   return_requested:     ["returned", "return_rejected"],
   cancelled:            [],
@@ -158,10 +158,6 @@ export const updateAdminOrderStatusService = async (id, status) => {
     throw new Error(
       `Cannot change status from "${order.status}" to "${status}". Allowed: ${allowedTransitions.join(", ")}.`
     );
-  }
-
-  if (order.status === "return_requested" && ["returned", "return_rejected"].includes(status)) {
-    throw new Error("Accept or reject the return request from the order detail page.");
   }
 
   if (status === "cancelled") {

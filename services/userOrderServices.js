@@ -33,7 +33,7 @@ export const cancelOrderService = async (userId, orderId, reason = "") => {
     throw new Error("Order not found");
   }
 
-  if (["delivered", "cancelled", "return_requested", "returned", "return_rejected"].includes(order.status)) {
+  if (["out_for_delivery", "delivered", "cancelled", "return_requested", "returned", "return_rejected"].includes(order.status)) {
     throw new Error("This order cannot be cancelled");
   }
 
@@ -66,7 +66,7 @@ export const cancelOrderItemService = async (userId, orderId, itemIndex, reason 
     throw new Error("Order item not found");
   }
 
-  if (["delivered", "cancelled", "return_requested", "returned", "return_rejected"].includes(item.status)) {
+  if (["out_for_delivery", "delivered", "cancelled", "return_requested", "returned", "return_rejected"].includes(item.status)) {
     throw new Error("This item cannot be cancelled");
   }
 
@@ -111,10 +111,56 @@ export const returnOrderService = async (userId, orderId, reason = "") => {
   order.cancellationReason = trimmedReason;
 
   for (const item of order.items) {
+    if (["cancelled", "return_requested", "returned", "return_rejected"].includes(item.status)) continue;
     item.status = "return_requested";
     item.returnReason = trimmedReason;
     item.stockRestored = false;
     item.restockVerifiedAt = null;
+  }
+
+  await order.save();
+  return order;
+};
+
+export const returnOrderItemService = async (userId, orderId, itemIndex, reason = "") => {
+  const order = await Order.findOne({ _id: orderId, user: userId });
+
+  if (!order) {
+    throw new Error("Order not found");
+  }
+
+  const index = Number(itemIndex);
+  const item = order.items[index];
+
+  if (!item) {
+    throw new Error("Order item not found");
+  }
+
+  if (item.status !== "delivered") {
+    throw new Error("Only delivered items can be returned");
+  }
+
+  const trimmedReason = String(reason || "").trim();
+
+  if (!trimmedReason) {
+    throw new Error("Please provide a reason for the return request.");
+  }
+
+  if (trimmedReason.length < 5) {
+    throw new Error("Return reason must be at least 5 characters long.");
+  }
+
+  item.status = "return_requested";
+  item.returnReason = trimmedReason;
+  item.stockRestored = false;
+  item.restockVerifiedAt = null;
+
+  const allReturnRelated = order.items.every((orderItem) =>
+    ["cancelled", "return_requested", "returned", "return_rejected"].includes(orderItem.status)
+  );
+  if (allReturnRelated) {
+    order.status = "return_requested";
+    order.cancellationReason = trimmedReason;
   }
 
   await order.save();

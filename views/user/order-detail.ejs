@@ -75,10 +75,17 @@
                     <span class="status-pill status-pill--<%= item.status %>"><%= item.status.replaceAll("_", " ") %></span>
                   </p>
 
-                  <% if (!["cancelled", "delivered", "return_requested", "returned", "return_rejected"].includes(item.status)) { %>
+                  <% if (["pending", "shipped"].includes(item.status)) { %>
                     <form method="POST" action="/api/user/orders/<%= order._id %>/items/<%= index %>/cancel" class="orders-action-group">
                       <input type="text" name="reason" placeholder="Cancellation reason (optional)" />
                       <button type="submit" class="orders-btn">Cancel This Item</button>
+                    </form>
+                  <% } %>
+
+                  <% if (item.status === "delivered") { %>
+                    <form method="POST" action="/api/user/orders/<%= order._id %>/items/<%= index %>/return" class="orders-action-group">
+                      <input type="text" name="reason" placeholder="Return reason" />
+                      <button type="submit" class="orders-btn">Return This Item</button>
                     </form>
                   <% } %>
                 </div>
@@ -94,7 +101,7 @@
             <div class="order-detail-row"><strong>Payment:</strong> <%= order.paymentMethod %></div>
             <div class="order-detail-row"><strong>Total:</strong> ₹<%= order.grandTotal %></div>
 
-            <% if (!["cancelled", "delivered", "return_requested", "returned", "return_rejected"].includes(order.status)) { %>
+            <% if (["pending", "shipped"].includes(order.status)) { %>
               <form method="POST" action="/api/user/orders/<%= order._id %>/cancel" class="orders-action-group">
                 <input type="text" name="reason" placeholder="Cancellation reason (optional)" />
                 <button type="submit" class="orders-btn">Cancel Full Order</button>
@@ -104,7 +111,7 @@
             <% if (order.status === "delivered") { %>
               <form method="POST" action="/api/user/orders/<%= order._id %>/return" class="orders-action-group">
                 <input type="text" name="reason" placeholder="Return reason" />
-                <button type="submit" class="orders-btn">Return Order</button>
+                <button type="submit" class="orders-btn">Return Full Order</button>
               </form>
             <% } %>
           </aside>
