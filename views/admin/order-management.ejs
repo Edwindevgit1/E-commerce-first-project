@@ -56,10 +56,10 @@
       </div>
 
       <% if (message) { %>
-        <p class="feedback success"><%= message %></p>
+        <p class="feedback success" data-flash-message><%= message %></p>
       <% } %>
       <% if (error) { %>
-        <p class="feedback error"><%= error %></p>
+        <p class="feedback error" data-flash-message><%= error %></p>
       <% } %>
 
       <form method="GET" action="/api/admin/orders" class="toolbar-grid">
@@ -178,5 +178,12 @@
     </section>
   </section>
 </main>
+<script>
+  setTimeout(() => {
+    document.querySelectorAll("[data-flash-message]").forEach((message) => {
+      message.remove();
+    });
+  }, 3000);
+</script>
 </body>
 </html>
