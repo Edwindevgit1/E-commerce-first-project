@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Detail</title>
+  <link rel="stylesheet" href="/css/storefront-navbar.css" />
+</head>
+<body>
+  <%- include("partials/storefront-navbar") %>
+
+  <main style="max-width:1000px;margin:30px auto;padding:0 16px;">
+    <h1>Order Detail</h1>
+
+    <p><strong>Order ID:</strong> <%= order.orderId %></p>
+    <p><strong>Status:</strong> <%= order.status %></p>
+    <p><strong>Order Date:</strong> <%= new Date(order.createdAt).toLocaleDateString("en-IN") %></p>
+    <p><strong>Payment:</strong> <%= order.paymentMethod %></p>
+    <p><strong>Total:</strong> ₹<%= order.grandTotal %></p>
+
+    <h2>Items</h2>
+    <% order.items.forEach((item, index) => { %>
+      <div style="border:1px solid #ddd;padding:16px;margin-bottom:12px;border-radius:12px;">
+        <p><strong><%= item.productName %></strong></p>
+        <p>Qty: <%= item.quantity %></p>
+        <p>Price: ₹<%= item.price %></p>
+        <p>Status: <%= item.status %></p>
+
+        <% if (!["cancelled", "delivered", "returned"].includes(item.status)) { %>
+          <form method="POST" action="/api/user/orders/<%= order._id %>/items/<%= index %>/cancel">
+            <input type="text" name="reason" placeholder="Cancellation reason (optional)" />
+            <button type="submit">Cancel This Item</button>
+          </form>
+        <% } %>
+      </div>
+    <% }) %>
+
+    <% if (!["cancelled", "delivered", "returned"].includes(order.status)) { %>
+      <form method="POST" action="/api/user/orders/<%= order._id %>/cancel" style="margin-top:20px;">
+        <input type="text" name="reason" placeholder="Cancellation reason (optional)" />
+        <button type="submit">Cancel Full Order</button>
+      </form>
+    <% } %>
+
+    <% if (order.status === "delivered") { %>
+      <form method="POST" action="/api/user/orders/<%= order._id %>/return" style="margin-top:20px;">
+        <input type="text" name="reason" placeholder="Return reason" required />
+        <button type="submit">Return Order</button>
+      </form>
+    <% } %>
+
+    <div style="margin-top:20px;">
+      <a href="/api/user/orders/<%= order._id %>/invoice">Download Invoice</a>
+    </div>
+  </main>
+</body>
+</html>

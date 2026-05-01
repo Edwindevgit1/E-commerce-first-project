@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Orders</title>
+  <link rel="stylesheet" href="/css/storefront-navbar.css" />
+</head>
+<body>
+  <%- include("partials/storefront-navbar") %>
+
+  <main style="max-width:1000px;margin:30px auto;padding:0 16px;">
+    <h1>My Orders</h1>
+
+    <form method="GET" action="/api/user/orders" style="margin:16px 0;">
+      <input type="text" name="search" placeholder="Search order ID" value="<%= search %>" />
+      <button type="submit">Search</button>
+    </form>
+
+    <% if (!orders.length) { %>
+      <p>No orders found.</p>
+    <% } else { %>
+      <% orders.forEach((order) => { %>
+        <div style="border:1px solid #ddd;padding:16px;margin-bottom:14px;border-radius:12px;">
+          <p><strong>Order ID:</strong> <%= order.orderId %></p>
+          <p><strong>Status:</strong> <%= order.status %></p>
+          <p><strong>Order Date:</strong> <%= new Date(order.createdAt).toLocaleDateString("en-IN") %></p>
+          <p><strong>Total:</strong> ₹<%= order.grandTotal %></p>
+          <a href="/api/user/orders/<%= order._id %>">View Details</a>
+        </div>
+      <% }) %>
+    <% } %>
+
+    <div style="margin-top:20px;">
+      <% for (let i = 1; i <= totalPages; i++) { %>
+        <a href="/api/user/orders?page=<%= i %>&search=<%= search %>" style="margin-right:8px;"><%= i %></a>
+      <% } %>
+    </div>
+  </main>
+</body>
+</html>
