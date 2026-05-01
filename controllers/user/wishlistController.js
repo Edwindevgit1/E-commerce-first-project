@@ -8,6 +8,16 @@ const buildRedirectWithMessage = (target, message) => {
   return `${target}${separator}message=${encodedMessage}`;
 };
 
+const getWishlistRedirectTarget = (req, fallback = "/api/user/wishlist") => {
+  const referer = req.get("referer") || "";
+
+  if (referer.includes("/api/user/products")) {
+    return referer;
+  }
+
+  return fallback;
+};
+
 const getWishlistFriendlyMessage = (error, fallback) => {
   switch (error?.message) {
     case "Product already exists in cart":
@@ -50,18 +60,16 @@ export const addToWishlistController = async (req,res) => {
     }
     await addToWishlistService(userId,productId);
     return res.redirect(
-      buildRedirectWithMessage("/api/user/wishlist", "Item added to your wishlist.")
+      buildRedirectWithMessage(
+        getWishlistRedirectTarget(req),
+        "Item added to your wishlist."
+      )
     );
   }catch(error){
     console.log(error,"add to wishlist error")
-    const fallbackUrl = "/api/user/products";
-    const referer = req.get("referer");
-    const target = referer && referer.includes("/api/user/products/")
-      ? referer
-      : fallbackUrl;
     return res.redirect(
       buildRedirectWithMessage(
-        target,
+        getWishlistRedirectTarget(req, "/api/user/products"),
         getWishlistFriendlyMessage(error, "Unable to add this product to your wishlist.")
       )
     );
@@ -79,13 +87,16 @@ export const removeFromWishlistController = async (req,res) => {
     }
     await removeFromWishlistService(userId, productId);
     return res.redirect(
-      buildRedirectWithMessage("/api/user/wishlist", "Item removed from your wishlist.")
+      buildRedirectWithMessage(
+        getWishlistRedirectTarget(req),
+        "Item removed from your wishlist."
+      )
     )
   }catch(error){
     console.log(error,"remove from wishlist error")
     return res.redirect(
       buildRedirectWithMessage(
-        "/api/user/wishlist",
+        getWishlistRedirectTarget(req),
         getWishlistFriendlyMessage(error, "Unable to remove this wishlist item.")
       )
     )

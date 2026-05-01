@@ -138,17 +138,17 @@
       <% products.forEach((product) => { %>
         <article class="product-card <%= product.isUnavailableBecauseOfCategory ? 'product-card--disabled' : '' %>">
           <form
-            action="/api/user/wishlist/add/<%= product._id %>"
+            action="/api/user/wishlist/<%= product.isWishlisted ? 'remove' : 'add' %>/<%= product._id %>"
             method="POST"
             class="listing-wishlist-form"
           >
             <button
               type="submit"
-              class="listing-wishlist-btn"
-              aria-label="Add to wishlist"
-              title="Add to wishlist"
+              class="listing-wishlist-btn <%= product.isWishlisted ? 'is-wishlisted' : '' %>"
+              aria-label="<%= product.isWishlisted ? 'Remove from wishlist' : 'Add to wishlist' %>"
+              title="<%= product.isWishlisted ? 'Remove from wishlist' : 'Add to wishlist' %>"
             >
-              ♡
+              <%= product.isWishlisted ? '♥' : '♡' %>
             </button>
           </form>
         

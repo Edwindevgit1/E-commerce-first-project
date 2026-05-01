@@ -107,6 +107,8 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
       category: product.category?.name || "",
       price,
       quantity: item.quantity,
+      size: item.size || "",
+      color: item.color || "",
       subtotal
     });
 

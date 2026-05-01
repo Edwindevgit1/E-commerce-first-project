@@ -1,6 +1,7 @@
 import Category from "../../models/Category.js";
 import Cart from "../../models/Cart.js";
 import Product from "../../models/Product.js";
+import Wishlist from "../../models/Wishlist.js";
 import { getEffectiveProductPricing } from "../../utils/pricing.js";
 
 const normalizeVariantValue = (value = "") => String(value || "").trim().toLowerCase();
@@ -38,6 +39,17 @@ const buildPaginationItems = (currentPage, totalPages) => {
     { length: end - adjustedStart + 1 },
     (_, index) => adjustedStart + index
   );
+};
+
+const getCurrentUserId = (req) => req.user?._id || req.session?.user?.id || null;
+
+const getWishlistProductIdSet = async (userId) => {
+  if (!userId) {
+    return new Set();
+  }
+
+  const wishlist = await Wishlist.findOne({ user: userId }).select("products").lean();
+  return new Set((wishlist?.products || []).map((productId) => String(productId)));
 };
 
 const getSortStage = (sort) => {
@@ -209,7 +221,8 @@ export const getProductListingPage = async (req, res) => {
       isBlocked: false
     };
 
-    const [products, totalProducts, categories, sizeOptions, colorOptions, variantSizeOptions, variantColorOptions] = await Promise.all([
+    const userId = getCurrentUserId(req);
+    const [products, totalProducts, categories, sizeOptions, colorOptions, variantSizeOptions, variantColorOptions, wishlistProductIds] = await Promise.all([
       Product.find(query)
         .populate("category")
         .sort(getSortStage(sort))
@@ -220,10 +233,17 @@ export const getProductListingPage = async (req, res) => {
       Product.distinct("sizes", baseQuery),
       Product.distinct("colors", baseQuery),
       Product.distinct("variants.size", baseQuery),
-      Product.distinct("variants.color", baseQuery)
+      Product.distinct("variants.color", baseQuery),
+      getWishlistProductIdSet(userId)
     ]);
 
-    const pricedProducts = products.map(enrichProductState);
+    const pricedProducts = products.map((product) => {
+      const pricedProduct = enrichProductState(product);
+      return {
+        ...pricedProduct,
+        isWishlisted: wishlistProductIds.has(String(product._id))
+      };
+    });
 
     const viewData = {
       products: pricedProducts,
@@ -275,8 +295,11 @@ export const getProductDetailsPage = async (req, res) => {
     let cartQuantity = 0;
     let selectedCartItemId = "";
 
-    if (req.user?._id) {
-      const cart = await Cart.findOne({ user: req.user._id }).lean();
+    const userId = getCurrentUserId(req);
+    const wishlistProductIds = await getWishlistProductIdSet(userId);
+
+    if (userId) {
+      const cart = await Cart.findOne({ user: userId }).lean();
       cartQuantity = (cart?.items || [])
         .filter((item) => String(item.product) === String(product._id))
         .reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
@@ -447,6 +470,7 @@ export const getProductDetailsPage = async (req, res) => {
       selectedCartItemId,
       productAvailability,
       categoryAvailability,
+      isWishlisted: wishlistProductIds.has(String(product._id)),
       pageMessage: req.query.message || null
     });
 

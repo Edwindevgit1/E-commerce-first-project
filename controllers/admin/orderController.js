@@ -1,7 +1,8 @@
 import {
   getAdminOrdersService,
   getAdminOrderByIdService,
-  updateAdminOrderStatusService
+  updateAdminOrderStatusService,
+  verifyAndRestockOrderItemService
 } from "../../services/adminOrderServices.js";
 
 const buildPaginationItems = (currentPage, totalPages) => {
@@ -102,5 +103,16 @@ export const updateAdminOrderStatusController = async (req, res) => {
       : `/api/admin/orders?error=${encodeURIComponent(error.message || "Unable to update order status")}`;
 
     return res.redirect(redirectTarget);
+  }
+};
+
+export const verifyAndRestockOrderItemController = async (req, res) => {
+  try {
+    await verifyAndRestockOrderItemService(req.params.id, req.params.itemIndex);
+    return res.redirect(`/api/admin/orders/${req.params.id}?message=Product verified and stock restored`);
+  } catch (error) {
+    return res.redirect(
+      `/api/admin/orders/${req.params.id}?error=${encodeURIComponent(error.message || "Unable to restock item")}`
+    );
   }
 };

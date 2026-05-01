@@ -1,21 +1,19 @@
-import Order from "../models/Order.js"
+import Counter from "../models/Counter.js";
 
 export const generateOrderId = async () => {
-  const today = new Date()
+  const today = new Date();
 
-  const year = today.getFullYear()
-  const month = String(today.getMonth()+1).padStart(2,"0")
-  const day = String(today.getDate()).padStart(2,"0")
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
 
   const datePart = `${year}${month}${day}`;
+  const counter = await Counter.findOneAndUpdate(
+    { key: `order:${datePart}` },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
 
-  const startOfDay = new Date();
-  startOfDay.setHours(0,0,0,0)
-
-  const count = await Order.countDocuments({
-    createdAt:{$gte:startOfDay}
-  })
-
-  const serial = String(count + 1).padStart(4,"0")
-  return `ORD-${datePart}-${serial}`
-}
+  const serial = String(counter.seq).padStart(4, "0");
+  return `ORD-${datePart}-${serial}`;
+};

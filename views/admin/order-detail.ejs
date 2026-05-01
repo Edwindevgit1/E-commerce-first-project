@@ -56,6 +56,45 @@
       color: #4e5f7c;
       margin-top: 2px;
     }
+    .restock-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(10, 19, 35, 0.48);
+    }
+    .restock-modal.is-open {
+      display: flex;
+    }
+    .restock-modal__dialog {
+      width: min(420px, 100%);
+      border-radius: 18px;
+      border: 1px solid #c9d6ea;
+      background: linear-gradient(180deg, #ffffff, #eef4fd);
+      box-shadow: 0 20px 46px rgba(17, 36, 75, 0.24);
+      padding: 18px;
+    }
+    .restock-modal__dialog h3 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      color: #0e1323;
+    }
+    .restock-modal__dialog p {
+      margin: 0;
+      color: #4e5f7c;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .restock-modal__actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
     @media (max-width: 900px) {
       .detail-grid {
         grid-template-columns: 1fr;
@@ -107,12 +146,20 @@
     <section class="detail-grid">
       <div class="detail-card">
         <h3>Items</h3>
-        <% order.items.forEach((item) => { %>
+        <% order.items.forEach((item, index) => { %>
           <article class="item-card">
             <img src="<%= item.productImage || 'https://placehold.co/140x140?text=Item' %>" alt="<%= item.productName %>" />
             <div>
               <strong><%= item.productName %></strong>
               <p>Qty: <%= item.quantity %></p>
+              <% if (item.size || item.color) { %>
+                <p>
+                  <%= [
+                    item.size ? "Size: " + item.size : "",
+                    item.color ? "Color: " + item.color : ""
+                  ].filter(Boolean).join(" | ") %>
+                </p>
+              <% } %>
               <p>Price: ₹<%= item.price %></p>
               <p>Subtotal: ₹<%= item.subtotal %></p>
               <p>Status: <%= item.status %></p>
@@ -121,6 +168,19 @@
               <% } %>
               <% if (item.returnReason) { %>
                 <p>Return reason: <%= item.returnReason %></p>
+              <% } %>
+              <% if (item.stockRestored) { %>
+                <p>Stock restored after admin verification<%= item.restockVerifiedAt ? " on " + new Date(item.restockVerifiedAt).toLocaleDateString("en-IN") : "" %>.</p>
+              <% } else if (["cancelled", "returned"].includes(item.status)) { %>
+                <form
+                  method="POST"
+                  action="/api/admin/orders/<%= order._id %>/items/<%= index %>/restock"
+                  style="margin-top:8px;"
+                  data-restock-form
+                  data-product-name="<%= item.productName %>"
+                >
+                  <button type="submit" class="btn btn-light">Verify & Restock</button>
+                </form>
               <% } %>
             </div>
             <span class="status-badge <%= item.status === 'delivered' ? 'active' : item.status === 'cancelled' ? 'soft-deleted' : 'inactive' %>">
@@ -178,5 +238,58 @@
     </section>
   </section>
 </main>
+<div class="restock-modal" id="restockModal" aria-hidden="true">
+  <div class="restock-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="restockModalTitle">
+    <h3 id="restockModalTitle">Verify product condition</h3>
+    <p id="restockModalText">
+      Confirm this product is in good condition and restore it to stock.
+    </p>
+    <div class="restock-modal__actions">
+      <button type="button" class="btn btn-light" id="cancelRestockModal">Cancel</button>
+      <button type="button" class="btn btn-dark" id="confirmRestockModal">Verify & Restock</button>
+    </div>
+  </div>
+</div>
+<script>
+  const restockModal = document.getElementById("restockModal");
+  const restockModalText = document.getElementById("restockModalText");
+  const cancelRestockModal = document.getElementById("cancelRestockModal");
+  const confirmRestockModal = document.getElementById("confirmRestockModal");
+  let pendingRestockForm = null;
+
+  const closeRestockModal = () => {
+    restockModal.classList.remove("is-open");
+    restockModal.setAttribute("aria-hidden", "true");
+    pendingRestockForm = null;
+  };
+
+  document.querySelectorAll("[data-restock-form]").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      pendingRestockForm = form;
+      const productName = form.dataset.productName || "this product";
+      restockModalText.textContent = `Confirm ${productName} is in good condition and restore it to stock.`;
+      restockModal.classList.add("is-open");
+      restockModal.setAttribute("aria-hidden", "false");
+    });
+  });
+
+  cancelRestockModal.addEventListener("click", closeRestockModal);
+  restockModal.addEventListener("click", (event) => {
+    if (event.target === restockModal) {
+      closeRestockModal();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && restockModal.classList.contains("is-open")) {
+      closeRestockModal();
+    }
+  });
+  confirmRestockModal.addEventListener("click", () => {
+    if (pendingRestockForm) {
+      pendingRestockForm.submit();
+    }
+  });
+</script>
 </body>
 </html>

@@ -12,26 +12,52 @@ const ADMIN_ORDER_STATUSES = new Set([
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const normalizeSearchTerm = (value = "") => String(value).trim().replace(/\s+/g, " ");
+const normalizeVariantValue = (value = "") => String(value || "").trim().toLowerCase();
+
+const findRestockVariant = (product, item) => {
+  const variants = product.variants || [];
+  const size = normalizeVariantValue(item.size);
+  const color = normalizeVariantValue(item.color);
+
+  if (size || color) {
+    const exactVariant = variants.find((variant) =>
+      normalizeVariantValue(variant.size) === size &&
+      normalizeVariantValue(variant.color) === color
+    );
+
+    if (exactVariant) {
+      return exactVariant;
+    }
+  }
+
+  return variants.find((variant) => String(variant.price) === String(item.price));
+};
 
 const restockOrderItem = async (item) => {
-  if (!item?.product || item.status === "cancelled") {
-    return;
+  if (!item?.product || item.stockRestored) {
+    throw new Error("This item cannot be restocked.");
   }
 
   const product = await Product.findById(item.product);
   if (!product) {
-    return;
+    throw new Error("Product not found for this order item.");
   }
 
-  const variant = (product.variants || []).find((v) => String(v.price) === String(item.price));
+  const variant = findRestockVariant(product, item);
   if (variant) {
     variant.stock += Number(item.quantity) || 0;
+  } else if (!product.variants?.length) {
+    product.stock += Number(item.quantity) || 0;
+  } else {
+    throw new Error("Matching product variant not found for restock.");
   }
 
-  product.stock = (product.variants || []).reduce(
-    (sum, variantItem) => sum + (Number(variantItem.stock) || 0),
-    0
-  );
+  if (product.variants?.length) {
+    product.stock = product.variants.reduce(
+      (sum, variantItem) => sum + (Number(variantItem.stock) || 0),
+      0
+    );
+  }
 
   await product.save();
 };
@@ -132,8 +158,9 @@ export const updateAdminOrderStatusService = async (id, status) => {
   if (status === "cancelled" && order.status !== "cancelled") {
     for (const item of order.items) {
       if (item.status !== "cancelled") {
-        await restockOrderItem(item);
         item.status = "cancelled";
+        item.stockRestored = false;
+        item.restockVerifiedAt = null;
       }
     }
     order.status = "cancelled";
@@ -149,6 +176,36 @@ export const updateAdminOrderStatusService = async (id, status) => {
     }
     item.status = status;
   }
+
+  await order.save();
+  return order;
+};
+
+export const verifyAndRestockOrderItemService = async (id, itemIndex) => {
+  const order = await Order.findById(id);
+
+  if (!order) {
+    throw new Error("Order not found");
+  }
+
+  const index = Number(itemIndex);
+  const item = order.items[index];
+
+  if (!item) {
+    throw new Error("Order item not found");
+  }
+
+  if (!["cancelled", "returned"].includes(item.status)) {
+    throw new Error("Only cancelled or returned items can be restocked after verification.");
+  }
+
+  if (item.stockRestored) {
+    throw new Error("This item has already been restocked.");
+  }
+
+  await restockOrderItem(item);
+  item.stockRestored = true;
+  item.restockVerifiedAt = new Date();
 
   await order.save();
   return order;

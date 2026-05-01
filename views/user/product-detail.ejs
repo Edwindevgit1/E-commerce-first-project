@@ -97,14 +97,14 @@
         <div class="detail-info-header">
           <h1><%= product.productName %></h1>
           <% if (!isInCart) { %>
-            <form action="/api/user/wishlist/add/<%= product._id %>" method="POST" class="wishlist-form">
+            <form action="/api/user/wishlist/<%= isWishlisted ? 'remove' : 'add' %>/<%= product._id %>" method="POST" class="wishlist-form">
               <button
                 type="submit"
-                class="wishlist-btn"
-                aria-label="Add to wishlist"
-                title="Add to wishlist"
+                class="wishlist-btn <%= isWishlisted ? 'is-wishlisted' : '' %>"
+                aria-label="<%= isWishlisted ? 'Remove from wishlist' : 'Add to wishlist' %>"
+                title="<%= isWishlisted ? 'Remove from wishlist' : 'Add to wishlist' %>"
               >
-                ♡
+                <%= isWishlisted ? '♥' : '♡' %>
               </button>
             </form>
           <% } %>

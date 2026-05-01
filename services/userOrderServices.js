@@ -1,5 +1,4 @@
 import Order from "../models/Order.js";
-import Product from "../models/Product.js";
 
 export const getOrdersService = async (userId, search = "", page = 1, limit = 5) => {
   const query = { user: userId };
@@ -40,25 +39,10 @@ export const cancelOrderService = async (userId, orderId, reason = "") => {
 
   for (const item of order.items) {
     if (item.status === "cancelled") continue;
-
-    const product = await Product.findById(item.product);
-    if (!product) {
-      continue;
-    }
-
-    const variant = (product.variants || []).find((v) => String(v.price) === String(item.price));
-    if (variant) {
-      variant.stock += item.quantity;
-    }
-
-    product.stock = (product.variants || []).reduce(
-      (sum, v) => sum + (Number(v.stock) || 0),
-      0
-    );
-
-    await product.save();
     item.status = "cancelled";
     item.cancellationReason = reason || "";
+    item.stockRestored = false;
+    item.restockVerifiedAt = null;
   }
 
   order.status = "cancelled";
@@ -86,23 +70,10 @@ export const cancelOrderItemService = async (userId, orderId, itemIndex, reason 
     throw new Error("This item cannot be cancelled");
   }
 
-  const product = await Product.findById(item.product);
-  if (product) {
-    const variant = (product.variants || []).find((v) => String(v.price) === String(item.price));
-    if (variant) {
-      variant.stock += item.quantity;
-    }
-
-    product.stock = (product.variants || []).reduce(
-      (sum, variantItem) => sum + (Number(variantItem.stock) || 0),
-      0
-    );
-
-    await product.save();
-  }
-
   item.status = "cancelled";
   item.cancellationReason = reason || "";
+  item.stockRestored = false;
+  item.restockVerifiedAt = null;
 
   const activeItems = order.items.filter((orderItem) => orderItem.status !== "cancelled");
   if (!activeItems.length) {
@@ -136,6 +107,8 @@ export const returnOrderService = async (userId, orderId, reason = "") => {
   for (const item of order.items) {
     item.status = "returned";
     item.returnReason = reason.trim();
+    item.stockRestored = false;
+    item.restockVerifiedAt = null;
   }
 
   await order.save();

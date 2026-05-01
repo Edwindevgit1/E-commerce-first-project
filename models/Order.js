@@ -22,6 +22,14 @@ const orderItemSchema = new mongoose.Schema({
     required:true,
     min:1
   },
+  size:{
+    type:String,
+    default:""
+  },
+  color:{
+    type:String,
+    default:""
+  },
   subtotal:{
     type:Number,
     required:true
@@ -38,6 +46,14 @@ const orderItemSchema = new mongoose.Schema({
   returnReason:{
     type:String,
     default:""
+  },
+  stockRestored:{
+    type:Boolean,
+    default:false
+  },
+  restockVerifiedAt:{
+    type:Date,
+    default:null
   }
 },{_id:false})
 const addressSchema = new mongoose.Schema({

@@ -543,6 +543,10 @@ body {
   cursor: pointer;
 }
 
+.wishlist-btn.is-wishlisted {
+  color: #d9273f;
+}
+
 .price-box {
   margin: 10px 0 10px;
   display: flex;
@@ -949,5 +953,15 @@ body {
 
 .listing-wishlist-btn:hover {
   background: #151515;
+  color: #ffffff;
+}
+
+.listing-wishlist-btn.is-wishlisted {
+  background: #fff1f3;
+  color: #d9273f;
+}
+
+.listing-wishlist-btn.is-wishlisted:hover {
+  background: #d9273f;
   color: #ffffff;
 }
