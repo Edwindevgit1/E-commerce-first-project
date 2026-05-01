@@ -33,7 +33,7 @@ export const cancelOrderService = async (userId, orderId, reason = "") => {
     throw new Error("Order not found");
   }
 
-  if (["delivered", "cancelled", "returned"].includes(order.status)) {
+  if (["delivered", "cancelled", "return_requested", "returned", "return_rejected"].includes(order.status)) {
     throw new Error("This order cannot be cancelled");
   }
 
@@ -66,7 +66,7 @@ export const cancelOrderItemService = async (userId, orderId, itemIndex, reason 
     throw new Error("Order item not found");
   }
 
-  if (["delivered", "cancelled", "returned"].includes(item.status)) {
+  if (["delivered", "cancelled", "return_requested", "returned", "return_rejected"].includes(item.status)) {
     throw new Error("This item cannot be cancelled");
   }
 
@@ -101,11 +101,11 @@ export const returnOrderService = async (userId, orderId, reason = "") => {
     throw new Error("Return reason is required");
   }
 
-  order.status = "returned";
+  order.status = "return_requested";
   order.cancellationReason = reason.trim();
 
   for (const item of order.items) {
-    item.status = "returned";
+    item.status = "return_requested";
     item.returnReason = reason.trim();
     item.stockRestored = false;
     item.restockVerifiedAt = null;

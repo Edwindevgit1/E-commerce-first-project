@@ -7,7 +7,8 @@ const ADMIN_ORDER_STATUSES = new Set([
   "shipped",
   "out_for_delivery",
   "delivered",
-  "cancelled"
+  "cancelled",
+  "return_requested"
 ]);
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -147,8 +148,12 @@ export const updateAdminOrderStatusService = async (id, status) => {
     throw new Error("Order not found");
   }
 
-  if (order.status === "returned" && status !== "returned") {
-    throw new Error("Returned orders cannot be changed.");
+  if (["returned", "return_rejected"].includes(order.status)) {
+    throw new Error("Finalized return orders cannot be changed.");
+  }
+
+  if (order.status === "return_requested" && status !== "return_requested") {
+    throw new Error("Accept or reject the return request from the order detail page.");
   }
 
   if (order.status === "cancelled" && status !== "cancelled") {
@@ -171,7 +176,7 @@ export const updateAdminOrderStatusService = async (id, status) => {
   order.status = status;
 
   for (const item of order.items) {
-    if (item.status === "cancelled" || item.status === "returned") {
+    if (["cancelled", "return_requested", "returned", "return_rejected"].includes(item.status)) {
       continue;
     }
     item.status = status;
@@ -195,8 +200,8 @@ export const verifyAndRestockOrderItemService = async (id, itemIndex) => {
     throw new Error("Order item not found");
   }
 
-  if (!["cancelled", "returned"].includes(item.status)) {
-    throw new Error("Only cancelled or returned items can be restocked after verification.");
+  if (!["cancelled", "return_requested", "returned"].includes(item.status)) {
+    throw new Error("Only cancelled or return-requested items can be restocked after verification.");
   }
 
   if (item.stockRestored) {
@@ -204,8 +209,52 @@ export const verifyAndRestockOrderItemService = async (id, itemIndex) => {
   }
 
   await restockOrderItem(item);
+  if (item.status === "return_requested") {
+    item.status = "returned";
+  }
   item.stockRestored = true;
   item.restockVerifiedAt = new Date();
+
+  const returnItems = order.items.filter((orderItem) =>
+    ["return_requested", "returned", "return_rejected"].includes(orderItem.status)
+  );
+  if (returnItems.length && returnItems.every((orderItem) => orderItem.status === "returned")) {
+    order.status = "returned";
+  }
+
+  await order.save();
+  return order;
+};
+
+export const rejectReturnRequestService = async (id, itemIndex) => {
+  const order = await Order.findById(id);
+
+  if (!order) {
+    throw new Error("Order not found");
+  }
+
+  const index = Number(itemIndex);
+  const item = order.items[index];
+
+  if (!item) {
+    throw new Error("Order item not found");
+  }
+
+  if (item.status !== "return_requested") {
+    throw new Error("Only pending return requests can be rejected.");
+  }
+
+  item.status = "return_rejected";
+  item.stockRestored = false;
+  item.restockVerifiedAt = null;
+
+  const returnItems = order.items.filter((orderItem) =>
+    ["return_requested", "returned", "return_rejected"].includes(orderItem.status)
+  );
+
+  if (returnItems.length && returnItems.every((orderItem) => orderItem.status === "return_rejected")) {
+    order.status = "return_rejected";
+  }
 
   await order.save();
   return order;

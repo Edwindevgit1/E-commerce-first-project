@@ -171,16 +171,27 @@
               <% } %>
               <% if (item.stockRestored) { %>
                 <p>Stock restored after admin verification<%= item.restockVerifiedAt ? " on " + new Date(item.restockVerifiedAt).toLocaleDateString("en-IN") : "" %>.</p>
-              <% } else if (["cancelled", "returned"].includes(item.status)) { %>
+              <% } else if (["cancelled", "return_requested", "returned"].includes(item.status)) { %>
                 <form
                   method="POST"
                   action="/api/admin/orders/<%= order._id %>/items/<%= index %>/restock"
                   style="margin-top:8px;"
                   data-restock-form
                   data-product-name="<%= item.productName %>"
+                  data-confirm-message="<%= item.status === 'return_requested' ? 'Accept this return after checking the product condition, and restore it to stock?' : 'Confirm this product is in good condition and restore it to stock?' %>"
+                  data-confirm-label="<%= item.status === 'return_requested' ? 'Accept Return & Restock' : 'Verify & Restock' %>"
                 >
-                  <button type="submit" class="btn btn-light">Verify & Restock</button>
+                  <button type="submit" class="btn btn-light"><%= item.status === "return_requested" ? "Accept Return & Restock" : "Verify & Restock" %></button>
                 </form>
+                <% if (item.status === "return_requested") { %>
+                  <form
+                    method="POST"
+                    action="/api/admin/orders/<%= order._id %>/items/<%= index %>/reject-return"
+                    style="margin-top:8px;"
+                  >
+                    <button type="submit" class="btn btn-light">Reject Return</button>
+                  </form>
+                <% } %>
               <% } %>
             </div>
             <span class="status-badge <%= item.status === 'delivered' ? 'active' : item.status === 'cancelled' ? 'soft-deleted' : 'inactive' %>">
@@ -230,6 +241,7 @@
               <option value="out_for_delivery" <%= order.status === "out_for_delivery" ? "selected" : "" %>>Out for delivery</option>
               <option value="delivered" <%= order.status === "delivered" ? "selected" : "" %>>Delivered</option>
               <option value="cancelled" <%= order.status === "cancelled" ? "selected" : "" %>>Cancelled</option>
+              <option value="return_requested" <%= order.status === "return_requested" ? "selected" : "" %>>Return requested</option>
             </select>
           </label>
           <button type="submit" class="btn btn-dark">Save Status</button>
@@ -268,7 +280,8 @@
       event.preventDefault();
       pendingRestockForm = form;
       const productName = form.dataset.productName || "this product";
-      restockModalText.textContent = `Confirm ${productName} is in good condition and restore it to stock.`;
+      restockModalText.textContent = `${productName}: ${form.dataset.confirmMessage || "Confirm this product is in good condition and restore it to stock."}`;
+      confirmRestockModal.textContent = form.dataset.confirmLabel || "Verify & Restock";
       restockModal.classList.add("is-open");
       restockModal.setAttribute("aria-hidden", "false");
     });

@@ -36,7 +36,7 @@ const orderItemSchema = new mongoose.Schema({
   },
   status:{
     type:String,
-    enum:["pending","shipped","out_for_delivery","delivered","cancelled","returned"],
+    enum:["pending","shipped","out_for_delivery","delivered","cancelled","return_requested","returned","return_rejected"],
     default:"pending"
   },
   cancellationReason:{
@@ -140,7 +140,7 @@ const orderSchema = new mongoose.Schema({
   },
   status:{
     type:String,
-    enum:["pending","shipped","out_for_delivery","delivered","cancelled","partially_cancelled","returned"],
+    enum:["pending","shipped","out_for_delivery","delivered","cancelled","partially_cancelled","return_requested","returned","return_rejected"],
     default:"pending"
   },
   cancellationReason:{

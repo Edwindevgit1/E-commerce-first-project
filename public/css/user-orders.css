@@ -231,7 +231,8 @@ body {
 
 .status-pill--pending,
 .status-pill--shipped,
-.status-pill--out_for_delivery {
+.status-pill--out_for_delivery,
+.status-pill--return_requested {
   background: #edf3fc;
   color: #1d2d4a;
 }
@@ -243,6 +244,7 @@ body {
 
 .status-pill--cancelled,
 .status-pill--returned,
+.status-pill--return_rejected,
 .status-pill--partially_cancelled {
   background: #fdeeee;
   color: #b41e1e;

@@ -78,7 +78,9 @@
           <option value="out_for_delivery" <%= selectedStatus === "out_for_delivery" ? "selected" : "" %>>Out for delivery</option>
           <option value="delivered" <%= selectedStatus === "delivered" ? "selected" : "" %>>Delivered</option>
           <option value="cancelled" <%= selectedStatus === "cancelled" ? "selected" : "" %>>Cancelled</option>
+          <option value="return_requested" <%= selectedStatus === "return_requested" ? "selected" : "" %>>Return requested</option>
           <option value="returned" <%= selectedStatus === "returned" ? "selected" : "" %>>Returned</option>
+          <option value="return_rejected" <%= selectedStatus === "return_rejected" ? "selected" : "" %>>Return rejected</option>
         </select>
 
         <select name="sort" class="toolbar-select">
@@ -139,6 +141,7 @@
                         <option value="out_for_delivery" <%= order.status === "out_for_delivery" ? "selected" : "" %>>Out for delivery</option>
                         <option value="delivered" <%= order.status === "delivered" ? "selected" : "" %>>Delivered</option>
                         <option value="cancelled" <%= order.status === "cancelled" ? "selected" : "" %>>Cancelled</option>
+                        <option value="return_requested" <%= order.status === "return_requested" ? "selected" : "" %>>Return requested</option>
                       </select>
                       <button type="submit" class="btn btn-light">Save</button>
                     </form>

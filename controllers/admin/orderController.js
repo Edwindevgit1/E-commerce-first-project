@@ -2,7 +2,8 @@ import {
   getAdminOrdersService,
   getAdminOrderByIdService,
   updateAdminOrderStatusService,
-  verifyAndRestockOrderItemService
+  verifyAndRestockOrderItemService,
+  rejectReturnRequestService
 } from "../../services/adminOrderServices.js";
 
 const buildPaginationItems = (currentPage, totalPages) => {
@@ -113,6 +114,17 @@ export const verifyAndRestockOrderItemController = async (req, res) => {
   } catch (error) {
     return res.redirect(
       `/api/admin/orders/${req.params.id}?error=${encodeURIComponent(error.message || "Unable to restock item")}`
+    );
+  }
+};
+
+export const rejectReturnRequestController = async (req, res) => {
+  try {
+    await rejectReturnRequestService(req.params.id, req.params.itemIndex);
+    return res.redirect(`/api/admin/orders/${req.params.id}?message=Return request rejected`);
+  } catch (error) {
+    return res.redirect(
+      `/api/admin/orders/${req.params.id}?error=${encodeURIComponent(error.message || "Unable to reject return request")}`
     );
   }
 };
