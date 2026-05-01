@@ -22,7 +22,9 @@ export const getOrdersService = async (userId, search = "", page = 1, limit = 5)
 };
 
 export const getOrderDetailService = async (userId, orderId) => {
-  return Order.findOne({ _id: orderId, user: userId }).lean();
+  return Order.findOne({ _id: orderId, user: userId })
+    .populate("user", "name email")
+    .lean();
 };
 
 export const cancelOrderService = async (userId, orderId, reason = "") => {

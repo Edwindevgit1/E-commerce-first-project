@@ -1,41 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Orders</title>
-  <link rel="stylesheet" href="/css/storefront-navbar.css" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Orders</title>
+    <link rel="stylesheet" href="/css/user-orders.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
 </head>
 <body>
-  <%- include("partials/storefront-navbar") %>
-
-  <main style="max-width:1000px;margin:30px auto;padding:0 16px;">
-    <h1>My Orders</h1>
-
-    <form method="GET" action="/api/user/orders" style="margin:16px 0;">
-      <input type="text" name="search" placeholder="Search order ID" value="<%= search %>" />
-      <button type="submit">Search</button>
-    </form>
-
-    <% if (!orders.length) { %>
-      <p>No orders found.</p>
-    <% } else { %>
-      <% orders.forEach((order) => { %>
-        <div style="border:1px solid #ddd;padding:16px;margin-bottom:14px;border-radius:12px;">
-          <p><strong>Order ID:</strong> <%= order.orderId %></p>
-          <p><strong>Status:</strong> <%= order.status %></p>
-          <p><strong>Order Date:</strong> <%= new Date(order.createdAt).toLocaleDateString("en-IN") %></p>
-          <p><strong>Total:</strong> ₹<%= order.grandTotal %></p>
-          <a href="/api/user/orders/<%= order._id %>">View Details</a>
+  <main class="neo-scene">
+    <section class="neo-card">
+      <header class="top-strip">
+        <div class="chip-row">
+          <a href="/api/auth/home" class="chip">Home</a>
+          <a href="/api/user/profile" class="chip">Account</a>
+          <a href="/api/user/orders" class="chip chip-dark">My orders</a>
+          <a href="/api/user/adress" class="chip">Address management</a>
+          <a href="/api/user/change-password" class="chip">Change password</a>
         </div>
-      <% }) %>
-    <% } %>
 
-    <div style="margin-top:20px;">
-      <% for (let i = 1; i <= totalPages; i++) { %>
-        <a href="/api/user/orders?page=<%= i %>&search=<%= search %>" style="margin-right:8px;"><%= i %></a>
-      <% } %>
-    </div>
+        <form action="/api/user/logout" method="POST">
+          <button class="logout-pill" type="submit">Logout</button>
+        </form>
+      </header>
+
+      <section class="orders-main">
+        <div class="head-row">
+          <div class="head-text">
+            <h1>My Orders</h1>
+            <p>Track order IDs, statuses, dates, and open any order for full details.</p>
+          </div>
+
+          <div class="mini-avatar">
+            <img
+              src="<%= user && user.profileImage ? user.profileImage : '/images/avatar.png' %>"
+              alt="avatar"
+            />
+          </div>
+        </div>
+
+        <div class="message-slot">
+          <% if (message) { %>
+            <p class="orders-message orders-message--success"><%= message %></p>
+          <% } else if (error) { %>
+            <p class="orders-message orders-message--error"><%= error %></p>
+          <% } else if (!orders.length) { %>
+            <p class="orders-empty">No orders found.</p>
+          <% } else { %>
+            <div class="message-placeholder"></div>
+          <% } %>
+        </div>
+
+        <form method="GET" action="/api/user/orders" class="orders-search">
+          <input type="text" name="search" placeholder="Search order ID" value="<%= search %>" />
+          <button type="submit" class="orders-btn orders-btn--primary">Search</button>
+          <% if (search) { %>
+            <a href="/api/user/orders" class="orders-link">Clear</a>
+          <% } %>
+        </form>
+
+        <% if (orders.length) { %>
+          <div class="orders-list">
+            <% orders.forEach((order) => { %>
+              <article class="order-card">
+                <div class="order-card__meta">
+                  <div class="order-card__row">
+                    <strong>Order ID:</strong>
+                    <span><%= order.orderId %></span>
+                  </div>
+                  <div class="order-card__row">
+                    <strong>Order Date:</strong>
+                    <span><%= new Date(order.createdAt).toLocaleDateString("en-IN") %></span>
+                  </div>
+                  <div class="order-card__row">
+                    <strong>Total:</strong>
+                    <span>₹<%= order.grandTotal %></span>
+                  </div>
+                </div>
+
+                <div class="order-card__meta">
+                  <div class="order-card__row">
+                    <span class="status-pill status-pill--<%= order.status %>"><%= order.status.replaceAll("_", " ") %></span>
+                  </div>
+                  <a href="/api/user/orders/<%= order._id %>" class="orders-link orders-link--primary">View Details</a>
+                </div>
+              </article>
+            <% }) %>
+          </div>
+        <% } %>
+
+        <div class="orders-pagination">
+          <% for (let i = 1; i <= totalPages; i++) { %>
+            <a
+              href="/api/user/orders?page=<%= i %>&search=<%= search %>"
+              class="orders-page-link <%= i === currentPage ? 'active' : '' %>"
+            ><%= i %></a>
+          <% } %>
+        </div>
+      </section>
+    </section>
   </main>
+
+  <%- include("partials/site-footer") %>
 </body>
 </html>
