@@ -140,19 +140,21 @@
                         out_for_delivery: "Out for delivery",
                         delivered: "Delivered",
                         cancelled: "Cancelled",
+                        partially_cancelled: "Partially cancelled",
                         return_requested: "Return requested",
                         returned: "Returned",
                         return_rejected: "Return rejected"
                       };
                       const transitions = {
-                        pending:          ["shipped", "cancelled"],
-                        shipped:          ["out_for_delivery", "cancelled"],
-                        out_for_delivery: ["delivered", "cancelled"],
-                        delivered:        ["return_requested"],
-                        return_requested: ["returned", "return_rejected"],
-                        cancelled:        [],
-                        returned:         [],
-                        return_rejected:  []
+                        pending:              ["shipped", "cancelled"],
+                        shipped:              ["out_for_delivery", "cancelled"],
+                        out_for_delivery:     ["delivered", "cancelled"],
+                        delivered:            ["return_requested"],
+                        partially_cancelled:  ["shipped", "out_for_delivery", "delivered", "cancelled"],
+                        return_requested:     ["returned", "return_rejected"],
+                        cancelled:            [],
+                        returned:             [],
+                        return_rejected:      []
                       };
                       const allowed = transitions[order.status] || [];
                     %>

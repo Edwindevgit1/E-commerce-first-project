@@ -201,8 +201,37 @@ body {
 
 .order-card {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   gap: 12px;
+  align-items: center;
+}
+
+.order-card__thumbs {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.order-card__thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+.order-card__more {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #dfe8f5;
+  color: #1d2d4a;
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .order-card__meta {
@@ -215,6 +244,83 @@ body {
   font-size: 12px;
   color: #2f3d58;
   line-height: 1.45;
+}
+
+.expand-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1d2d4a;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.expand-toggle:hover {
+  color: #0a2052;
+}
+
+.expand-count {
+  color: #5a6d8f;
+  font-weight: 500;
+}
+
+.expand-arrow {
+  font-size: 10px;
+  transition: transform 0.25s ease;
+  display: inline-block;
+}
+
+.expand-toggle.is-open .expand-arrow {
+  transform: rotate(180deg);
+}
+
+.expand-panel {
+  display: grid;
+  gap: 6px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+  opacity: 0;
+}
+
+.expand-panel.is-open {
+  max-height: 400px;
+  opacity: 1;
+  margin-top: 4px;
+}
+
+.expand-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: #e4ecf7;
+  font-size: 12px;
+  color: #1d2d4a;
+  font-weight: 500;
+}
+
+.expand-item__img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #fff;
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.expand-item__qty {
+  color: #5a6d8f;
+  font-weight: 400;
 }
 
 .status-pill {
@@ -352,9 +458,12 @@ body {
 
   .head-row,
   .order-detail-grid,
-  .order-card,
   .order-item-card,
   .orders-search {
+    grid-template-columns: 1fr;
+  }
+
+  .order-card {
     grid-template-columns: 1fr;
   }
 

@@ -68,6 +68,19 @@
           <div class="orders-list">
             <% orders.forEach((order) => { %>
               <article class="order-card">
+                <div class="order-card__thumbs">
+                  <% order.items.slice(0, 3).forEach((item) => { %>
+                    <img
+                      src="<%= item.productImage || 'https://placehold.co/48x48?text=Item' %>"
+                      alt="<%= item.productName %>"
+                      class="order-card__thumb"
+                    />
+                  <% }) %>
+                  <% if (order.items.length > 3) { %>
+                    <span class="order-card__more">+<%= order.items.length - 3 %></span>
+                  <% } %>
+                </div>
+
                 <div class="order-card__meta">
                   <div class="order-card__row">
                     <strong>Order ID:</strong>
@@ -80,6 +93,23 @@
                   <div class="order-card__row">
                     <strong>Total:</strong>
                     <span>₹<%= order.grandTotal %></span>
+                  </div>
+                  <div class="order-card__row">
+                    <button type="button" class="expand-toggle" data-expand-toggle>
+                      <%= order.items[0]?.productName || "Product" %><% if (order.items.length > 1) { %> <span class="expand-count">+<%= order.items.length - 1 %> more</span><% } %> <span class="expand-arrow">▼</span>
+                    </button>
+                  </div>
+                  <div class="expand-panel" data-expand-panel>
+                    <% order.items.forEach((item) => { %>
+                      <div class="expand-item">
+                        <img
+                          src="<%= item.productImage || 'https://placehold.co/28x28?text=•' %>"
+                          alt="<%= item.productName %>"
+                          class="expand-item__img"
+                        />
+                        <span><%= item.productName %> <span class="expand-item__qty">×<%= item.quantity %></span></span>
+                      </div>
+                    <% }) %>
                   </div>
                 </div>
 
@@ -116,5 +146,15 @@
   </main>
 
   <%- include("partials/site-footer") %>
+<script>
+  document.querySelectorAll("[data-expand-toggle]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const panel = btn.closest(".order-card__meta").querySelector("[data-expand-panel]");
+      if (!panel) return;
+      btn.classList.toggle("is-open");
+      panel.classList.toggle("is-open");
+    });
+  });
+</script>
 </body>
 </html>

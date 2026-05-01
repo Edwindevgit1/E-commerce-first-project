@@ -4,14 +4,15 @@ import User from "../models/User.js";
 
 // Defines which statuses each order status can transition to
 const STATUS_TRANSITIONS = {
-  pending:          ["shipped", "cancelled"],
-  shipped:          ["out_for_delivery", "cancelled"],
-  out_for_delivery: ["delivered", "cancelled"],
-  delivered:        ["return_requested"],
-  return_requested: ["returned", "return_rejected"],
-  cancelled:        [],
-  returned:         [],
-  return_rejected:  []
+  pending:              ["shipped", "cancelled"],
+  shipped:              ["out_for_delivery", "cancelled"],
+  out_for_delivery:     ["delivered", "cancelled"],
+  delivered:            ["return_requested"],
+  partially_cancelled:  ["shipped", "out_for_delivery", "delivered", "cancelled"],
+  return_requested:     ["returned", "return_rejected"],
+  cancelled:            [],
+  returned:             [],
+  return_rejected:      []
 };
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
