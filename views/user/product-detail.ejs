@@ -238,8 +238,8 @@
     <% } %>
   </main>
 
-  <template id="productDetailData"><%- productDetailJson %></template>
-  <script src="/script/product-detail.js"></script>
+  <div id="productDetailData" style="display:none" aria-hidden="true"><%- productDetailJson %></div>
+  <script src="/script/product-detail.js?v=7"></script>
 <%- include("partials/site-footer") %>
 </body>
 </html>
