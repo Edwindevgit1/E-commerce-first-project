@@ -9,15 +9,32 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+const RESET_OTP_COOLDOWN_SECONDS = 30;
+const RESET_OTP_EXPIRY_MS = RESET_OTP_COOLDOWN_SECONDS * 1000;
+
+export const getResetOtpRetryAfter = (req) => {
+  const lastSentAt = Number(req.session?.resetOtpLastSentAt) || 0;
+  if (!lastSentAt) return 0;
+
+  const elapsed = Math.floor((Date.now() - lastSentAt) / 1000);
+  return Math.max(RESET_OTP_COOLDOWN_SECONDS - elapsed, 0);
+};
+
+export const renderResetOtpPage = (req, res, options = {}, statusCode = 200) =>
+  res.status(statusCode).render("user/verify", {
+    error: options.error || null,
+    retryAfter: getResetOtpRetryAfter(req),
+  });
+
 const verifyOTP = async (req, res) => {
   try {
 
     const { otp1, otp2, otp3, otp4, otp5, otp6 } = req.body;
 
     if (!otp1 || !otp2 || !otp3 || !otp4 || !otp5 || !otp6) {
-      return res.render("user/verify", {
+      return renderResetOtpPage(req, res, {
         error: "Please enter complete OTP"
-      });
+      }, 400);
     }
 
     const enteredOTP = `${otp1}${otp2}${otp3}${otp4}${otp5}${otp6}`;
@@ -34,15 +51,15 @@ const verifyOTP = async (req, res) => {
       return res.redirect("/api/auth/forgotpassword");
     }
     if (user.resetOtpExpiry.getTime() < Date.now()) {
-      return res.render("user/verify", {
-        error: "OTP expired"
-      });
+      return renderResetOtpPage(req, res, {
+        error: "OTP expired. Click resend OTP again."
+      }, 400);
     }
 
     if (String(user.resetOtp) !== String(enteredOTP)) {
-      return res.render("user/verify", {
+      return renderResetOtpPage(req, res, {
         error: "Invalid OTP"
-      });
+      }, 400);
     }
     user.resetOtp = null;
     user.resetOtpExpiry = null;
@@ -50,6 +67,7 @@ const verifyOTP = async (req, res) => {
     await user.save();
 
     req.session.otpVerified = true;
+    delete req.session.resetOtpLastSentAt;
 
     res.redirect("/api/auth/resetpassword");
 
@@ -57,9 +75,9 @@ const verifyOTP = async (req, res) => {
 
     console.error("OTP verify error:", err);
 
-    res.render("user/verify", {
+    renderResetOtpPage(req, res, {
       error: "Something went wrong"
-    });
+    }, 500);
 
   }
 };
@@ -86,12 +104,25 @@ export const resendOtp = async (req, res) => {
       });
     }
 
+    const now = Date.now();
+    const lastSentAt = Number(req.session.resetOtpLastSentAt) || 0;
+    const elapsed = Math.floor((now - lastSentAt) / 1000);
+
+    if (elapsed < RESET_OTP_COOLDOWN_SECONDS) {
+      return res.status(429).json({
+        success: false,
+        message: "Please wait before requesting OTP again.",
+        retryAfter: RESET_OTP_COOLDOWN_SECONDS - elapsed
+      });
+    }
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     user.resetOtp = otp;
-    user.resetOtpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    user.resetOtpExpiry = new Date(now + RESET_OTP_EXPIRY_MS);
 
     await user.save();
+    req.session.resetOtpLastSentAt = now;
 
     console.log("Resent OTP:", otp);
 

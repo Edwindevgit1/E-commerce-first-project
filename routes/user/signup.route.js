@@ -13,7 +13,10 @@ console.log(req.body)
 next()
 } ,signupUser);
 
-router.get("/google",
+router.get("/google", (req, res, next) => {
+  req.session.googleAuthIntent = req.query.intent === "signup" ? "signup" : "login";
+  next();
+},
   passport.authenticate("google", {
     scope: ["profile", "email"]
   })

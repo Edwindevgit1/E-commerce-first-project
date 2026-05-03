@@ -14,6 +14,7 @@ router.get("/register", getSignupPage);
 router.get("/signupotp", getSignupOtpPage);
 
 router.get("/cancel-signup", cancelSignup);
+router.get("/cancel-singup", cancelSignup);
 
 router.post("/signupotp", signupUser);
 

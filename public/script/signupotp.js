@@ -1,5 +1,7 @@
 const RESEND_WAIT = 30;
-let remaining = RESEND_WAIT;
+let remaining = Number.isFinite(Number(window.signupOtpRetryAfter))
+  ? Math.max(Number(window.signupOtpRetryAfter), 0)
+  : RESEND_WAIT;
 let intervalId = null;
 
 const inputs = Array.from(document.querySelectorAll(".otp-input"));

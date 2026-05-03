@@ -9,9 +9,6 @@ router.get('/resetpassword', (req,res)=>{
     return res.redirect('/api/auth/forgotpassword')
   }
 
-  // invalidate OTP step so user cannot go back
-  delete req.session.resetEmail
-
   res.set("Cache-Control","no-store, no-cache, must-revalidate, private")
 
   res.render('user/reset-password')

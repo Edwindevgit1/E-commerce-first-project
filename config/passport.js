@@ -19,6 +19,7 @@ passport.use(
           return done(null, existingUser);
         }
         return done(null, {
+          googleId: profile.id,
           name: profile.displayName,
           email,
           provider: "google"

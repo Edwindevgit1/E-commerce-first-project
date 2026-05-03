@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
 
 const OTP_COOLDOWN_SECONDS = 30;
-const OTP_EXPIRY_MS = 2 * 60 * 1000;
+const OTP_EXPIRY_MS = OTP_COOLDOWN_SECONDS * 1000;
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -14,6 +14,29 @@ const transporter = nodemailer.createTransport({
 });
 
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+const EMAIL_REGEX = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+
+const getEmailValidationMessage = (email = "") => {
+  if (!email) return "Email is required";
+  if (/\s/.test(email)) return "Email cannot contain spaces";
+  if (/[A-Z]/.test(email)) return "Email must be in lowercase only";
+  if (!EMAIL_REGEX.test(email)) return "Please enter a valid email address";
+  return "";
+};
+
+const getSignupOtpRetryAfter = (req) => {
+  const lastSentAt = Number(req.session?.otpLastSentAt) || 0;
+  if (!lastSentAt) return 0;
+
+  const elapsed = Math.floor((Date.now() - lastSentAt) / 1000);
+  return Math.max(OTP_COOLDOWN_SECONDS - elapsed, 0);
+};
+
+const renderSignupOtp = (req, res, options = {}, statusCode = 200) =>
+  res.status(statusCode).render("user/signupotp", {
+    error: options.error || null,
+    retryAfter: getSignupOtpRetryAfter(req),
+  });
 
 const signupUser = async (req, res) => {
   try {
@@ -33,9 +56,10 @@ const signupUser = async (req, res) => {
       });
     }
 
-    if (/[A-Z]/.test(trimmedEmail)) {
+    const emailError = getEmailValidationMessage(trimmedEmail);
+    if (emailError) {
       return res.render("user/signup", {
-        error: "Email must be in lowercase only",
+        error: emailError,
         name: trimmedName,
         email: trimmedEmail,
       });
@@ -113,7 +137,11 @@ export const getSignupPage=(req,res)=>{
   if(req.session.signupData){
     return res.redirect('/api/auth/signupotp')
   }
-  res.render('user/signup')
+  res.render('user/signup', {
+    error: req.query.error || null,
+    name: "",
+    email: ""
+  })
 }
 
 export const resendSignupOtp = async (req, res) => {
@@ -158,36 +186,36 @@ export const verifySignupOtp = async (req, res) => {
   try {
     const rawOtp = String(req.body?.otp || "").trim();
     if (!rawOtp) {
-      return res.status(400).render("user/signupotp", {
+      return renderSignupOtp(req, res, {
         error: "OTP is required.",
-      });
+      }, 400);
     }
 
     if (!/^\d+$/.test(rawOtp)) {
-      return res.status(400).render("user/signupotp", {
+      return renderSignupOtp(req, res, {
         error: "OTP must contain numbers only.",
-      });
+      }, 400);
     }
 
     if (rawOtp.length !== 6) {
-      return res.status(400).render("user/signupotp", {
+      return renderSignupOtp(req, res, {
         error: "OTP must be 6 digits.",
-      });
+      }, 400);
     }
     if (!req.session.signupOtp || !req.session.signupOtpExpiry || !req.session.signupData) {
-      return res.status(400).render("user/signupotp", {
+      return renderSignupOtp(req, res, {
         error: "Session expired. Please sign up again.",
-      });
+      }, 400);
     }
     if (Date.now() > req.session.signupOtpExpiry) {
-      return res.status(400).render("user/signupotp", {
-        error: "OTP expired. Please resend OTP.",
-      });
+      return renderSignupOtp(req, res, {
+        error: "OTP expired. Click resend OTP again.",
+      }, 400);
     }
     if (rawOtp !== req.session.signupOtp) {
-      return res.status(400).render("user/signupotp", {
+      return renderSignupOtp(req, res, {
         error: "Invalid OTP.",
-      });
+      }, 400);
     }
     const { name, email, password ,provider} = req.session.signupData;
 
@@ -215,9 +243,9 @@ export const verifySignupOtp = async (req, res) => {
     return res.redirect("/api/auth/login");
   } catch (err) {
     console.error("verify otp error", err);
-    return res.status(500).render("user/signupotp", {
+    return renderSignupOtp(req, res, {
       error: "OTP verification failed.",
-    });
+    }, 500);
   }
 };
 export const cancelSignup=(req,res)=>{
@@ -243,41 +271,53 @@ export const googleAuthCallback = async (req, res) => {
 
     const email = googleUser.email.toLowerCase();
     const name = googleUser.name;
+    const googleAuthIntent = req.session.googleAuthIntent === "signup" ? "signup" : "login";
+    delete req.session.googleAuthIntent;
 
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
+      if (googleAuthIntent === "signup") {
+        return res.redirect(
+          "/api/auth/register?error=" +
+            encodeURIComponent("User already exists. Please login.")
+        );
+      }
+
+      if (existingUser.isBlocked && (existingUser.role === "user" || existingUser.role === "admin")) {
+        return res.redirect("/api/auth/login");
+      }
+
       req.session.user = {
         id: existingUser._id,
         email: existingUser.email,
         name: existingUser.name,
       };
 
-      return res.redirect("/api/auth/register");
+      return res.redirect("/api/auth/home");
     }
-    const otp = generateOtp();
 
-    req.session.signupOtp = otp;
-    req.session.signupOtpExpiry = Date.now() + OTP_EXPIRY_MS;
-    req.session.otpLastSentAt = Date.now();
+    if (googleAuthIntent !== "signup") {
+      return res.redirect(
+        "/api/auth/login?error=" +
+          encodeURIComponent("User does not exist. Please sign up first.")
+      );
+    }
 
-    req.session.signupData = {
+    const user = await User.create({
       name,
       email,
-      password: null,
+      googleId: googleUser.googleId || null,
       provider: "google",
-    };
-
-    console.log("Google Signup OTP:", otp);
-
-    await transporter.sendMail({
-      from: `Your app <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "Email verification OTP",
-      text: `Your OTP is: ${otp}`,
+      isVerified: true,
     });
 
-    return res.redirect("/api/auth/signupotp");
+    delete req.session.signupOtp;
+    delete req.session.signupOtpExpiry;
+    delete req.session.otpLastSentAt;
+    delete req.session.signupData;
+
+    return res.redirect("/api/auth/login");
 
   } catch (error) {
     console.log("Google auth error", error);
@@ -292,6 +332,6 @@ export const getSignupOtpPage = (req, res) => {
 
   res.set("Cache-Control", "no-store");
 
-  res.render("user/signupotp");
+  return renderSignupOtp(req, res);
 };
 export default signupUser;

@@ -1,5 +1,5 @@
 import express from "express";
-import verifyOTP, { resendOtp } from "../../controllers/otpverificationController.js";
+import verifyOTP, { renderResetOtpPage, resendOtp } from "../../controllers/otpverificationController.js";
 
 const router = express.Router();
 
@@ -11,12 +11,13 @@ router.get('/verify', (req, res) => {
 
   res.set("Cache-Control","no-store");
 
-  res.render('user/verify');
+  return renderResetOtpPage(req, res);
 
 });
 router.get('/forgot-cancel-reset', (req,res)=>{
   delete req.session.resetEmail
   delete req.session.otpVerified
+  delete req.session.resetOtpLastSentAt
   res.redirect('/api/auth/login')
 })
 router.post('/verify',verifyOTP)

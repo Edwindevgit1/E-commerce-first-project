@@ -9,6 +9,9 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+const RESET_OTP_COOLDOWN_SECONDS = 30;
+const RESET_OTP_EXPIRY_MS = RESET_OTP_COOLDOWN_SECONDS * 1000;
+
 const sendOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -36,7 +39,7 @@ const sendOtp = async (req, res) => {
 
     console.log("Forgot password OTP:",otp)
     user.resetOtp = otp;
-    user.resetOtpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    user.resetOtpExpiry = new Date(Date.now() + RESET_OTP_EXPIRY_MS);
 
     await user.save();
 
@@ -50,6 +53,7 @@ const sendOtp = async (req, res) => {
 
 
     req.session.resetEmail = user.email;
+    req.session.resetOtpLastSentAt = Date.now();
 
     res.redirect("/api/auth/verify");
 

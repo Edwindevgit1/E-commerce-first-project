@@ -33,15 +33,28 @@ document.querySelectorAll(".toggle-password").forEach((btn) => {
     syncPasswordToggle(btn, input.type === "password");
   });
 });
+
+function showSignupError(message) {
+  const messageSlot = document.querySelector(".message-slot");
+  if (!messageSlot) return;
+
+  messageSlot.innerHTML = `<div id="errorBox" class="error-message">${message}</div>`;
+  hideSignupErrorAfterDelay();
+}
+
+function hideSignupErrorAfterDelay() {
+  setTimeout(() => {
+    const errorBox = document.getElementById("errorBox");
+    if (errorBox) {
+      errorBox.style.display = "none";
+    }
+  }, 3000);
+}
+
 window.addEventListener("pageshow", function () {
   const form = document.querySelector("form");
   if (form) {
     form.reset();
   }
 });
-setTimeout(() => {
-  const errorBox = document.getElementById("errorBox");
-  if (errorBox) {
-    errorBox.style.display = "none";
-  }
-}, 3000);
+hideSignupErrorAfterDelay();

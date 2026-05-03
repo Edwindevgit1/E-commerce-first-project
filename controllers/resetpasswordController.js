@@ -48,8 +48,9 @@ const resetpassword = async (req, res) => {
     await user.save();
 
 
-    req.session.resetEmail = null;
-    req.session.otpVerified = null;
+    delete req.session.resetEmail;
+    delete req.session.otpVerified;
+    delete req.session.resetOtpLastSentAt;
 
 
     res.redirect('/api/auth/login');

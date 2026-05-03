@@ -61,12 +61,15 @@
             <button type="button" id="resendBtn" class="resend-btn" disabled>
               Resend OTP (<span id="timerText">00:30</span>)
             </button>
-            <a href="/api/auth/cancel-singup">Back to signup</a>
+            <a href="/api/auth/cancel-signup">Back to signup</a>
           </div>
         </form>
       </section>
     </main>
 
+    <script>
+      window.signupOtpRetryAfter = <%= Number(retryAfter || 0) %>;
+    </script>
     <script src="/script/signupotp.js"></script>
     <%- include("partials/auth-footer") %>
   </body>

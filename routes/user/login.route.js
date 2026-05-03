@@ -6,7 +6,7 @@ import noCache from "../../middleware/noCacheMiddleware.js";
 const router=express.Router()
 
 router.get("/login",noCache,blockAuthPages, (req, res) => {
-  res.render("user/login", { error: null });
+  res.render("user/login", { error: req.query.error || null });
 });
 
 router.post('/login',loginUser)
