@@ -1,6 +1,16 @@
 import User from '../models/User.js'
 import bcrpyt from "bcrypt"
 
+const EMAIL_REGEX = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+
+const getEmailValidationMessage = (email = "") => {
+  if (!email) return "Email is required";
+  if (/\s/.test(email)) return "Email cannot contain spaces";
+  if (/[A-Z]/.test(email)) return "Email must be in lowercase only";
+  if (!EMAIL_REGEX.test(email)) return "Please enter a valid email address";
+  return "";
+};
+
 export const getAdminLoginPage = (req,res)=>{
   if(req.session.admin){
     return res.redirect('/api/admin/adminusermanagement')
@@ -11,12 +21,18 @@ export const getAdminLoginPage = (req,res)=>{
 export const adminlogin = async(req,res)=>{
   try{
     const {email,password}=req.body
-    if(!email||!password){
+    const trimmedEmail = String(email || "").trim();
+    if(!trimmedEmail||!password){
       return res.render('admin/adminlogin',{
         error:'All fields are required'
       })
     }
-    const trimmedEmail=email.trim().toLowerCase()
+    const emailError = getEmailValidationMessage(trimmedEmail);
+    if (emailError) {
+      return res.render("admin/adminlogin", {
+        error: emailError
+      });
+    }
     const user=await User.findOne({email:trimmedEmail})
     if(!user){
       return res.render('admin/adminlogin',{
