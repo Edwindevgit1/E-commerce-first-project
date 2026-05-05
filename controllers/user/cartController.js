@@ -258,6 +258,7 @@ export const checkoutCartController = async (req, res) => {
       checkoutItems,
       grandTotal,
       addresses: user?.addresses || [],
+      walletBalance:user?.wallet?.balance || 0,
       selectedProductIds: Array.isArray(selectedProductIds)
         ? selectedProductIds
         : [selectedProductIds]
@@ -290,7 +291,11 @@ export const placeOrderController = async (req, res) => {
       return res.redirect("/api/user/cart?error=No items selected");
     }
 
-    const order = await placeOrderService(userId, selectedProductIds, addressId);
+    const order = await placeOrderService(userId, selectedProductIds, addressId,{
+      paymentMethod:req.body.paymentMethod,
+      useWallet:req.body.useWallet="on" || req.body.paymentMethod === "WALLET",
+      walletAmount:req.body.walletAmount
+    });
 
     return res.redirect(`/api/user/order-success/${order._id}`);
 

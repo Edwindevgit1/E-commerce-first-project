@@ -47,6 +47,14 @@ const orderItemSchema = new mongoose.Schema({
     type:String,
     default:""
   },
+  refundAmount:{
+    type:Number,
+    default:0
+  },
+  refundedAt:{
+    type:Date,
+    default:null
+  },
   stockRestored:{
     type:Boolean,
     default:false
@@ -108,13 +116,21 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod:{
     type:String,
-    enum:["COD","ONLINE"],
+    enum:["COD","RAZORPAY","WALLET"],
     default:"COD"
   },
   paymentStatus:{
     type:String,
     enum:["pending","paid","failed"],
     default:"pending"
+  },
+  walletAmountUsed:{
+    type:Number,
+    default:0
+  },
+  refundStatus:{
+    type:String,
+    enum:["none","pending","refunded","rejected"]
   },
   subtotal:{
     type:Number,

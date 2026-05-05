@@ -1,6 +1,7 @@
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import { creditWallet } from "./walletServices.js";
 
 // Defines which statuses each order status can transition to
 const STATUS_TRANSITIONS = {
@@ -211,6 +212,15 @@ export const verifyAndRestockOrderItemService = async (id, itemIndex) => {
   await restockOrderItem(item);
   if (item.status === "return_requested") {
     item.status = "returned";
+    item.refundAmount = item.refundAmount || item.subtotal;
+    item.refundedAt = item.refundedAt || new Date();
+
+    await creditWallet(
+      order.user,
+      item.refundAmount,
+      "Refund for accepted return",
+      order._id
+    )
   }
   item.stockRestored = true;
   item.restockVerifiedAt = new Date();
@@ -220,6 +230,7 @@ export const verifyAndRestockOrderItemService = async (id, itemIndex) => {
   );
   if (returnItems.length && returnItems.every((orderItem) => orderItem.status === "returned")) {
     order.status = "returned";
+    order.refundStatus = "refunded";
   }
 
   await order.save();

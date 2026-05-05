@@ -1,5 +1,40 @@
 import Order from "../models/Order.js";
+import Product from "../models/Product.js";
+import { creditWallet } from "./walletServices.js";
 
+const normalizeVarientValue = (value="") => String(value || "").trim().toLowerCase();
+const findRestockVarient = (product,item) => {
+  const variants = product.varients || [];
+  const size = normalizeVarientValue(item.size);
+  const color = normalizeVarientValue(item.color);
+
+  return variants.find((variant)=>
+    normalizeVarientValue(varient.size) === size &&
+    normalizeVarientValue(varient.color) === color)
+    || variants.find((variant)=>String(variant.price) === String(item.price));
+}
+const restockOrderItem = async (item) => {
+  if(!item?.product || item.stockRestored) return;
+  const product = await Product.findById(item.product);
+  if(!product)return;
+  const variant = findRestockVarient(product,item);
+  if(variant){
+    variant.stock += Number(item.quantity) || 0;
+  }else{
+    product.stock += Number(item.quantity) || 0;
+  }
+  if(product.variants?.length){
+    product.stock = product.variants.reduce((sum,varientItem)=>sum+(Number(variantItem.stock)||0))
+  }
+  await product.save();
+  item.stockRestored = true;
+  item.restockVerifiedAt = new Date();
+}
+const refundCancelledOrder = async (order,amount,reason) => {
+  const refundable = order.walletAmountUsed > 0 || (["paid","pending"].includes(order.paymentStatus) && order.paymentMethod !=="COD")
+  if(!refundable || amount <= 0)return;
+  await creditWallet(order.user,amount,reason,order._id);
+}
 export const getOrdersService = async (userId, search = "", page = 1, limit = 5) => {
   const query = { user: userId };
 
@@ -41,12 +76,18 @@ export const cancelOrderService = async (userId, orderId, reason = "") => {
     if (item.status === "cancelled") continue;
     item.status = "cancelled";
     item.cancellationReason = reason || "";
-    item.stockRestored = false;
-    item.restockVerifiedAt = null;
+    await restockOrderItem(item);
+    item.refundAmount = item.refundAmount || item.subtotal;
+    item.refundedAt = item.refundedAt || new Date();
   }
 
   order.status = "cancelled";
   order.cancellationReason = reason || "";
+  order.refundStatus = order.paymentMethod === "COD" ? "none" : "refunded";
+  const fullRefundAmount = order.paymentMethod === "COD"
+  ? Number(order.walletAmountUsed || 0)
+  : order.grandTotal + Number(order.walletAmountUsed || 0);
+  await refundCancelledOrder(order,fullRefundAmount,"Refund for cancelled order");
   await order.save();
 
   return order;
@@ -74,6 +115,14 @@ export const cancelOrderItemService = async (userId, orderId, itemIndex, reason 
   item.cancellationReason = reason || "";
   item.stockRestored = false;
   item.restockVerifiedAt = null;
+
+  await restockOrderItem(item);
+  item.refundAmount = item.refundAmount || item.subtotal;
+  item.refundedAt = item.refundedAt || new Date();
+  const itemRefundAmount = order.paymentMethod === "COD"
+  ? Math.min(Number(order.walletAmountUsed || 0),item.subtotal)
+  : item.subtotal;
+  await refundCancelledOrder(order,itemRefundAmount,"Refund for cancelled item");
 
   const activeItems = order.items.filter((orderItem) => orderItem.status !== "cancelled");
   if (!activeItems.length) {

@@ -5,11 +5,12 @@ import User from "../models/User.js";
 import { generateOrderId } from "../utils/orderId.js";
 import { getEffectiveProductPricing } from "../utils/pricing.js";
 import { cartVariantHelpers } from "./cartServices.js";
+import { debitWallet } from "./walletServices.js";
 
 const { buildCartItemId, getProductVariant } = cartVariantHelpers;
 const MAX_CART_QUANTITY = 5;
 
-export const placeOrderService = async (userId, selectedCartItemIds = [], addressId) => {
+export const placeOrderService = async (userId, selectedCartItemIds = [], addressId,options={}) => {
   if (!userId) {
     throw new Error("User is required");
   }
@@ -139,7 +140,11 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
   const shippingCharge = grandTotal >= 1000 ? 0 : 50;
   const tax = 0;
   const discount = 0;
-  const finalTotal = grandTotal + shippingCharge + tax - discount;
+  const totalBeforeWallet = Math.max(0,grandTotal + shippingCharge + tax - discount);
+  const requestedWalletAmount = options.useWallet? Math.min(Number(options.walletAmount) || totalBeforeWallet , totalBeforeWallet):0;
+  const finalTotal = Math.max(0, totalBeforeWallet - requestedWalletAmount);
+  const paymentMethod = finalTotal === 0 && requestedWalletAmount > 0 ? "WALLET" : options.paymentMethod || 'COD';
+  const paymentStatus = paymentMethod === "COD" ? "pending" : finalTotal === 0 ? "paid":"pending";
 
   const order = await Order.create({
     orderId,
@@ -151,9 +156,14 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
     tax,
     shippingCharge,
     grandTotal: finalTotal,
-    paymentMethod: "COD",
+    paymentMethod,
+    paymentStatus,
+    walletAmountUsed:requestedWalletAmount,
     status: "pending"
   });
+  if(requestedWalletAmount > 0){
+    await debitWallet(userId,requestedWalletAmount,"Order payment using wallet",order._id)
+  }
 
   cart.items = cart.items.filter(
     (item) => !selectedIdSet.has(buildCartItemId(item.product, item.size, item.color))
