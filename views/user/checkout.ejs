@@ -26,6 +26,8 @@
     const tax = 0;
     const shipping = subtotal >= 1000 ? 0 : 50;
     const finalTotal = subtotal + shipping + tax - discount;
+    const availableWallet = Number(walletBalance) || 0;
+    const canPayFullWithWallet = availableWallet >= finalTotal && finalTotal > 0;
     const redirectQuery = selectedItems
       .map(function(itemId) {
         return "selectedCartItemIds=" + encodeURIComponent(itemId);
@@ -55,8 +57,6 @@
               <% selectedItems.forEach(function(itemId) { %>
                 <input type="hidden" name="selectedCartItemIds" value="<%= itemId %>" />
               <% }); %>
-              <input type="hidden" name="paymentMethod" value="COD" />
-
               <div class="address-list">
                 <% savedAddresses.forEach(function(address, index) { %>
                   <label class="address-option">
@@ -121,16 +121,6 @@
           </div>
         </section>
 
-        <section class="checkout-panel">
-          <div class="checkout-panel-head">
-            <h2>Payment Method</h2>
-          </div>
-
-          <div class="payment-box">
-            <strong>Cash on Delivery</strong>
-            <span>Pay in cash when your order reaches your delivery address.</span>
-          </div>
-        </section>
       </div>
 
       <aside class="checkout-summary">
@@ -161,13 +151,57 @@
           <strong>₹<%= finalTotal %></strong>
         </div>
 
+        <section class="summary-payment">
+          <h3>Payment Method</h3>
+
+          <label class="summary-payment-option">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="COD"
+              form="placeOrderForm"
+              checked
+            />
+            <span>
+              <strong>Cash on Delivery</strong>
+              <small>Pay when your order is delivered.</small>
+            </span>
+          </label>
+
+          <label class="summary-payment-option <%= canPayFullWithWallet ? '' : 'is-disabled' %>">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="WALLET"
+              form="placeOrderForm"
+              <%= canPayFullWithWallet ? '' : 'disabled' %>
+            />
+            <span>
+              <strong>Wallet</strong>
+              <small>
+                Balance: ₹<%= availableWallet %>
+                <% if (!canPayFullWithWallet) { %>
+                  | Need ₹<%= finalTotal %>
+                <% } %>
+              </small>
+            </span>
+          </label>
+
+          <input
+            type="hidden"
+            name="walletAmount"
+            form="placeOrderForm"
+            value="<%= finalTotal %>"
+          />
+        </section>
+
         <button
           type="submit"
           form="placeOrderForm"
           class="checkout-submit"
           <%= !savedAddresses.length ? "disabled" : "" %>
         >
-          Place COD Order
+          Place Order
         </button>
       </aside>
     </section>
