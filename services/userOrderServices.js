@@ -2,29 +2,34 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import { creditWallet } from "./walletServices.js";
 
-const normalizeVarientValue = (value="") => String(value || "").trim().toLowerCase();
-const findRestockVarient = (product,item) => {
-  const variants = product.varients || [];
-  const size = normalizeVarientValue(item.size);
-  const color = normalizeVarientValue(item.color);
+const normalizeVariantValue = (value = "") => String(value || "").trim().toLowerCase();
 
-  return variants.find((variant)=>
-    normalizeVarientValue(varient.size) === size &&
-    normalizeVarientValue(varient.color) === color)
-    || variants.find((variant)=>String(variant.price) === String(item.price));
+const findRestockVariant = (product, item) => {
+  const variants = product.variants || [];
+  const size = normalizeVariantValue(item.size);
+  const color = normalizeVariantValue(item.color);
+
+  return variants.find((variant) =>
+    normalizeVariantValue(variant.size) === size &&
+    normalizeVariantValue(variant.color) === color
+  ) || variants.find((variant) => String(variant.price) === String(item.price));
 }
+
 const restockOrderItem = async (item) => {
   if(!item?.product || item.stockRestored) return;
   const product = await Product.findById(item.product);
   if(!product)return;
-  const variant = findRestockVarient(product,item);
+  const variant = findRestockVariant(product,item);
   if(variant){
     variant.stock += Number(item.quantity) || 0;
   }else{
     product.stock += Number(item.quantity) || 0;
   }
   if(product.variants?.length){
-    product.stock = product.variants.reduce((sum,varientItem)=>sum+(Number(variantItem.stock)||0))
+    product.stock = product.variants.reduce(
+      (sum, variantItem) => sum + (Number(variantItem.stock) || 0),
+      0
+    );
   }
   await product.save();
   item.stockRestored = true;
@@ -35,6 +40,10 @@ const refundCancelledOrder = async (order,amount,reason) => {
   if(!refundable || amount <= 0)return;
   await creditWallet(order.user,amount,reason,order._id);
 }
+
+const canRequestCancellation = (item) =>
+  ["pending", "shipped"].includes(item.status) && !item.cancellationRejected;
+
 export const getOrdersService = async (userId, search = "", page = 1, limit = 5) => {
   const query = { user: userId };
 
@@ -68,26 +77,46 @@ export const cancelOrderService = async (userId, orderId, reason = "") => {
     throw new Error("Order not found");
   }
 
-  if (["out_for_delivery", "delivered", "cancelled", "return_requested", "returned", "return_rejected"].includes(order.status)) {
+  if (["out_for_delivery", "delivered", "cancelled", "cancellation_requested", "return_requested", "returned", "return_rejected"].includes(order.status)) {
     throw new Error("This order cannot be cancelled");
   }
 
   for (const item of order.items) {
-    if (item.status === "cancelled") continue;
-    item.status = "cancelled";
+    if (["cancelled", "cancellation_requested"].includes(item.status) || item.cancellationRejected) continue;
+    item.status = item.status === "shipped" ? "cancellation_requested" : "cancelled";
     item.cancellationReason = reason || "";
-    await restockOrderItem(item);
-    item.refundAmount = item.refundAmount || item.subtotal;
-    item.refundedAt = item.refundedAt || new Date();
+    item.stockRestored = false;
+    item.restockVerifiedAt = null;
+    if (item.status === "cancelled") {
+      item.refundAmount = item.refundAmount || item.subtotal;
+      item.refundedAt = item.refundedAt || new Date();
+    }
   }
 
-  order.status = "cancelled";
+  if (!order.items.some((item) => ["cancelled", "cancellation_requested"].includes(item.status))) {
+    throw new Error("No cancellable items found for this order");
+  }
+
+  const hasCancellationRequest = order.items.some((item) => item.status === "cancellation_requested");
+  const hasActiveItems = order.items.some((item) =>
+    !["cancelled", "cancellation_requested", "returned", "return_rejected"].includes(item.status)
+  );
+
+  if (hasCancellationRequest) {
+    order.status = hasActiveItems ? "partially_cancelled" : "cancellation_requested";
+  } else {
+    order.status = hasActiveItems ? "partially_cancelled" : "cancelled";
+  }
   order.cancellationReason = reason || "";
-  order.refundStatus = order.paymentMethod === "COD" ? "none" : "refunded";
-  const fullRefundAmount = order.paymentMethod === "COD"
-  ? Number(order.walletAmountUsed || 0)
-  : order.grandTotal + Number(order.walletAmountUsed || 0);
-  await refundCancelledOrder(order,fullRefundAmount,"Refund for cancelled order");
+  if (order.status === "cancelled") {
+    order.refundStatus = order.paymentMethod === "COD" ? "none" : "refunded";
+    const fullRefundAmount = order.paymentMethod === "COD"
+    ? Number(order.walletAmountUsed || 0)
+    : Math.max(Number(order.grandTotal || 0), Number(order.walletAmountUsed || 0));
+    await refundCancelledOrder(order,fullRefundAmount,"Refund for cancelled order");
+  } else {
+    order.refundStatus = "pending";
+  }
   await order.save();
 
   return order;
@@ -107,26 +136,30 @@ export const cancelOrderItemService = async (userId, orderId, itemIndex, reason 
     throw new Error("Order item not found");
   }
 
-  if (["out_for_delivery", "delivered", "cancelled", "return_requested", "returned", "return_rejected"].includes(item.status)) {
+  if (!canRequestCancellation(item)) {
     throw new Error("This item cannot be cancelled");
   }
 
-  item.status = "cancelled";
+  const needsAdminApproval = item.status === "shipped";
+  item.status = needsAdminApproval ? "cancellation_requested" : "cancelled";
   item.cancellationReason = reason || "";
   item.stockRestored = false;
   item.restockVerifiedAt = null;
 
-  await restockOrderItem(item);
-  item.refundAmount = item.refundAmount || item.subtotal;
-  item.refundedAt = item.refundedAt || new Date();
-  const itemRefundAmount = order.paymentMethod === "COD"
-  ? Math.min(Number(order.walletAmountUsed || 0),item.subtotal)
-  : item.subtotal;
-  await refundCancelledOrder(order,itemRefundAmount,"Refund for cancelled item");
+  if (!needsAdminApproval) {
+    item.refundAmount = item.refundAmount || item.subtotal;
+    item.refundedAt = item.refundedAt || new Date();
+    const itemRefundAmount = order.paymentMethod === "COD"
+    ? Math.min(Number(order.walletAmountUsed || 0),item.subtotal)
+    : item.subtotal;
+    await refundCancelledOrder(order,itemRefundAmount,"Refund for cancelled item");
+  }
 
-  const activeItems = order.items.filter((orderItem) => orderItem.status !== "cancelled");
+  const activeItems = order.items.filter((orderItem) => !["cancelled", "cancellation_requested"].includes(orderItem.status));
   if (!activeItems.length) {
-    order.status = "cancelled";
+    order.status = needsAdminApproval ? "cancellation_requested" : "cancelled";
+  } else if (order.items.some((orderItem) => orderItem.status === "cancellation_requested")) {
+    order.status = "partially_cancelled";
   } else {
     order.status = "partially_cancelled";
   }

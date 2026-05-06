@@ -45,6 +45,7 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
   }
 
   const orderItems = [];
+  const productsToSave = [];
   let grandTotal = 0;
 
   for (const item of itemsToOrder) {
@@ -121,7 +122,7 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
       0
     );
 
-    await product.save();
+    productsToSave.push(product);
   }
 
   const user = await User.findById(userId);
@@ -141,10 +142,23 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
   const tax = 0;
   const discount = 0;
   const totalBeforeWallet = Math.max(0,grandTotal + shippingCharge + tax - discount);
-  const requestedWalletAmount = options.useWallet? Math.min(Number(options.walletAmount) || totalBeforeWallet , totalBeforeWallet):0;
-  const finalTotal = Math.max(0, totalBeforeWallet - requestedWalletAmount);
-  const paymentMethod = finalTotal === 0 && requestedWalletAmount > 0 ? "WALLET" : options.paymentMethod || 'COD';
-  const paymentStatus = paymentMethod === "COD" ? "pending" : finalTotal === 0 ? "paid":"pending";
+  const selectedPaymentMethod = String(options.paymentMethod || "COD").toUpperCase();
+  const useWalletPayment = selectedPaymentMethod === "WALLET" || options.useWallet === true;
+  const requestedWalletAmount = useWalletPayment
+    ? Math.min(Number(options.walletAmount) || totalBeforeWallet, totalBeforeWallet)
+    : 0;
+
+  if (useWalletPayment && requestedWalletAmount < totalBeforeWallet) {
+    throw new Error("Wallet payment must cover the full order amount");
+  }
+
+  if (requestedWalletAmount > 0 && requestedWalletAmount > Number(user.wallet?.balance || 0)) {
+    throw new Error("Insufficient wallet balance");
+  }
+
+  const remainingPayable = Math.max(0, totalBeforeWallet - requestedWalletAmount);
+  const paymentMethod = remainingPayable === 0 && requestedWalletAmount > 0 ? "WALLET" : "COD";
+  const paymentStatus = paymentMethod === "COD" ? "pending" : remainingPayable === 0 ? "paid":"pending";
 
   const order = await Order.create({
     orderId,
@@ -155,15 +169,23 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
     discount,
     tax,
     shippingCharge,
-    grandTotal: finalTotal,
+    grandTotal: totalBeforeWallet,
     paymentMethod,
     paymentStatus,
     walletAmountUsed:requestedWalletAmount,
     status: "pending"
   });
-  if(requestedWalletAmount > 0){
-    await debitWallet(userId,requestedWalletAmount,"Order payment using wallet",order._id)
+
+  if (requestedWalletAmount > 0) {
+    try {
+      await debitWallet(userId, requestedWalletAmount, "Order payment using wallet", order._id);
+    } catch (error) {
+      await Order.findByIdAndDelete(order._id);
+      throw error;
+    }
   }
+
+  await Promise.all(productsToSave.map((product) => product.save()));
 
   cart.items = cart.items.filter(
     (item) => !selectedIdSet.has(buildCartItemId(item.product, item.size, item.color))

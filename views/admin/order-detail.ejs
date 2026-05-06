@@ -172,18 +172,27 @@
               <% } %>
               <% if (item.stockRestored) { %>
                 <p>Stock restored after admin verification<%= item.restockVerifiedAt ? " on " + new Date(item.restockVerifiedAt).toLocaleDateString("en-IN") : "" %>.</p>
-              <% } else if (["cancelled", "return_requested", "returned"].includes(item.status)) { %>
+              <% } else if (["cancelled", "cancellation_requested", "return_requested", "returned"].includes(item.status)) { %>
                 <form
                   method="POST"
                   action="/api/admin/orders/<%= order._id %>/items/<%= index %>/restock"
                   style="margin-top:8px;"
                   data-restock-form
                   data-product-name="<%= item.productName %>"
-                  data-confirm-message="<%= item.status === 'return_requested' ? 'Accept this return after checking the product condition, and restore it to stock?' : 'Confirm this product is in good condition and restore it to stock?' %>"
-                  data-confirm-label="<%= item.status === 'return_requested' ? 'Accept Return & Restock' : 'Verify & Restock' %>"
+                  data-confirm-message="<%= item.status === 'return_requested' ? 'Accept this return after checking the product condition, and restore it to stock?' : item.status === 'cancellation_requested' ? 'Accept this cancellation request, restore stock, and close this item?' : 'Confirm this product is in good condition and restore it to stock?' %>"
+                  data-confirm-label="<%= item.status === 'return_requested' ? 'Accept Return & Restock' : item.status === 'cancellation_requested' ? 'Accept Cancellation & Restock' : 'Verify & Restock' %>"
                 >
-                  <button type="submit" class="btn btn-light"><%= item.status === "return_requested" ? "Accept Return & Restock" : "Verify & Restock" %></button>
+                  <button type="submit" class="btn btn-light"><%= item.status === "return_requested" ? "Accept Return & Restock" : item.status === "cancellation_requested" ? "Accept Cancellation & Restock" : "Verify & Restock" %></button>
                 </form>
+                <% if (item.status === "cancellation_requested") { %>
+                  <form
+                    method="POST"
+                    action="/api/admin/orders/<%= order._id %>/items/<%= index %>/reject-cancellation"
+                    style="margin-top:8px;"
+                  >
+                    <button type="submit" class="btn btn-light">Reject Cancellation</button>
+                  </form>
+                <% } %>
                 <% if (item.status === "return_requested") { %>
                   <form
                     method="POST"
@@ -214,7 +223,11 @@
           <div><strong>Shipping:</strong> ₹<%= order.shippingCharge %></div>
           <div><strong>Tax:</strong> ₹<%= order.tax %></div>
           <div><strong>Discount:</strong> ₹<%= order.discount %></div>
-          <div><strong>Grand Total:</strong> ₹<%= order.grandTotal %></div>
+          <%
+            const adminDetailTotal = Number(order.grandTotal) ||
+              ((Number(order.subtotal) || 0) + (Number(order.shippingCharge) || 0) + (Number(order.tax) || 0) - (Number(order.discount) || 0));
+          %>
+          <div><strong>Grand Total:</strong> ₹<%= adminDetailTotal %></div>
         </div>
 
         <h3 style="margin-top: 16px;">Customer Details</h3>
@@ -239,6 +252,7 @@
             out_for_delivery: "Out for delivery",
             delivered: "Delivered",
             cancelled: "Cancelled",
+            cancellation_requested: "Cancellation requested",
             partially_cancelled: "Partially cancelled",
             return_requested: "Return requested",
             returned: "Returned",
@@ -249,13 +263,32 @@
             shipped:              ["out_for_delivery", "cancelled"],
             out_for_delivery:     ["delivered", "cancelled"],
             delivered:            [],
-            partially_cancelled:  ["shipped", "out_for_delivery", "delivered", "cancelled"],
+            cancellation_requested:["cancelled"],
             return_requested:     ["returned", "return_rejected"],
             cancelled:            [],
             returned:             [],
             return_rejected:      []
           };
-          const detailAllowed = detailTransitions[order.status] || [];
+          let detailAllowed = detailTransitions[order.status] || [];
+          if (order.status === "partially_cancelled") {
+            const activeStatuses = order.items
+              .filter(function(item) {
+                return !["cancelled", "cancellation_requested", "returned", "return_rejected"].includes(item.status);
+              })
+              .map(function(item) {
+                return item.status;
+              });
+
+            if (activeStatuses.includes("out_for_delivery")) {
+              detailAllowed = ["delivered", "cancelled"];
+            } else if (activeStatuses.includes("shipped")) {
+              detailAllowed = ["out_for_delivery", "cancelled"];
+            } else if (activeStatuses.includes("pending")) {
+              detailAllowed = ["shipped", "cancelled"];
+            } else {
+              detailAllowed = ["cancelled"];
+            }
+          }
         %>
         <% if (detailAllowed.length) { %>
           <form method="POST" action="/api/admin/orders/<%= order._id %>/status" style="margin-top:16px;display:grid;gap:8px;">

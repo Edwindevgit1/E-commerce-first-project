@@ -293,7 +293,7 @@ export const placeOrderController = async (req, res) => {
 
     const order = await placeOrderService(userId, selectedProductIds, addressId,{
       paymentMethod:req.body.paymentMethod,
-      useWallet:req.body.useWallet="on" || req.body.paymentMethod === "WALLET",
+      useWallet:req.body.paymentMethod === "WALLET",
       walletAmount:req.body.walletAmount
     });
 

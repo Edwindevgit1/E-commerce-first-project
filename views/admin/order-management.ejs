@@ -78,6 +78,7 @@
           <option value="out_for_delivery" <%= selectedStatus === "out_for_delivery" ? "selected" : "" %>>Out for delivery</option>
           <option value="delivered" <%= selectedStatus === "delivered" ? "selected" : "" %>>Delivered</option>
           <option value="cancelled" <%= selectedStatus === "cancelled" ? "selected" : "" %>>Cancelled</option>
+          <option value="cancellation_requested" <%= selectedStatus === "cancellation_requested" ? "selected" : "" %>>Cancellation requested</option>
           <option value="return_requested" <%= selectedStatus === "return_requested" ? "selected" : "" %>>Return requested</option>
           <option value="returned" <%= selectedStatus === "returned" ? "selected" : "" %>>Returned</option>
           <option value="return_rejected" <%= selectedStatus === "return_rejected" ? "selected" : "" %>>Return rejected</option>
@@ -126,7 +127,11 @@
                       <span><%= order.user?.email || "No email" %></span>
                     </div>
                   </td>
-                  <td>₹<%= order.grandTotal %></td>
+                  <%
+                    const adminListTotal = Number(order.grandTotal) ||
+                      ((Number(order.subtotal) || 0) + (Number(order.shippingCharge) || 0) + (Number(order.tax) || 0) - (Number(order.discount) || 0));
+                  %>
+                  <td>₹<%= adminListTotal %></td>
                   <td>
                     <span class="status-badge <%= order.status === 'delivered' ? 'active' : order.status === 'cancelled' ? 'soft-deleted' : 'inactive' %>">
                       <%= order.status %>
@@ -140,6 +145,7 @@
                         out_for_delivery: "Out for delivery",
                         delivered: "Delivered",
                         cancelled: "Cancelled",
+                        cancellation_requested: "Cancellation requested",
                         partially_cancelled: "Partially cancelled",
                         return_requested: "Return requested",
                         returned: "Returned",
@@ -150,13 +156,32 @@
                         shipped:              ["out_for_delivery", "cancelled"],
                         out_for_delivery:     ["delivered", "cancelled"],
                         delivered:            [],
-                        partially_cancelled:  ["shipped", "out_for_delivery", "delivered", "cancelled"],
+                        cancellation_requested:["cancelled"],
                         return_requested:     ["returned", "return_rejected"],
                         cancelled:            [],
                         returned:             [],
                         return_rejected:      []
                       };
-                      const allowed = transitions[order.status] || [];
+                      let allowed = transitions[order.status] || [];
+                      if (order.status === "partially_cancelled") {
+                        const activeStatuses = order.items
+                          .filter(function(item) {
+                            return !["cancelled", "cancellation_requested", "returned", "return_rejected"].includes(item.status);
+                          })
+                          .map(function(item) {
+                            return item.status;
+                          });
+
+                        if (activeStatuses.includes("out_for_delivery")) {
+                          allowed = ["delivered", "cancelled"];
+                        } else if (activeStatuses.includes("shipped")) {
+                          allowed = ["out_for_delivery", "cancelled"];
+                        } else if (activeStatuses.includes("pending")) {
+                          allowed = ["shipped", "cancelled"];
+                        } else {
+                          allowed = ["cancelled"];
+                        }
+                      }
                     %>
                     <% if (allowed.length) { %>
                       <form method="POST" action="/api/admin/orders/<%= order._id %>/status" style="display:flex;gap:6px;align-items:center;">

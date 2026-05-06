@@ -29,6 +29,7 @@ router.get('/checkout', async (req, res) => {
       addresses: user?.addresses || [],
       checkoutItems,
       grandTotal,
+      walletBalance: user?.wallet?.balance || 0,
       selectedProductIds
     });
   } catch (error) {

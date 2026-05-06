@@ -26,7 +26,7 @@
     const tax = 0;
     const shipping = subtotal >= 1000 ? 0 : 50;
     const finalTotal = subtotal + shipping + tax - discount;
-    const availableWallet = Number(walletBalance) || 0;
+    const availableWallet = Number(typeof walletBalance !== "undefined" ? walletBalance : 0) || 0;
     const canPayFullWithWallet = availableWallet >= finalTotal && finalTotal > 0;
     const redirectQuery = selectedItems
       .map(function(itemId) {

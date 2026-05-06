@@ -3,7 +3,8 @@ import {
   getAdminOrderByIdService,
   updateAdminOrderStatusService,
   verifyAndRestockOrderItemService,
-  rejectReturnRequestService
+  rejectReturnRequestService,
+  rejectCancellationRequestService
 } from "../../services/adminOrderServices.js";
 import { buildInvoicePdfBuffer } from "../user/orderController.js";
 
@@ -126,6 +127,17 @@ export const rejectReturnRequestController = async (req, res) => {
   } catch (error) {
     return res.redirect(
       `/api/admin/orders/${req.params.id}?error=${encodeURIComponent(error.message || "Unable to reject return request")}`
+    );
+  }
+};
+
+export const rejectCancellationRequestController = async (req, res) => {
+  try {
+    await rejectCancellationRequestService(req.params.id, req.params.itemIndex);
+    return res.redirect(`/api/admin/orders/${req.params.id}?message=Cancellation request rejected`);
+  } catch (error) {
+    return res.redirect(
+      `/api/admin/orders/${req.params.id}?error=${encodeURIComponent(error.message || "Unable to reject cancellation request")}`
     );
   }
 };

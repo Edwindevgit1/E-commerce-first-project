@@ -9,11 +9,35 @@ const STATUS_TRANSITIONS = {
   shipped:              ["out_for_delivery", "cancelled"],
   out_for_delivery:     ["delivered", "cancelled"],
   delivered:            [],
-  partially_cancelled:  ["shipped", "out_for_delivery", "delivered", "cancelled"],
+  cancellation_requested:["cancelled"],
   return_requested:     ["returned", "return_rejected"],
   cancelled:            [],
   returned:             [],
   return_rejected:      []
+};
+
+const getAllowedStatusTransitions = (order) => {
+  if (order.status !== "partially_cancelled") {
+    return STATUS_TRANSITIONS[order.status] || [];
+  }
+
+  const activeStatuses = order.items
+    .filter((item) => !["cancelled", "cancellation_requested", "returned", "return_rejected"].includes(item.status))
+    .map((item) => item.status);
+
+  if (activeStatuses.includes("out_for_delivery")) {
+    return ["delivered", "cancelled"];
+  }
+
+  if (activeStatuses.includes("shipped")) {
+    return ["out_for_delivery", "cancelled"];
+  }
+
+  if (activeStatuses.includes("pending")) {
+    return ["shipped", "cancelled"];
+  }
+
+  return ["cancelled"];
 };
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -149,7 +173,7 @@ export const updateAdminOrderStatusService = async (id, status) => {
     throw new Error("Order not found");
   }
 
-  const allowedTransitions = STATUS_TRANSITIONS[order.status] || [];
+  const allowedTransitions = getAllowedStatusTransitions(order);
 
   if (!allowedTransitions.length) {
     throw new Error(`Orders with status "${order.status}" cannot be changed.`);
@@ -177,7 +201,7 @@ export const updateAdminOrderStatusService = async (id, status) => {
   order.status = status;
 
   for (const item of order.items) {
-    if (["cancelled", "return_requested", "returned", "return_rejected"].includes(item.status)) {
+    if (["cancelled", "cancellation_requested", "return_requested", "returned", "return_rejected"].includes(item.status)) {
       continue;
     }
     item.status = status;
@@ -201,8 +225,8 @@ export const verifyAndRestockOrderItemService = async (id, itemIndex) => {
     throw new Error("Order item not found");
   }
 
-  if (!["cancelled", "return_requested", "returned"].includes(item.status)) {
-    throw new Error("Only cancelled or return-requested items can be restocked after verification.");
+  if (!["cancelled", "cancellation_requested", "return_requested", "returned"].includes(item.status)) {
+    throw new Error("Only cancelled, cancellation-requested, or return-requested items can be restocked after verification.");
   }
 
   if (item.stockRestored) {
@@ -210,6 +234,20 @@ export const verifyAndRestockOrderItemService = async (id, itemIndex) => {
   }
 
   await restockOrderItem(item);
+  if (item.status === "cancellation_requested") {
+    item.status = "cancelled";
+    item.refundAmount = item.refundAmount || item.subtotal;
+    item.refundedAt = item.refundedAt || new Date();
+
+    if (order.paymentMethod !== "COD" || Number(order.walletAmountUsed || 0) > 0) {
+      await creditWallet(
+        order.user,
+        item.refundAmount,
+        "Refund for accepted cancellation",
+        order._id
+      );
+    }
+  }
   if (item.status === "return_requested") {
     item.status = "returned";
     item.refundAmount = item.refundAmount || item.subtotal;
@@ -231,6 +269,68 @@ export const verifyAndRestockOrderItemService = async (id, itemIndex) => {
   if (returnItems.length && returnItems.every((orderItem) => orderItem.status === "returned")) {
     order.status = "returned";
     order.refundStatus = "refunded";
+  }
+
+  const cancellationItems = order.items.filter((orderItem) =>
+    ["cancelled", "cancellation_requested"].includes(orderItem.status)
+  );
+  if (cancellationItems.length) {
+    if (order.items.every((orderItem) => orderItem.status === "cancelled")) {
+      order.status = "cancelled";
+      order.refundStatus = order.paymentMethod === "COD" ? "none" : "refunded";
+    } else if (order.items.some((orderItem) => orderItem.status === "cancellation_requested")) {
+      order.status = "partially_cancelled";
+      order.refundStatus = "pending";
+    } else if (order.status !== "returned") {
+      order.status = "partially_cancelled";
+    }
+  }
+
+  await order.save();
+  return order;
+};
+
+export const rejectCancellationRequestService = async (id, itemIndex) => {
+  const order = await Order.findById(id);
+
+  if (!order) {
+    throw new Error("Order not found");
+  }
+
+  const index = Number(itemIndex);
+  const item = order.items[index];
+
+  if (!item) {
+    throw new Error("Order item not found");
+  }
+
+  if (item.status !== "cancellation_requested") {
+    throw new Error("Only pending cancellation requests can be rejected.");
+  }
+
+  item.status = "shipped";
+  item.cancellationRejected = true;
+  item.stockRestored = false;
+  item.restockVerifiedAt = null;
+
+  const nonCancelledStatuses = order.items
+    .filter((orderItem) => !["cancelled", "returned", "return_rejected"].includes(orderItem.status))
+    .map((orderItem) => orderItem.status);
+
+  if (nonCancelledStatuses.includes("cancellation_requested")) {
+    order.status = "partially_cancelled";
+    order.refundStatus = "pending";
+  } else if (nonCancelledStatuses.includes("out_for_delivery")) {
+    order.status = "out_for_delivery";
+    order.refundStatus = "none";
+  } else if (nonCancelledStatuses.includes("shipped")) {
+    order.status = order.items.some((orderItem) => orderItem.status === "cancelled")
+      ? "partially_cancelled"
+      : "shipped";
+    order.refundStatus = "none";
+  } else {
+    order.status = "pending";
+    order.refundStatus = "none";
   }
 
   await order.save();
