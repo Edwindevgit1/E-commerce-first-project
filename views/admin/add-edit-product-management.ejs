@@ -27,6 +27,8 @@ const getFieldError = (key) => productFieldErrors[key];
 <main class="dashboard-scene">
 <section class="dashboard-card">
 
+<%- include("partials/admin-navbar", { active: "products" }) %>
+
 <section class="hero-panel add-hero">
 <div class="hero-copy">
 <h1><%= formTitle %></h1>

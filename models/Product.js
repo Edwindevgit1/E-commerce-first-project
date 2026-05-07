@@ -64,6 +64,17 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    offerPercentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 90
+    },
+    brand: {
+      type: String,
+      default: "",
+      trim: true
+    },
     stock: {
       type: Number,
       required: true

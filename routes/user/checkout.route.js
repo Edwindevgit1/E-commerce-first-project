@@ -3,6 +3,7 @@ import User from "../../models/User.js";
 import { validateCartForCheckoutService } from "../../services/cartServices.js";
 
 const router = express.Router()
+
 router.get('/checkout', async (req, res) => {
   try {
     if (!req.user || !req.user._id) {
@@ -30,7 +31,9 @@ router.get('/checkout', async (req, res) => {
       checkoutItems,
       grandTotal,
       walletBalance: user?.wallet?.balance || 0,
-      selectedProductIds
+      selectedProductIds,
+      message: req.query.message || null,
+      error: req.query.error || null
     });
   } catch (error) {
     console.log(error, "Checkout page load error");

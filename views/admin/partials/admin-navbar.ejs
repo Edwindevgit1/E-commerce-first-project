@@ -1,0 +1,20 @@
+<%
+  const adminActive = typeof active !== "undefined" ? active : "";
+  const adminChipClass = (key) => key === adminActive ? "chip chip-dark" : "chip";
+%>
+<header class="top-strip">
+  <div class="chip-row">
+    <a href="/api/admin/dashboard" class="<%= adminChipClass('dashboard') %>">Dashboard</a>
+    <a href="/api/admin/products" class="<%= adminChipClass('products') %>">Products</a>
+    <a href="/api/admin/category" class="<%= adminChipClass('categories') %>">Categories</a>
+    <a href="/api/admin/orders" class="<%= adminChipClass('orders') %>">Orders</a>
+    <a href="/api/admin/coupons" class="<%= adminChipClass('coupons') %>">Coupons</a>
+    <a href="/api/admin/offers" class="<%= adminChipClass('offers') %>">Offers</a>
+    <a href="/api/admin/sales-report" class="<%= adminChipClass('reports') %>">Reports</a>
+    <a href="/api/admin/adminusermanagement" class="<%= adminChipClass('users') %>">Users</a>
+  </div>
+
+  <form action="/api/admin/adminlogout" method="POST">
+    <button type="submit" class="logout-pill">Logout</button>
+  </form>
+</header>

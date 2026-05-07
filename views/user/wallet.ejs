@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wallet</title>
+    <link rel="stylesheet" href="/css/userprofile.css" />
+    <link rel="stylesheet" href="/css/wallet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="neo-scene">
+      <section class="neo-card">
+        <header class="top-strip">
+          <div class="chip-row">
+            <a href="/api/auth/home" class="chip">Home</a>
+            <a href="/api/user/profile" class="chip">Account</a>
+            <a href="/api/user/wallet" class="chip chip-dark">Wallet</a>
+            <a href="/api/user/orders" class="chip">My orders</a>
+            <a href="/api/user/adress" class="chip">Address management</a>
+            <a href="/api/user/change-password" class="chip">Change password</a>
+          </div>
+
+          <form action="/api/user/logout" method="POST">
+            <button class="logout-pill" type="submit">Logout</button>
+          </form>
+        </header>
+
+        <section class="wallet-shell">
+
+        <header class="wallet-hero">
+          <div>
+            <h1>Wallet</h1>
+            <p>Track balance, refunds, cashback, and recent wallet activity from your account.</p>
+          </div>
+        </header>
+
+        <section class="wallet-grid">
+          <div class="left-col">
+            <article class="balance-card">
+              <span class="balance-label">Available balance</span>
+              <div class="balance-row">
+                <div>
+                  <h2>₹<%= Number(wallet.balance || 0).toLocaleString("en-IN") %></h2>
+                  <p>Includes refunds and credits ready for checkout.</p>
+                </div>
+                <div class="rupee-orb">₹</div>
+              </div>
+              <div class="balance-actions">
+                <a href="/api/user/orders" class="btn btn-light">View Orders</a>
+                <a href="#transactions" class="btn btn-dark">View Refunds</a>
+              </div>
+            </article>
+          </div>
+
+          <div class="right-col">
+            <section class="stat-grid">
+              <article class="stat-card">
+                <span>Cashback Earned</span>
+                <strong>₹<%= Number(stats.cashbackEarned || 0).toLocaleString("en-IN") %></strong>
+              </article>
+              <article class="stat-card">
+                <span>Refunds Received</span>
+                <strong>₹<%= Number(stats.refundsReceived || 0).toLocaleString("en-IN") %></strong>
+              </article>
+              <article class="stat-card">
+                <span>Pending Credits</span>
+                <strong>₹<%= Number(stats.pendingCredits || 0).toLocaleString("en-IN") %></strong>
+              </article>
+              <article class="stat-card">
+                <span>Last Added</span>
+                <strong>₹<%= Number(stats.lastAdded || 0).toLocaleString("en-IN") %></strong>
+              </article>
+            </section>
+
+            <article class="wallet-panel transactions-panel" id="transactions">
+              <h2>Recent Transactions</h2>
+              <p>Credits, refunds, and wallet spends from your latest orders.</p>
+
+              <div class="transaction-table">
+                <div class="transaction-row table-head">
+                  <span>Date</span>
+                  <span>Activity</span>
+                  <span>Type</span>
+                  <span>Amount</span>
+                </div>
+                <% transactions.forEach((transaction) => {
+                  const amount = Number(transaction.amount) || 0;
+                  const orderId = transaction.order?.orderId ? ` (${transaction.order.orderId})` : "";
+                  const reason = transaction.reason || "Wallet transaction";
+                %>
+                  <div class="transaction-row">
+                    <span><%= transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "--" %></span>
+                    <span><%= reason %><%= orderId %></span>
+                    <span class="type-pill <%= transaction.type %>"><%= transaction.type %></span>
+                    <strong class="<%= transaction.type %>">
+                      <%= transaction.type === "credit" ? "+" : "-" %> ₹<%= amount.toLocaleString("en-IN") %>
+                    </strong>
+                  </div>
+                <% }) %>
+                <% if (!transactions.length) { %>
+                  <div class="empty-wallet">No wallet transactions yet.</div>
+                <% } %>
+              </div>
+
+              <% if (pagination && pagination.totalPages > 1) { %>
+                <nav class="wallet-pagination" aria-label="Wallet transactions pages">
+                  <% if (pagination.hasPrev) { %>
+                    <a class="page-btn" href="/api/user/wallet?page=<%= pagination.currentPage - 1 %>#transactions">Prev</a>
+                  <% } else { %>
+                    <span class="page-btn disabled">Prev</span>
+                  <% } %>
+
+                  <% for (let page = 1; page <= pagination.totalPages; page++) { %>
+                    <a
+                      class="page-btn <%= page === pagination.currentPage ? 'active' : '' %>"
+                      href="/api/user/wallet?page=<%= page %>#transactions"
+                    ><%= page %></a>
+                  <% } %>
+
+                  <% if (pagination.hasNext) { %>
+                    <a class="page-btn" href="/api/user/wallet?page=<%= pagination.currentPage + 1 %>#transactions">Next</a>
+                  <% } else { %>
+                    <span class="page-btn disabled">Next</span>
+                  <% } %>
+                </nav>
+              <% } %>
+            </article>
+          </div>
+        </section>
+        </section>
+      </section>
+    </main>
+    <%- include("partials/site-footer") %>
+  </body>
+</html>

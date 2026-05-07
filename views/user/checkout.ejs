@@ -126,14 +126,16 @@
       <aside class="checkout-summary">
         <h2>Price Details</h2>
 
+        <% if (typeof message !== "undefined" && message) { %>
+          <p class="feedback success"><%= message %></p>
+        <% } %>
+        <% if (typeof error !== "undefined" && error) { %>
+          <p class="feedback error"><%= error %></p>
+        <% } %>
+
         <div class="summary-row">
           <span>Subtotal</span>
           <strong>₹<%= subtotal %></strong>
-        </div>
-
-        <div class="summary-row">
-          <span>Discount</span>
-          <strong>- ₹<%= discount %></strong>
         </div>
 
         <div class="summary-row">

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sales Report</title>
+  <link rel="stylesheet" href="/css/product-management.css" />
+</head>
+<body>
+<main class="dashboard-scene">
+<section class="dashboard-card">
+  <%- include("partials/admin-navbar", { active: "reports" }) %>
+
+  <section class="hero-panel">
+    <div class="hero-copy">
+      <h1>Sales Report</h1>
+      <p>Daily, weekly, yearly, custom sales report.</p>
+    </div>
+
+    <div class="hero-actions">
+      <a
+        class="btn btn-dark"
+        href="/api/admin/sales-report/pdf?<%= new URLSearchParams(query).toString() %>"
+      >Download PDF</a>
+
+      <a
+        class="btn btn-light"
+        href="/api/admin/sales-report/excel?<%= new URLSearchParams(query).toString() %>"
+      >Download Excel</a>
+    </div>
+  </section>
+
+  <section class="content-panel">
+    <form method="GET" action="/api/admin/sales-report" class="toolbar-grid">
+      <select name="filter" class="toolbar-select">
+        <option value="daily" <%= query.filter === "daily" ? "selected" : "" %>>Daily</option>
+        <option value="weekly" <%= query.filter === "weekly" ? "selected" : "" %>>Weekly</option>
+        <option value="yearly" <%= query.filter === "yearly" ? "selected" : "" %>>Yearly</option>
+        <option value="custom" <%= query.filter === "custom" ? "selected" : "" %>>Custom</option>
+      </select>
+
+      <input
+        type="date"
+        name="startDate"
+        class="search-input"
+        value="<%= query.startDate || '' %>"
+      />
+
+      <input
+        type="date"
+        name="endDate"
+        class="search-input"
+        value="<%= query.endDate || '' %>"
+      />
+
+      <button class="btn btn-dark">Filter</button>
+      <a href="/api/admin/sales-report" class="btn btn-light">Clear</a>
+    </form>
+  </section>
+
+  <section class="content-panel">
+    <div class="hero-stats">
+      <article class="stat-card">
+        <span>Sales Count</span>
+        <strong><%= report.totals.salesCount %></strong>
+      </article>
+
+      <article class="stat-card">
+        <span>Order Amount</span>
+        <strong>₹<%= report.totals.orderAmount %></strong>
+      </article>
+
+      <article class="stat-card">
+        <span>Discount</span>
+        <strong>₹<%= report.totals.discount %></strong>
+      </article>
+
+      <article class="stat-card">
+        <span>Coupon Deductions</span>
+        <strong>₹<%= report.totals.couponDiscount %></strong>
+      </article>
+    </div>
+  </section>
+
+  <section class="content-panel">
+    <div class="table-wrap">
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Status</th>
+            <th>Coupon</th>
+            <th>Discount</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!report.orders.length) { %>
+            <tr>
+              <td colspan="7" class="empty-cell">No report data.</td>
+            </tr>
+          <% } %>
+
+          <% report.orders.forEach((order) => { %>
+            <%
+              const amount = Number(order.grandTotal) ||
+                ((Number(order.subtotal) || 0) +
+                  (Number(order.shippingCharge) || 0) +
+                  (Number(order.tax) || 0) -
+                  (Number(order.discount) || 0));
+            %>
+            <tr>
+              <td><strong><%= order.orderId %></strong></td>
+              <td><%= new Date(order.createdAt).toLocaleDateString("en-IN") %></td>
+              <td><%= order.user?.email || "User" %></td>
+              <td><%= order.status %></td>
+              <td><%= order.coupon?.code || "--" %></td>
+              <td>₹<%= order.discount || 0 %></td>
+              <td>₹<%= amount %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+</main>
+</body>
+</html>

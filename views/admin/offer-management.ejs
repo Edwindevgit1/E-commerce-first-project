@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Offers</title>
+  <link rel="stylesheet" href="/css/product-management.css" />
+</head>
+<body>
+<main class="dashboard-scene">
+<section class="dashboard-card">
+  <%- include("partials/admin-navbar", { active: "offers" }) %>
+
+  <section class="hero-panel">
+    <div class="hero-copy">
+      <h1>Offer Module</h1>
+      <p>Product offer, category offer, referral offer.</p>
+    </div>
+  </section>
+
+  <% if (message) { %><p class="feedback success"><%= message %></p><% } %>
+  <% if (error) { %><p class="feedback error"><%= error %></p><% } %>
+
+  <section class="content-panel">
+    <div class="panel-head">
+      <div>
+        <h2>Product Offers</h2>
+        <p>Set product offer price or percentage.</p>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Base Price</th>
+            <th>Offer Price</th>
+            <th>Offer %</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% products.forEach((product) => { %>
+            <tr>
+              <form method="POST" action="/api/admin/offers/products/<%= product._id %>">
+                <td><strong><%= product.productName %></strong></td>
+                <td>₹<%= product.price %></td>
+                <td>
+                  <input
+                    type="number"
+                    name="offerPrice"
+                    min="0"
+                    value="<%= product.offerPrice || 0 %>"
+                    class="search-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    name="offerPercentage"
+                    min="0"
+                    max="90"
+                    value="<%= product.offerPercentage || 0 %>"
+                    class="search-input"
+                  />
+                </td>
+                <td><button class="btn btn-dark">Save</button></td>
+              </form>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="content-panel">
+    <div class="panel-head">
+      <div>
+        <h2>Category Offers</h2>
+        <p>Largest discount between product and category applies in pricing.</p>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Offer %</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% categories.forEach((category) => { %>
+            <tr>
+              <form method="POST" action="/api/admin/offers/categories/<%= category._id %>">
+                <td><strong><%= category.name %></strong></td>
+                <td>
+                  <input
+                    type="number"
+                    name="offerPercentage"
+                    min="0"
+                    max="90"
+                    value="<%= category.offerPercentage || 0 %>"
+                    class="search-input"
+                  />
+                </td>
+                <td><button class="btn btn-dark">Save</button></td>
+              </form>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="content-panel">
+    <div class="panel-head">
+      <div>
+        <h2>Referral Offers</h2>
+        <p>Use referral code or token URL in signup flow.</p>
+      </div>
+    </div>
+
+    <form method="POST" action="/api/admin/offers/referral" class="toolbar-grid">
+      <input name="title" placeholder="Referral title" required />
+      <input name="rewardAmount" type="number" min="1" placeholder="Wallet reward amount" required />
+      <select name="isActive">
+        <option value="true">Active</option>
+        <option value="false">Inactive</option>
+      </select>
+      <button class="btn btn-dark">Create Referral Offer</button>
+    </form>
+
+    <div class="table-wrap">
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Reward</th>
+            <th>Status</th>
+            <th>Code URL Example</th>
+            <th>Token URL Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% referralOffers.forEach((offer) => { %>
+            <tr>
+              <td><%= offer.title %></td>
+              <td>₹<%= offer.rewardAmount %></td>
+              <td><%= offer.isActive ? "Active" : "Inactive" %></td>
+              <td>/api/auth/signup?ref=USERCODE</td>
+              <td>/api/auth/signup?token=<%= offer.token || offer._id %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+</main>
+</body>
+</html>

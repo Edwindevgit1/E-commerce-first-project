@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/css/product-management.css" />
+  <style>
+    body { background:#dfeaf7; }
+    .dashboard-scene { padding:12px 8px; align-items:start; }
+    .dashboard-card { width:min(1120px, 100%); padding:10px; border-radius:18px; background:linear-gradient(165deg, #ebf1fa, #dfe8f5); }
+    .admin-hero { margin:12px 8px 14px; padding:12px 14px; border-radius:12px; background:#edf3fc; box-shadow:var(--inner-shadow); }
+    .admin-hero h1 { font-size:24px; color:#1c3263; margin-bottom:6px; }
+    .admin-hero p { max-width:520px; color:#55719f; font-size:13px; line-height:1.45; }
+    .metric-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:0 8px 12px; }
+    .metric-card { min-height:92px; border-radius:12px; background:#f8fbff; border:1px solid #e6eef8; padding:14px; }
+    .metric-head { display:flex; align-items:center; gap:10px; color:#4a68a0; font-size:13px; font-weight:700; }
+    .metric-icon { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-size:13px; font-weight:900; }
+    .metric-icon.users { background:#dfe9ff; color:#3671d8; }
+    .metric-icon.orders { background:#dcf2eb; color:#2aa574; }
+    .metric-icon.revenue { background:#e6e4ff; color:#756ce0; }
+    .metric-icon.refunds { background:#fff0cf; color:#e7a22d; }
+    .metric-value { margin-top:10px; font-size:24px; color:#1c3263; font-weight:900; }
+    .dashboard-main { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; margin:0 8px 8px; }
+    .dashboard-lower { display:grid; grid-template-columns:1fr 1fr 290px; gap:12px; margin:0 8px 8px; align-items:start; }
+    .dash-panel { border-radius:12px; background:#f8fbff; border:1px solid #e6eef8; padding:16px; }
+    .dash-panel h2 { color:#1d3267; font-size:20px; margin-bottom:4px; }
+    .dash-panel p { color:#55719f; font-size:12px; }
+    .chart-toolbar { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:14px; }
+    .filter-row { display:flex; gap:8px; flex-wrap:wrap; }
+    .filter-chip { min-height:32px; padding:0 12px; border-radius:999px; text-decoration:none; color:#15203a; background:#edf3fc; box-shadow:4px 4px 10px rgba(127,149,179,.24), -3px -3px 10px rgba(255,255,255,.72); font-size:11px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; }
+    .filter-chip.active { background:#071b4d; color:#fff; }
+    .chart-grid { min-height:196px; display:grid; grid-auto-flow:column; grid-auto-columns:minmax(48px,1fr); gap:10px; align-items:end; margin-top:8px; }
+    .chart-col { display:grid; gap:8px; justify-items:center; align-items:end; }
+    .chart-bar { width:24px; border-radius:999px; background:linear-gradient(180deg, #92b5f1, #5f8fe0); box-shadow:0 10px 18px rgba(95,143,224,.18); }
+    .chart-bar.is-strong { background:linear-gradient(180deg, #14326d, #071b4d); }
+    .chart-meta { color:#5c78a6; font-size:10px; font-weight:700; text-align:center; }
+    .list-panel-head { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:10px; }
+    .list-count { color:#5c78a6; font-size:11px; font-weight:800; }
+    .ranking-list { display:grid; gap:8px; }
+    .ranking-row { display:grid; grid-template-columns:34px 1fr auto; gap:10px; align-items:center; min-height:44px; padding:0 12px; border-radius:10px; background:#fff; border:1px solid #edf2f8; color:#21355f; }
+    .ranking-rank { width:26px; height:26px; border-radius:50%; display:grid; place-items:center; background:#edf3fc; color:#1d3267; font-size:11px; font-weight:900; }
+    .ranking-name { font-size:12px; font-weight:800; }
+    .ranking-sub { color:#5c78a6; font-size:10px; margin-top:2px; }
+    .ranking-qty { color:#1d3267; font-size:12px; font-weight:900; }
+    .empty-rank { min-height:80px; display:grid; place-items:center; color:#5c78a6; font-size:12px; border:1px dashed #d5e1f0; border-radius:10px; }
+    .recent-table { margin-top:12px; display:grid; gap:8px; }
+    .recent-row { display:grid; grid-template-columns:1.1fr 1fr 1.1fr 1fr .8fr; gap:10px; align-items:center; min-height:42px; padding:0 14px; border-radius:10px; background:#fff; border:1px solid #edf2f8; color:#21355f; font-size:12px; }
+    .recent-row.head { background:#eaf2fd; color:#55719f; font-size:11px; font-weight:800; }
+    .status-pill { justify-self:start; padding:6px 12px; border-radius:999px; font-size:11px; font-weight:800; background:#fff0d9; color:#dc8c00; }
+    .status-pill.delivered { background:#dff6ec; color:#20a96b; }
+    .recent-pagination { display:flex; justify-content:center; align-items:center; gap:10px; flex-wrap:wrap; margin-top:16px; }
+    .recent-page-btn { min-width:58px; min-height:38px; display:inline-flex; align-items:center; justify-content:center; padding:0 18px; border-radius:999px; background:#edf3fc; box-shadow:8px 8px 18px rgba(91,117,152,.16), -6px -6px 14px rgba(255,255,255,.78); color:#15203a; text-decoration:none; font-size:12px; font-weight:900; border:0; }
+    .recent-page-btn.page-number { min-width:38px; width:38px; padding:0; }
+    .recent-page-btn.active { background:#071b4d; color:#fff; box-shadow:0 10px 20px rgba(7,27,77,.22); }
+    .recent-page-btn.disabled { color:#98a2b3; pointer-events:none; opacity:1; }
+    .quick-actions { display:grid; gap:8px; }
+    .action-pill { min-height:34px; border-radius:999px; display:grid; grid-template-columns:1fr 1fr auto; align-items:center; gap:8px; padding:0 12px; text-decoration:none; font-size:11px; font-weight:800; color:#1d3267; border:1px solid #d8e4f4; background:#fff; }
+    .action-pill.primary { background:#1d3267; color:#fff; }
+    .action-pill.blue { background:#3971d7; color:#fff; }
+    .action-pill small { font-weight:500; opacity:.85; }
+    @media (max-width: 980px) {
+      .metric-grid, .dashboard-main, .dashboard-lower { grid-template-columns:1fr; }
+      .chart-toolbar { flex-direction:column; align-items:flex-start; }
+    }
+  </style>
+</head>
+<body>
+<main class="dashboard-scene">
+  <section class="dashboard-card">
+    <%- include("partials/admin-navbar", { active: "dashboard" }) %>
+
+    <section class="admin-hero">
+      <h1>Admin Dashboard</h1>
+      <p>Track fulfilment pace, user growth, and store health from one admin control room.</p>
+    </section>
+
+    <section class="metric-grid">
+      <article class="metric-card">
+        <div class="metric-head"><span class="metric-icon users">U</span><span>Total Users</span></div>
+        <div class="metric-value"><%= Number(dashboard.stats.totalUsers || 0).toLocaleString("en-IN") %></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-head"><span class="metric-icon orders">O</span><span>Total Orders</span></div>
+        <div class="metric-value"><%= Number(dashboard.stats.totalOrders || 0).toLocaleString("en-IN") %></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-head"><span class="metric-icon revenue">R</span><span>Revenue</span></div>
+        <div class="metric-value">₹<%= Number(dashboard.stats.revenue || 0).toLocaleString("en-IN") %></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-head"><span class="metric-icon refunds">F</span><span>Refunds</span></div>
+        <div class="metric-value"><%= Number(dashboard.stats.refunds || 0).toLocaleString("en-IN") %></div>
+      </article>
+    </section>
+
+    <section class="dashboard-main">
+      <div class="dash-panel">
+        <div class="chart-toolbar">
+          <div>
+            <h2>Sales Chart</h2>
+            <p>Trend view for <%= period %> sales performance.</p>
+          </div>
+          <div class="filter-row">
+            <a href="/api/admin/dashboard?period=weekly" class="filter-chip <%= period === 'weekly' ? 'active' : '' %>">Weekly</a>
+            <a href="/api/admin/dashboard?period=monthly" class="filter-chip <%= period === 'monthly' ? 'active' : '' %>">Monthly</a>
+            <a href="/api/admin/dashboard?period=yearly" class="filter-chip <%= period === 'yearly' ? 'active' : '' %>">Yearly</a>
+          </div>
+        </div>
+
+        <%
+          const chartItems = Array.isArray(dashboard.chart) ? dashboard.chart : [];
+          const chartMax = Math.max(1, ...chartItems.map((item) => Number(item.sales || 0)));
+        %>
+        <div class="chart-grid">
+          <% chartItems.forEach((item, index) => {
+            const sales = Number(item.sales || 0);
+            const height = Math.max(28, Math.round((sales / chartMax) * 132));
+          %>
+            <div class="chart-col">
+              <div class="chart-bar <%= index === chartItems.length - 1 ? 'is-strong' : '' %>" style="height:<%= height %>px"></div>
+              <div class="chart-meta"><%= item._id %></div>
+              <div class="chart-meta">₹<%= sales.toLocaleString("en-IN") %></div>
+            </div>
+          <% }) %>
+          <% if (!chartItems.length) { %>
+            <div class="empty-rank">No chart data found.</div>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="dash-panel">
+        <h2>Recent Orders</h2>
+        <p>A quick view of order activity across latest deliveries and pending fulfilment.</p>
+        <div class="recent-table">
+          <div class="recent-row head">
+            <span>Order ID</span><span>User</span><span>Date</span><span>Status</span><span>Total</span>
+          </div>
+          <% dashboard.recentOrders.forEach((order) => { %>
+            <%
+              const amount = Number(order.grandTotal) ||
+                ((Number(order.subtotal) || 0) + (Number(order.shippingCharge) || 0) + (Number(order.tax) || 0) - (Number(order.discount) || 0));
+              const displayStatus = String(order.status || "pending").replaceAll("_", " ");
+            %>
+            <div class="recent-row">
+              <span><%= order.orderId %></span>
+              <span><%= order.user?.name || "User" %></span>
+              <span><%= order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-IN", { day:"numeric", month:"short", year:"numeric" }) : "--" %></span>
+              <span class="status-pill <%= order.status === 'delivered' ? 'delivered' : '' %>"><%= displayStatus %></span>
+              <strong>₹<%= amount %></strong>
+            </div>
+          <% }) %>
+        </div>
+
+        <% if (dashboard.recentPagination && dashboard.recentPagination.totalPages > 1) { %>
+          <nav class="recent-pagination" aria-label="Recent orders pages">
+            <%
+              const recentCurrent = dashboard.recentPagination.currentPage;
+              const recentTotal = dashboard.recentPagination.totalPages;
+              const firstVisiblePage = recentCurrent === 1 ? 1 : recentCurrent - 1;
+              const lastVisiblePage = Math.min(recentTotal, firstVisiblePage + 1);
+            %>
+            <% if (dashboard.recentPagination.hasPrev) { %>
+              <a class="recent-page-btn" href="/api/admin/dashboard?period=<%= period %>&recentPage=<%= dashboard.recentPagination.currentPage - 1 %>">Prev</a>
+            <% } else { %>
+              <span class="recent-page-btn disabled">Prev</span>
+            <% } %>
+
+            <% for (let page = firstVisiblePage; page <= lastVisiblePage; page++) { %>
+              <a
+                class="recent-page-btn page-number <%= page === recentCurrent ? 'active' : '' %>"
+                href="/api/admin/dashboard?period=<%= period %>&recentPage=<%= page %>"
+              ><%= page %></a>
+            <% } %>
+
+            <% if (dashboard.recentPagination.hasNext) { %>
+              <a class="recent-page-btn" href="/api/admin/dashboard?period=<%= period %>&recentPage=<%= dashboard.recentPagination.currentPage + 1 %>">Next</a>
+            <% } else { %>
+              <span class="recent-page-btn disabled">Next</span>
+            <% } %>
+          </nav>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="dashboard-lower">
+      <div class="dash-panel">
+        <div class="list-panel-head">
+          <div>
+            <h2>Best Selling Products</h2>
+            <p>Top 10 products by sold quantity.</p>
+          </div>
+          <span class="list-count">Top 10</span>
+        </div>
+
+        <div class="ranking-list">
+          <% if ((dashboard.bestProducts || []).length) { %>
+            <% dashboard.bestProducts.forEach((item, index) => { %>
+              <div class="ranking-row">
+                <span class="ranking-rank"><%= index + 1 %></span>
+                <div>
+                  <div class="ranking-name"><%= item._id %></div>
+                  <div class="ranking-sub">Sales ₹<%= Number(item.amount || 0).toLocaleString("en-IN") %></div>
+                </div>
+                <span class="ranking-qty"><%= item.qty %></span>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <div class="empty-rank">No product sales found.</div>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="dash-panel">
+        <div class="list-panel-head">
+          <div>
+            <h2>Best Selling Categories</h2>
+            <p>Top 10 categories by sold quantity.</p>
+          </div>
+          <span class="list-count">Top 10</span>
+        </div>
+
+        <div class="ranking-list">
+          <% if ((dashboard.bestCategories || []).length) { %>
+            <% dashboard.bestCategories.forEach((item, index) => { %>
+              <div class="ranking-row">
+                <span class="ranking-rank"><%= index + 1 %></span>
+                <div>
+                  <div class="ranking-name"><%= item._id %></div>
+                  <div class="ranking-sub">Sales ₹<%= Number(item.amount || 0).toLocaleString("en-IN") %></div>
+                </div>
+                <span class="ranking-qty"><%= item.qty %></span>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <div class="empty-rank">No category sales found.</div>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="dash-panel quick-actions">
+        <h2>Quick Actions</h2>
+        <a href="/api/admin/add-product" class="action-pill primary"><span>Add Product</span><small>Launch new listing</small><b>→</b></a>
+        <a href="/api/admin/orders" class="action-pill blue"><span>View Orders</span><small>Check pending shipments</small><b>→</b></a>
+        <a href="/api/admin/adminusermanagement" class="action-pill"><span>Manage Users</span><small>Review account status</small><b>→</b></a>
+      </div>
+    </section>
+  </section>
+</main>
+</body>
+</html>

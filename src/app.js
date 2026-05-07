@@ -29,6 +29,9 @@ import userWishlistRoutes from "../routes/user/wishlistRoute.js";
 import checkoutRoutes from "../routes/user/checkout.route.js";
 import userOrderRoutes from "../routes/user/order.route.js";
 import adminOrderRoutes from "../routes/admin/orderRoute.js";
+import adminCouponRoutes from "../routes/admin/couponRoute.js";
+import adminOfferRoutes from "../routes/admin/offerRoute.js";
+import adminReportRoutes from "../routes/admin/reportRoute.js";
 
 
 
@@ -64,6 +67,9 @@ app.use('/api/admin',blockunblock)
 app.use('/api/admin',categoryRoutes)
 app.use('/api/admin',productRoutes)
 app.use('/api/admin',adminOrderRoutes)
+app.use('/api/admin',adminCouponRoutes)
+app.use('/api/admin',adminOfferRoutes)
+app.use('/api/admin',adminReportRoutes)
 //products
 app.use('/api/user',userProductRoute)
 //user

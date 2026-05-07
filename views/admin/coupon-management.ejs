@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Coupons</title>
+  <link rel="stylesheet" href="/css/product-management.css" />
+</head>
+<body>
+<main class="dashboard-scene">
+<section class="dashboard-card">
+  <%- include("partials/admin-navbar", { active: "coupons" }) %>
+
+  <section class="hero-panel">
+    <div class="hero-copy">
+      <h1>Coupon Management</h1>
+      <p>Create and delete checkout coupons.</p>
+    </div>
+  </section>
+
+  <% if (message) { %><p class="feedback success"><%= message %></p><% } %>
+  <% if (error) { %><p class="feedback error"><%= error %></p><% } %>
+
+  <form method="POST" action="/api/admin/coupons" class="toolbar-grid">
+    <input name="code" placeholder="Code" required />
+    <select name="discountType">
+      <option value="flat">Flat</option>
+      <option value="percentage">Percentage</option>
+    </select>
+    <input name="discountValue" type="number" min="1" placeholder="Discount" required />
+    <input name="maxDiscount" type="number" min="0" placeholder="Max discount" />
+    <input name="minOrderAmount" type="number" min="0" placeholder="Min order" />
+    <input name="usageLimit" type="number" min="0" placeholder="Usage limit" />
+    <input name="expiresAt" type="date" />
+    <button class="btn btn-dark">Create</button>
+  </form>
+
+  <div class="table-wrap">
+    <table class="product-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Type</th>
+          <th>Value</th>
+          <th>Min</th>
+          <th>Used</th>
+          <th>Expiry</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+      <% coupons.forEach((coupon) => { %>
+        <tr>
+          <td><strong><%= coupon.code %></strong></td>
+          <td><%= coupon.discountType %></td>
+          <td><%= coupon.discountValue %></td>
+          <td>₹<%= coupon.minOrderAmount %></td>
+          <td><%= coupon.usedCount %>/<%= coupon.usageLimit || "∞" %></td>
+          <td><%= coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString("en-IN") : "No expiry" %></td>
+          <td>
+            <form method="POST" action="/api/admin/coupons/<%= coupon._id %>/delete">
+              <button class="btn btn-light">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+</main>
+</body>
+</html>

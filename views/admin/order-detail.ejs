@@ -112,19 +112,7 @@
 <body>
 <main class="dashboard-scene">
   <section class="dashboard-card">
-    <header class="top-strip">
-      <div class="chip-row">
-        <a href="/api/admin/dashboard" class="chip">Dashboard</a>
-        <a href="/api/admin/products" class="chip">Products</a>
-        <a href="/api/admin/category" class="chip">Categories</a>
-        <a href="/api/admin/orders" class="chip chip-dark">Orders</a>
-        <a href="/api/admin/adminusermanagement" class="chip">Users</a>
-      </div>
-
-      <form action="/api/admin/adminlogout" method="POST">
-        <button type="submit" class="logout-pill">Logout</button>
-      </form>
-    </header>
+    <%- include("partials/admin-navbar", { active: "orders" }) %>
 
     <section class="hero-panel">
       <div class="hero-copy">
