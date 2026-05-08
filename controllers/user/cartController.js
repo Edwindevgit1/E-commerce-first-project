@@ -6,6 +6,7 @@ import {
   isExpectedCartError,
   validateCartForCheckoutService
 } from "../../services/cartServices.js";
+import { validateCouponForCheckout } from "../../services/couponServices.js";
 import { placeOrderService } from "../../services/orderServices.js";
 import User from "../../models/User.js";
 import Order from "../../models/Order.js";
@@ -253,11 +254,18 @@ export const checkoutCartController = async (req, res) => {
     );
 
     const user = await User.findById(userId);
+    const couponResult = await validateCouponForCheckout(
+      req.session.checkoutCouponCode || "",
+      grandTotal
+    );
 
     return res.render("user/checkout", {
       checkoutItems,
       grandTotal,
+      coupon: couponResult.coupon,
+      couponDiscount: couponResult.discount,
       addresses: user?.addresses || [],
+      razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
       walletBalance:user?.wallet?.balance || 0,
       selectedProductIds: Array.isArray(selectedProductIds)
         ? selectedProductIds
@@ -286,17 +294,30 @@ export const placeOrderController = async (req, res) => {
     const selectedProductIds = Array.isArray(selectedCartItemIds)
       ? selectedCartItemIds
       : [selectedCartItemIds];
+    const paymentMethod = String(req.body.paymentMethod || "COD").toUpperCase();
 
     if (!selectedProductIds.length || !selectedProductIds[0]) {
       return res.redirect("/api/user/cart?error=No items selected");
     }
 
+    if (paymentMethod === "RAZORPAY") {
+      const query = selectedProductIds
+        .filter(Boolean)
+        .map((itemId) => `selectedCartItemIds=${encodeURIComponent(itemId)}`)
+        .join("&");
+      return res.redirect(
+        `/api/user/checkout?${query}&error=${encodeURIComponent("Use Razorpay popup to complete payment.")}`
+      );
+    }
+
     const order = await placeOrderService(userId, selectedProductIds, addressId,{
-      paymentMethod:req.body.paymentMethod,
-      useWallet:req.body.paymentMethod === "WALLET",
-      walletAmount:req.body.walletAmount
+      paymentMethod,
+      useWallet:paymentMethod === "WALLET",
+      walletAmount:req.body.walletAmount,
+      couponCode:req.session.checkoutCouponCode || ""
     });
 
+    req.session.checkoutCouponCode = "";
     return res.redirect(`/api/user/order-success/${order._id}`);
 
   } catch (error) {

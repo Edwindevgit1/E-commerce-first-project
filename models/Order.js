@@ -128,6 +128,24 @@ const orderSchema = new mongoose.Schema({
     enum:["pending","paid","failed"],
     default:"pending"
   },
+  razorpay:{
+    orderId:{
+      type:String,
+      default:""
+    },
+    paymentId:{
+      type:String,
+      default:""
+    },
+    signature:{
+      type:String,
+      default:""
+    },
+    paidAt:{
+      type:Date,
+      default:null
+    }
+  },
   walletAmountUsed:{
     type:Number,
     default:0
@@ -144,6 +162,10 @@ const orderSchema = new mongoose.Schema({
   discount:{
     type:Number,
     default:0
+  },
+  coupon: {
+    code: { type: String, default: "" },
+    discount: { type: Number, default: 0 }
   },
   referralOffer:{
     code:{ type:String, default:"" },

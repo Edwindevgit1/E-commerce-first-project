@@ -2,9 +2,11 @@ import Cart from "../models/Cart.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import Coupon from "../models/Coupon.js";
 import { generateOrderId } from "../utils/orderId.js";
 import { getEffectiveProductPricing } from "../utils/pricing.js";
 import { cartVariantHelpers } from "./cartServices.js";
+import { validateCouponForCheckout } from "./couponServices.js";
 import { debitWallet } from "./walletServices.js";
 
 const { buildCartItemId, getProductVariant } = cartVariantHelpers;
@@ -140,7 +142,8 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
   const orderId = await generateOrderId();
   const shippingCharge = grandTotal >= 1000 ? 0 : 50;
   const tax = 0;
-  const discount = 0;
+  const couponResult = await validateCouponForCheckout(options.couponCode || "", grandTotal);
+  const discount = couponResult.discount;
   const totalBeforeWallet = Math.max(0,grandTotal + shippingCharge + tax - discount);
   const selectedPaymentMethod = String(options.paymentMethod || "COD").toUpperCase();
   const useWalletPayment = selectedPaymentMethod === "WALLET" || options.useWallet === true;
@@ -157,8 +160,29 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
   }
 
   const remainingPayable = Math.max(0, totalBeforeWallet - requestedWalletAmount);
-  const paymentMethod = remainingPayable === 0 && requestedWalletAmount > 0 ? "WALLET" : "COD";
-  const paymentStatus = paymentMethod === "COD" ? "pending" : remainingPayable === 0 ? "paid":"pending";
+  let paymentMethod = "COD";
+  let paymentStatus = "pending";
+
+  if (selectedPaymentMethod === "WALLET") {
+    paymentMethod = "WALLET";
+    paymentStatus = remainingPayable === 0 ? "paid" : "pending";
+  } else if (selectedPaymentMethod === "RAZORPAY") {
+    paymentMethod = "RAZORPAY";
+    paymentStatus = "pending";
+  }
+
+  if (options.paymentStatus) {
+    paymentStatus = String(options.paymentStatus).toLowerCase();
+  }
+
+  const razorpayDetails = paymentMethod === "RAZORPAY"
+    ? {
+        orderId: String(options.razorpayOrderId || ""),
+        paymentId: String(options.razorpayPaymentId || ""),
+        signature: String(options.razorpaySignature || ""),
+        paidAt: paymentStatus === "paid" ? new Date() : null
+      }
+    : undefined;
 
   const order = await Order.create({
     orderId,
@@ -167,11 +191,15 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
     items: orderItems,
     subtotal: grandTotal,
     discount,
+    coupon: couponResult.coupon
+      ? { code: couponResult.coupon.code, discount }
+      : { code: "", discount: 0 },
     tax,
     shippingCharge,
     grandTotal: totalBeforeWallet,
     paymentMethod,
     paymentStatus,
+    razorpay: razorpayDetails,
     walletAmountUsed:requestedWalletAmount,
     status: "pending"
   });
@@ -183,6 +211,12 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
       await Order.findByIdAndDelete(order._id);
       throw error;
     }
+  }
+
+  if (couponResult.coupon) {
+    await Coupon.findByIdAndUpdate(couponResult.coupon._id, {
+      $inc: { usedCount: 1 }
+    });
   }
 
   await Promise.all(productsToSave.map((product) => product.save()));

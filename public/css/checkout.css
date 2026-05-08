@@ -259,6 +259,22 @@ body {
   font-size: 14px;
 }
 
+.coupon-form {
+  display: grid;
+  gap: 10px;
+}
+
+.coupon-input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #dce5f2;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: #f8fbff;
+  color: #121826;
+  font-size: 12px;
+}
+
 .summary-payment-option {
   display: grid;
   grid-template-columns: auto 1fr;

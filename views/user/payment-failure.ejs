@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Failed</title>
+  <link rel="stylesheet" href="/css/storefront-navbar.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    body { margin:0; font-family:"Sora",sans-serif; background:linear-gradient(180deg, #f7fbff 0%, #eef5ff 100%); color:#183b7a; }
+    .failure-shell { width:min(100%, 760px); margin:18px auto 40px; padding:0 14px; }
+    .failure-card { background:rgba(255,255,255,.9); border:1px solid #c8d8fb; border-radius:24px; box-shadow:0 16px 34px rgba(36,75,147,.1); padding:18px; }
+    .failure-panel { border:1px solid #c8d8fb; border-radius:20px; padding:28px 18px 22px; text-align:center; background:linear-gradient(180deg, rgba(255,255,255,.75), rgba(237,244,255,.9)); }
+    .failure-mark { width:88px; height:88px; border-radius:50%; margin:0 auto 14px; display:grid; place-items:center; font-size:42px; font-weight:800; background:#ffe7e5; color:#c33b2f; }
+    h1 { margin:0 0 10px; font-size:32px; color:#244b93; }
+    .subtitle { max-width:540px; margin:0 auto 20px; font-size:14px; line-height:1.6; color:#5f7fb8; }
+    .action-row { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
+    .failure-btn { min-width:170px; padding:12px 16px; border-radius:14px; border:1px solid #c8d8fb; background:#fff; color:#244b93; font-weight:700; text-decoration:none; font-size:13px; }
+    .failure-btn--primary { background:#244b93; color:#fff; border-color:#244b93; }
+  </style>
+</head>
+<body>
+  <%- include("partials/storefront-navbar") %>
+  <main class="failure-shell">
+    <section class="failure-card">
+      <div class="failure-panel">
+        <div class="failure-mark">!</div>
+        <h1>Payment Failed</h1>
+        <p class="subtitle"><%= message %></p>
+        <div class="action-row">
+          <a href="<%= retryUrl %>" class="failure-btn failure-btn--primary">Retry Payment</a>
+          <a href="/api/user/cart" class="failure-btn">Back to Cart</a>
+          <a href="/api/user/products" class="failure-btn">Continue Shopping</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

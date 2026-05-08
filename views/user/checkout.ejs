@@ -22,7 +22,7 @@
       ? selectedProductIds
       : [selectedProductIds].filter(Boolean);
     const subtotal = Number(grandTotal) || 0;
-    const discount = 0;
+    const discount = Number(couponDiscount || 0) || 0;
     const tax = 0;
     const shipping = subtotal >= 1000 ? 0 : 50;
     const finalTotal = subtotal + shipping + tax - discount;
@@ -39,7 +39,7 @@
   <main class="checkout-page">
     <header class="checkout-header">
       <h1>Checkout</h1>
-      <p>Choose your delivery address, review your products, and place your Cash on Delivery order.</p>
+      <p>Choose your delivery address, review your products, apply coupon, and pay with COD, wallet, or Razorpay.</p>
     </header>
 
     <section class="checkout-grid">
@@ -138,6 +138,35 @@
           <strong>₹<%= subtotal %></strong>
         </div>
 
+        <section class="summary-payment">
+          <h3>Coupon</h3>
+          <% if (coupon) { %>
+            <form method="POST" action="/api/user/checkout/coupon/remove">
+              <% selectedItems.forEach(function(itemId) { %>
+                <input type="hidden" name="selectedCartItemIds" value="<%= itemId %>" />
+              <% }); %>
+              <div class="summary-row">
+                <span><%= coupon.code %></span>
+                <strong>- ₹<%= discount %></strong>
+              </div>
+              <button type="submit" class="checkout-submit">Remove Coupon</button>
+            </form>
+          <% } else { %>
+            <form method="POST" action="/api/user/checkout/coupon/apply" class="coupon-form">
+              <% selectedItems.forEach(function(itemId) { %>
+                <input type="hidden" name="selectedCartItemIds" value="<%= itemId %>" />
+              <% }); %>
+              <input type="text" name="couponCode" class="coupon-input" placeholder="Enter coupon code" required />
+              <button type="submit" class="checkout-submit">Apply Coupon</button>
+            </form>
+          <% } %>
+        </section>
+
+        <div class="summary-row">
+          <span>Discount</span>
+          <strong>- ₹<%= discount %></strong>
+        </div>
+
         <div class="summary-row">
           <span>Tax</span>
           <strong>₹<%= tax %></strong>
@@ -167,6 +196,19 @@
             <span>
               <strong>Cash on Delivery</strong>
               <small>Pay when your order is delivered.</small>
+            </span>
+          </label>
+
+          <label class="summary-payment-option">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="RAZORPAY"
+              form="placeOrderForm"
+            />
+            <span>
+              <strong>Razorpay</strong>
+              <small>Pay online using card, UPI, or net banking.</small>
             </span>
           </label>
 
@@ -200,6 +242,7 @@
         <button
           type="submit"
           form="placeOrderForm"
+          id="placeOrderButton"
           class="checkout-submit"
           <%= !savedAddresses.length ? "disabled" : "" %>
         >
@@ -210,5 +253,85 @@
   </main>
 
   <%- include("partials/site-footer") %>
+  <% if (razorpayKeyId) { %>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <% } %>
+  <script>
+    (() => {
+      const form = document.getElementById("placeOrderForm");
+      const button = document.getElementById("placeOrderButton");
+      if (!form || !button) return;
+
+      form.addEventListener("submit", async (event) => {
+        const paymentInput = document.querySelector('input[name="paymentMethod"]:checked');
+        const paymentMethod = paymentInput ? paymentInput.value : "COD";
+
+        if (paymentMethod !== "RAZORPAY") return;
+
+        event.preventDefault();
+
+        try {
+          button.disabled = true;
+          button.textContent = "Starting payment...";
+
+          const formData = new FormData(form);
+          const response = await fetch("/api/user/checkout/razorpay/create-order", {
+            method: "POST",
+            body: new URLSearchParams(formData)
+          });
+          const payload = await response.json();
+
+          if (!response.ok || !payload.success) {
+            throw new Error(payload.message || "Unable to create Razorpay order");
+          }
+
+          const razorpay = new Razorpay({
+            key: payload.key,
+            amount: payload.amount,
+            currency: payload.currency,
+            order_id: payload.orderId,
+            name: "Nike Store",
+            description: "Checkout Payment",
+            handler: async function (paymentResponse) {
+              const verifyResponse = await fetch("/api/user/checkout/razorpay/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(paymentResponse)
+              });
+              const verifyPayload = await verifyResponse.json();
+
+              if (verifyPayload.success) {
+                window.location.href = verifyPayload.redirectUrl;
+                return;
+              }
+
+              window.location.href = verifyPayload.redirectUrl || "/api/user/payment-failure";
+            },
+            modal: {
+              ondismiss: function () {
+                window.location.href = "/api/user/payment-failure?message="
+                  + encodeURIComponent("Payment cancelled. Please try again.")
+                  + "&retryUrl="
+                  + encodeURIComponent("<%= checkoutRedirectUrl %>");
+              }
+            },
+            theme: {
+              color: "#0a2052"
+            }
+          });
+
+          razorpay.open();
+        } catch (error) {
+          window.location.href = "/api/user/payment-failure?message="
+            + encodeURIComponent(error.message || "Unable to start payment")
+            + "&retryUrl="
+            + encodeURIComponent("<%= checkoutRedirectUrl %>");
+        } finally {
+          button.disabled = false;
+          button.textContent = "Place Order";
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

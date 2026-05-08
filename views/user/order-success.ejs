@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Order Successful</title>
+  <title>Payment Successful</title>
   <link rel="stylesheet" href="/css/storefront-navbar.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -62,6 +62,26 @@
       font-size: clamp(34px, 5vw, 48px);
       font-weight: 800;
       margin: 0 auto 14px;
+    }
+    .statement-box {
+      margin: 0 auto 20px;
+      max-width: 560px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--panel-border);
+      background: rgba(255,255,255,0.95);
+      text-align: left;
+    }
+    .statement-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 10px;
+      color: var(--text-soft);
+      font-size: 13px;
+    }
+    .statement-row strong {
+      color: var(--accent);
     }
     h1 {
       margin: 0 0 10px;
@@ -150,15 +170,29 @@
 </head>
 <body>
   <%- include("partials/storefront-navbar") %>
+  <%
+    const isOnlinePaid = order.paymentMethod === "RAZORPAY" || order.paymentMethod === "WALLET";
+    const pageTitle = isOnlinePaid ? "Payment successful" : "Order placed successfully";
+    const pageSubtitle = isOnlinePaid
+      ? "Thank you! Your payment is confirmed and your order is now being prepared for shipment."
+      : "Thank you! Your order is confirmed and will be collected as cash on delivery.";
+  %>
 
   <main class="success-shell">
     <section class="success-card">
       <div class="success-panel">
         <div class="checkmark">✓</div>
-        <h1>Order successful</h1>
+        <h1><%= pageTitle %></h1>
         <p class="subtitle">
-          Thank you! Your order has been placed successfully and is now being prepared for shipment.
+          <%= pageSubtitle %>
         </p>
+
+        <div class="statement-box">
+          <div class="statement-row"><span>Order Total</span><strong>₹<%= Number(order.grandTotal || 0).toLocaleString("en-IN") %></strong></div>
+          <div class="statement-row"><span>Payment Method</span><strong><%= order.paymentMethod %></strong></div>
+          <div class="statement-row"><span>Payment Status</span><strong><%= order.paymentStatus %></strong></div>
+          <div class="statement-row"><span>Order Status</span><strong><%= order.status %></strong></div>
+        </div>
 
         <div class="meta-row">
           <div class="meta-pill">

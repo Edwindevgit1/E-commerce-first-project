@@ -55,3 +55,39 @@ export const listCouponsService = async () => {
 export const deleteCouponService = async (id) => {
   return Coupon.findByIdAndDelete(id);
 };
+
+export const validateCouponForCheckout = async (code = "", subtotal = 0) => {
+  const normalizedCode = normalizeCode(code);
+  const orderSubtotal = Number(subtotal) || 0;
+
+  if (!normalizedCode) {
+    return { coupon: null, discount: 0 };
+  }
+
+  const coupon = await Coupon.findOne({ code: normalizedCode });
+
+  if (!coupon) {
+    throw new Error("Invalid coupon code");
+  }
+
+  if (!coupon.isActive) {
+    throw new Error("Coupon is inactive");
+  }
+
+  if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+    throw new Error("Coupon expired");
+  }
+
+  if (Number(coupon.minOrderAmount || 0) > orderSubtotal) {
+    throw new Error(`Coupon requires minimum order amount of Rs. ${Number(coupon.minOrderAmount || 0)}`);
+  }
+
+  if (Number(coupon.usageLimit || 0) > 0 && Number(coupon.usedCount || 0) >= Number(coupon.usageLimit || 0)) {
+    throw new Error("Coupon usage limit reached");
+  }
+
+  return {
+    coupon,
+    discount: calculateCouponDiscount(coupon, orderSubtotal)
+  };
+};

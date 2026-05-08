@@ -21,5 +21,11 @@ router.post("/cart/update-ajax/:productId",updateCartQuantityAjaxController)
 router.post("/cart/checkout", checkoutCartController)
 router.post("/cart/place-order", placeOrderController);
 router.get("/order-success/:orderId", noCache, getOrderSuccessController);
+router.get("/payment-failure", noCache, (req, res) => {
+  res.render("user/payment-failure", {
+    message: req.query.message || "Payment failed or was cancelled.",
+    retryUrl: req.query.retryUrl || "/api/user/cart"
+  });
+});
 
 export default router
