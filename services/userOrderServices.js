@@ -83,11 +83,13 @@ export const cancelOrderService = async (userId, orderId, reason = "") => {
 
   for (const item of order.items) {
     if (["cancelled", "cancellation_requested"].includes(item.status) || item.cancellationRejected) continue;
-    item.status = item.status === "shipped" ? "cancellation_requested" : "cancelled";
+    const needsAdminApproval = item.status === "shipped";
+    item.status = needsAdminApproval ? "cancellation_requested" : "cancelled";
     item.cancellationReason = reason || "";
     item.stockRestored = false;
     item.restockVerifiedAt = null;
-    if (item.status === "cancelled") {
+    if (!needsAdminApproval) {
+      await restockOrderItem(item);
       item.refundAmount = item.refundAmount || item.subtotal;
       item.refundedAt = item.refundedAt || new Date();
     }
@@ -114,8 +116,10 @@ export const cancelOrderService = async (userId, orderId, reason = "") => {
     ? Number(order.walletAmountUsed || 0)
     : Math.max(Number(order.grandTotal || 0), Number(order.walletAmountUsed || 0));
     await refundCancelledOrder(order,fullRefundAmount,"Refund for cancelled order");
-  } else {
+  } else if (hasCancellationRequest) {
     order.refundStatus = "pending";
+  } else {
+    order.refundStatus = order.paymentMethod === "COD" ? "none" : "refunded";
   }
   await order.save();
 
@@ -147,6 +151,7 @@ export const cancelOrderItemService = async (userId, orderId, itemIndex, reason 
   item.restockVerifiedAt = null;
 
   if (!needsAdminApproval) {
+    await restockOrderItem(item);
     item.refundAmount = item.refundAmount || item.subtotal;
     item.refundedAt = item.refundedAt || new Date();
     const itemRefundAmount = order.paymentMethod === "COD"
@@ -163,6 +168,12 @@ export const cancelOrderItemService = async (userId, orderId, itemIndex, reason 
   } else {
     order.status = "partially_cancelled";
   }
+
+  order.refundStatus = needsAdminApproval
+    ? "pending"
+    : order.paymentMethod === "COD"
+      ? "none"
+      : "refunded";
 
   await order.save();
   return order;

@@ -8,6 +8,7 @@ import { getEffectiveProductPricing } from "../utils/pricing.js";
 import { cartVariantHelpers } from "./cartServices.js";
 import { validateCouponForCheckout } from "./couponServices.js";
 import { debitWallet } from "./walletServices.js";
+import { processReferralRewardForOrder } from "./referralOfferServices.js";
 
 const { buildCartItemId, getProductVariant } = cartVariantHelpers;
 const MAX_CART_QUANTITY = 5;
@@ -226,6 +227,8 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
   );
 
   await cart.save();
+
+  await processReferralRewardForOrder(userId, order);
 
   return order;
 };

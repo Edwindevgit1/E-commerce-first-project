@@ -58,6 +58,30 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "/images/avatar.png"
     },
+    referral: {
+      code: {
+        type: String,
+        default: ""
+      },
+      offer: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ReferralOffer",
+        default: null
+      },
+      claimedAt: {
+        type: Date,
+        default: null
+      },
+      rewardedAt: {
+        type: Date,
+        default: null
+      },
+      rewardedOrder: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Order",
+        default: null
+      }
+    },
     wallet: {
       balance: {
         type: Number,

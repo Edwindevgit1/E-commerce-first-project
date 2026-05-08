@@ -7,15 +7,37 @@ const referralOfferSchema = new mongoose.Schema(
       required: true,
       trim: true
     },
-    token: {
+    code: {
       type: String,
+      required: true,
       unique: true,
-      default: () => new mongoose.Types.ObjectId().toString()
+      uppercase: true,
+      trim: true
     },
     rewardAmount: {
       type: Number,
       required: true,
       min: 1
+    },
+    minPurchase: {
+      type: Number,
+      default: 100,
+      min: 100
+    },
+    usageLimit: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    usedCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    message: {
+      type: String,
+      default: "",
+      trim: true
     },
     isActive: {
       type: Boolean,

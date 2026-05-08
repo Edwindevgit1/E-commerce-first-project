@@ -117,13 +117,17 @@
     <div class="panel-head">
       <div>
         <h2>Referral Offers</h2>
-        <p>Use referral code or token URL in signup flow.</p>
+        <p>Use referral code in signup flow.</p>
       </div>
     </div>
 
     <form method="POST" action="/api/admin/offers/referral" class="toolbar-grid">
       <input name="title" placeholder="Referral title" required />
+      <input name="code" placeholder="Referral code" required />
       <input name="rewardAmount" type="number" min="1" placeholder="Wallet reward amount" required />
+      <input name="minPurchase" type="number" min="100" placeholder="Minimum purchase" required />
+      <input name="usageLimit" type="number" min="0" placeholder="Usage limit (0 = unlimited)" />
+      <input name="message" placeholder="Message for user side" />
       <select name="isActive">
         <option value="true">Active</option>
         <option value="false">Inactive</option>
@@ -136,20 +140,40 @@
         <thead>
           <tr>
             <th>Title</th>
+            <th>Code</th>
             <th>Reward</th>
+            <th>Min Purchase</th>
+            <th>Usage</th>
+            <th>Message</th>
             <th>Status</th>
-            <th>Code URL Example</th>
-            <th>Token URL Example</th>
+            <th>Signup Example</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
           <% referralOffers.forEach((offer) => { %>
             <tr>
-              <td><%= offer.title %></td>
-              <td>₹<%= offer.rewardAmount %></td>
-              <td><%= offer.isActive ? "Active" : "Inactive" %></td>
-              <td>/api/auth/signup?ref=USERCODE</td>
-              <td>/api/auth/signup?token=<%= offer.token || offer._id %></td>
+              <td><input form="referral-edit-<%= offer._id %>" name="title" value="<%= offer.title %>" class="search-input" required /></td>
+              <td><input form="referral-edit-<%= offer._id %>" name="code" value="<%= offer.code || '' %>" class="search-input" required /></td>
+              <td><input form="referral-edit-<%= offer._id %>" name="rewardAmount" type="number" min="1" value="<%= offer.rewardAmount %>" class="search-input" required /></td>
+              <td><input form="referral-edit-<%= offer._id %>" name="minPurchase" type="number" min="100" value="<%= offer.minPurchase || 100 %>" class="search-input" required /></td>
+              <td><%= Number(offer.usedCount || 0) %>/<%= Number(offer.usageLimit || 0) > 0 ? offer.usageLimit : "∞" %><input form="referral-edit-<%= offer._id %>" name="usageLimit" type="number" min="0" value="<%= offer.usageLimit || 0 %>" class="search-input" /></td>
+              <td><input form="referral-edit-<%= offer._id %>" name="message" value="<%= offer.message || '' %>" class="search-input" placeholder="Message" /></td>
+              <td>
+                  <select form="referral-edit-<%= offer._id %>" name="isActive" class="search-input">
+                    <option value="true" <%= offer.isActive ? 'selected' : '' %>>Active</option>
+                    <option value="false" <%= !offer.isActive ? 'selected' : '' %>>Inactive</option>
+                  </select>
+              </td>
+              <td>/api/auth/register?ref=<%= offer.code || "CODE" %></td>
+              <td style="display:flex;gap:8px;">
+                  <form id="referral-edit-<%= offer._id %>" method="POST" action="/api/admin/offers/referral/<%= offer._id %>">
+                    <button class="btn btn-dark" type="submit">Save</button>
+                  </form>
+                  <form method="POST" action="/api/admin/offers/referral/<%= offer._id %>/delete">
+                    <button class="btn btn-light" type="submit">Delete</button>
+                  </form>
+              </td>
             </tr>
           <% }) %>
         </tbody>

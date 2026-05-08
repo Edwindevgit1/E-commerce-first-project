@@ -1,5 +1,6 @@
 import express from 'express'
 import User from '../../models/User.js'
+import ReferralOffer from '../../models/ReferralOffer.js'
 import fs from 'fs'
 import path from 'path'
 
@@ -47,6 +48,7 @@ router.get('/wallet', async (req, res) => {
   try {
     const user = await User.findById(req.session.user.id)
       .populate('wallet.transactions.order', 'orderId')
+      .populate('referral.offer')
 
     if (!user) {
       req.session.destroy()
@@ -79,10 +81,19 @@ router.get('/wallet', async (req, res) => {
       lastAdded: Number(creditTransactions[0]?.amount || 0)
     }
 
+    const activeReferralOffers = await ReferralOffer.find({
+      isActive: true
+    })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .lean()
+
     res.render('user/wallet', {
       user,
       wallet,
       stats,
+      activeReferralOffers,
+      claimedReferralOffer: user.referral?.offer || null,
       transactions: transactions.slice(startIndex, startIndex + pageSize),
       pagination: {
         currentPage,

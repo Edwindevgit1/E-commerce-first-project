@@ -1,6 +1,8 @@
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
+import { creditWallet } from "../services/walletServices.js";
+import { getActiveReferralOfferByCode } from "../services/referralOfferServices.js";
 
 const OTP_COOLDOWN_SECONDS = 30;
 const OTP_EXPIRY_MS = OTP_COOLDOWN_SECONDS * 1000;
@@ -38,9 +40,12 @@ const renderSignupOtp = (req, res, options = {}, statusCode = 200) =>
     retryAfter: getSignupOtpRetryAfter(req),
   });
 
+const normalizeReferralCode = (value = "") => String(value || "").trim().toUpperCase();
+
 const signupUser = async (req, res) => {
   try {
     const { name, email, password, confirmPassword } = req.body;
+    const referralCode = normalizeReferralCode(req.body.referralCode || req.query.ref || "");
 
     const trimmedName = name?.trim();
     const trimmedEmail = email?.trim();
@@ -53,6 +58,7 @@ const signupUser = async (req, res) => {
         error: "All fields are required",
         name: trimmedName,
         email: trimmedEmail,
+        referralCode
       });
     }
 
@@ -62,6 +68,7 @@ const signupUser = async (req, res) => {
         error: emailError,
         name: trimmedName,
         email: trimmedEmail,
+        referralCode
       });
     }
 
@@ -70,6 +77,7 @@ const signupUser = async (req, res) => {
         error: "Passwords do not match",
         name: trimmedName,
         email: trimmedEmail,
+        referralCode
       });
     }
 
@@ -79,7 +87,12 @@ const signupUser = async (req, res) => {
         error: "Password must contain 8 character, 1 uppercase, 1 lowercase, 1 special character",
         name: trimmedName,
         email: trimmedEmail,
+        referralCode
       });
+    }
+
+    if (referralCode) {
+      await getActiveReferralOfferByCode(referralCode);
     }
 
     const existingUser = await User.findOne({ email: trimmedEmail });
@@ -90,6 +103,7 @@ const signupUser = async (req, res) => {
           error: "This account is blocked. You cannot sign up with this email.",
           name: trimmedName,
           email: trimmedEmail,
+          referralCode
         });
       }
       if (existingUser.provider === "google") {
@@ -97,6 +111,7 @@ const signupUser = async (req, res) => {
           error: "Account exists. Please login using Google.",
           name: trimmedName,
           email: trimmedEmail,
+          referralCode
         });
       }
 
@@ -104,6 +119,7 @@ const signupUser = async (req, res) => {
         error: "User already exists please login",
         name: trimmedName,
         email: trimmedEmail,
+        referralCode
       });
     }
 
@@ -118,7 +134,8 @@ const signupUser = async (req, res) => {
       name: trimmedName,
       email: trimmedEmail,
       password: hashedPassword,
-      provider:"local"
+      provider:"local",
+      referralCode
     };
 
     await transporter.sendMail({
@@ -130,17 +147,24 @@ const signupUser = async (req, res) => {
     return res.redirect("/api/auth/signupotp");
   } catch (error) {
     console.error(error, "signup error");
-    return res.render("user/signup", { error: "Registration failed" });
+    return res.render("user/signup", {
+      error: error.message || "Registration failed",
+      name: req.body?.name?.trim?.() || "",
+      email: req.body?.email?.trim?.() || "",
+      referralCode: normalizeReferralCode(req.body?.referralCode || req.query.ref || "")
+    });
   }
 };
 export const getSignupPage=(req,res)=>{
   if(req.session.signupData){
     return res.redirect('/api/auth/signupotp')
   }
+  const referralCode = normalizeReferralCode(req.query.ref || "");
   res.render('user/signup', {
     error: req.query.error || null,
     name: "",
-    email: ""
+    email: "",
+    referralCode
   })
 }
 
@@ -217,7 +241,7 @@ export const verifySignupOtp = async (req, res) => {
         error: "Invalid OTP.",
       }, 400);
     }
-    const { name, email, password ,provider} = req.session.signupData;
+    const { name, email, password ,provider, referralCode } = req.session.signupData;
 
     const existing = await User.findOne({ email });
     if (existing) {
@@ -228,12 +252,23 @@ export const verifySignupOtp = async (req, res) => {
       });
     }
 
+    const referralOffer = referralCode
+      ? await getActiveReferralOfferByCode(referralCode)
+      : null;
+
     await User.create({
       name,
       email,
       password, 
       provider,
       isVerified: true,
+      referral: referralOffer
+        ? {
+            code: referralCode,
+            offer: referralOffer._id,
+            claimedAt: new Date()
+          }
+        : undefined
     });
     delete req.session.signupOtp;
     delete req.session.signupOtpExpiry;
@@ -272,7 +307,9 @@ export const googleAuthCallback = async (req, res) => {
     const email = googleUser.email.toLowerCase();
     const name = googleUser.name;
     const googleAuthIntent = req.session.googleAuthIntent === "signup" ? "signup" : "login";
+    const referralCode = normalizeReferralCode(req.session.googleSignupReferralCode || "");
     delete req.session.googleAuthIntent;
+    delete req.session.googleSignupReferralCode;
 
     const existingUser = await User.findOne({ email });
 
@@ -304,12 +341,23 @@ export const googleAuthCallback = async (req, res) => {
       );
     }
 
-    const user = await User.create({
+    const referralOffer = referralCode
+      ? await getActiveReferralOfferByCode(referralCode)
+      : null;
+
+    await User.create({
       name,
       email,
       googleId: googleUser.googleId || null,
       provider: "google",
       isVerified: true,
+      referral: referralOffer
+        ? {
+            code: referralCode,
+            offer: referralOffer._id,
+            claimedAt: new Date()
+          }
+        : undefined
     });
 
     delete req.session.signupOtp;

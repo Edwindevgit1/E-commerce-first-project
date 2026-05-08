@@ -15,6 +15,9 @@ next()
 
 router.get("/google", (req, res, next) => {
   req.session.googleAuthIntent = req.query.intent === "signup" ? "signup" : "login";
+  req.session.googleSignupReferralCode = req.query.intent === "signup"
+    ? String(req.query.ref || "").trim().toUpperCase()
+    : "";
   next();
 },
   passport.authenticate("google", {

@@ -187,11 +187,15 @@ export const updateAdminOrderStatusService = async (id, status) => {
 
   if (status === "cancelled") {
     for (const item of order.items) {
-      if (item.status !== "cancelled") {
-        item.status = "cancelled";
-        item.stockRestored = false;
-        item.restockVerifiedAt = null;
+      if (item.status === "cancelled") continue;
+
+      if (!item.stockRestored && !["return_requested", "returned"].includes(item.status)) {
+        await restockOrderItem(item);
+        item.stockRestored = true;
+        item.restockVerifiedAt = new Date();
       }
+
+      item.status = "cancelled";
     }
     order.status = "cancelled";
     await order.save();
