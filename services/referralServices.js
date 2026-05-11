@@ -1,6 +1,5 @@
 import User from "../models/User.js";
-import ReferralOffer from "../models/ReferralOffer.js";
-import ReferralConfig from "../models/ReferralConfig.js";
+import ReferralSettings from "../models/ReferralSettings.js";
 import { creditWallet } from "./walletServices.js";
 
 const normalizeReferralCode = (value = "") =>
@@ -42,155 +41,223 @@ export const ensureUserReferralCode = async (user) => {
   return user.referralCode;
 };
 
-export const getReferralConfig = async () => {
-  let config = await ReferralConfig.findOne({ key: "global" });
-  if (!config) {
-    config = await ReferralConfig.create({ key: "global" });
+export const getReferralSettings = async () => {
+  let settings = await ReferralSettings.findOne({ key: "global" });
+
+  if (!settings) {
+    settings = await ReferralSettings.create({ key: "global" });
   }
-  return config;
+
+  return settings;
 };
 
-export const updateReferralConfig = async (updates = {}) => {
-  const config = await getReferralConfig();
-  if (typeof updates.signupEnabled === "boolean") {
-    config.signupEnabled = updates.signupEnabled;
+export const updateReferralSettings = async (updates = {}) => {
+  const settings = await getReferralSettings();
+
+  if (typeof updates.referrerReward === "number") {
+    settings.referrerReward = Math.max(0, updates.referrerReward);
   }
-  if (typeof updates.profileVisible === "boolean") {
-    config.profileVisible = updates.profileVisible;
+
+  if (typeof updates.newUserReward === "number") {
+    settings.newUserReward = Math.max(0, updates.newUserReward);
   }
-  await config.save();
-  return config;
-};
 
-export const clearAllUserReferralCodes = async () =>
-  User.updateMany(
-    {},
-    {
-      $unset: {
-        referralCode: "",
-        referredBy: "",
-        referredByCode: "",
-        referralOffer: "",
-        referralOfferTitle: "",
-        referralOfferMessage: "",
-        referralRewardAmount: "",
-        referralMinPurchase: "",
-        referralRewardedAt: "",
-        referralRewardedOrder: "",
-        referrerRewardedAt: ""
-      }
-    }
-  );
+  if (typeof updates.minimumPurchase === "number") {
+    settings.minimumPurchase = Math.max(100, updates.minimumPurchase);
+  }
 
-const isUsageLimitReached = (offer) =>
-  Number(offer?.usageLimit || 0) > 0 &&
-  Number(offer?.usedCount || 0) >= Number(offer?.usageLimit || 0);
+  if (typeof updates.referralEnabled === "boolean") {
+    settings.referralEnabled = updates.referralEnabled;
+  }
 
-export const getActiveReferralOffers = async () =>
-  ReferralOffer.find({ isActive: true }).sort({ createdAt: -1 }).lean();
+  if (typeof updates.referralDisplayEnabled === "boolean") {
+    settings.referralDisplayEnabled = updates.referralDisplayEnabled;
+  }
 
-export const getCurrentActiveReferralOffer = async () => {
-  const offers = await ReferralOffer.find({ isActive: true }).sort({ createdAt: -1 });
-  return offers.find((offer) => !isUsageLimitReached(offer)) || null;
+  await settings.save();
+  return settings;
 };
 
 export const findReferrerByCode = async (code = "") => {
   const referralCode = normalizeReferralCode(code);
   if (!referralCode) return null;
 
-  const referrer = await User.findOne({ referralCode: referralCode, isVerified: true });
+  const referrer = await User.findOne({
+    referralCode,
+    isVerified: true
+  });
+
   if (!referrer) {
     throw new Error("Invalid referral code");
+  }
+
+  if (referrer.isBlocked || referrer.referralSuspended) {
+    throw new Error("Referral account unavailable");
   }
 
   return referrer;
 };
 
-export const validateReferralSignup = async (code = "") => {
-  const config = await getReferralConfig();
-  if (!config.signupEnabled) {
-    throw new Error("Referral signup is disabled now");
+export const validateReferralSignup = async (code = "", email = "") => {
+  const referralCode = normalizeReferralCode(code);
+  if (!referralCode) return null;
+
+  const settings = await getReferralSettings();
+  if (!settings.referralEnabled) {
+    throw new Error("Referral system is disabled now");
   }
 
-  const referrer = await findReferrerByCode(code);
-  const activeOffer = await getCurrentActiveReferralOffer();
+  const referrer = await findReferrerByCode(referralCode);
 
-  if (!activeOffer) {
-    throw new Error("No active referral offer available now");
+  if (email && String(referrer.email || "").toLowerCase() === String(email || "").toLowerCase()) {
+    throw new Error("Self referral is not allowed");
   }
 
-  return { referrer, activeOffer };
+  return { referrer, settings };
 };
 
-export const rewardReferrerAfterSignup = async (newUser) => {
-  if (!newUser?.referredBy || newUser?.referrerRewardedAt) {
+export const rewardReferrerAfterSignup = async (userId) => {
+  const [user, settings] = await Promise.all([
+    User.findById(userId).populate("referredBy"),
+    getReferralSettings()
+  ]);
+
+  if (!user || !user.referredBy || user.referrerRewardCreditedAt) {
     return null;
   }
 
-  const rewardAmount = Math.max(0, Number(newUser.referralRewardAmount) || 0);
-  if (!rewardAmount) {
+  if (!settings.referralEnabled) {
+    return null;
+  }
+
+  const referrer = user.referredBy;
+  if (!referrer || referrer.isBlocked || referrer.referralSuspended) {
+    return null;
+  }
+
+  const referrerReward = Math.max(0, Number(settings.referrerReward || 0));
+  if (referrerReward <= 0) {
     return null;
   }
 
   await creditWallet(
-    newUser.referredBy,
-    rewardAmount,
-    `Referral reward for ${newUser.name} signup`,
+    referrer._id,
+    referrerReward,
+    "Referral reward",
     null
   );
 
-  newUser.referrerRewardedAt = new Date();
-  await newUser.save();
+  user.referrerRewardGranted = referrerReward;
+  user.referrerRewardCreditedAt = new Date();
+  await user.save();
 
-  if (newUser.referralOffer) {
-    await ReferralOffer.findByIdAndUpdate(newUser.referralOffer, {
-      $inc: { usedCount: 1 }
-    });
-  }
-
-  return newUser;
+  return user;
 };
 
-export const rewardReferredUserAfterFirstOrder = async (userId, order) => {
-  const user = await User.findById(userId);
-  if (!user || !user.referredBy || user.referralRewardedAt) {
+export const processReferralRewardsAfterFirstOrder = async (userId, order) => {
+  const [user, settings] = await Promise.all([
+    User.findById(userId).populate("referredBy"),
+    getReferralSettings()
+  ]);
+
+  if (!user || !user.referredBy || user.referralRewardClaimed) {
+    return null;
+  }
+
+  if (!settings.referralEnabled) {
+    return null;
+  }
+
+  const referrer = user.referredBy;
+  if (!referrer || referrer.isBlocked || referrer.referralSuspended) {
     return null;
   }
 
   const orderAmount = Number(order?.grandTotal || 0);
-  const minimumOrder = Math.max(100, Number(user.referralMinPurchase || 100));
-  if (orderAmount < minimumOrder) {
+  const minimumPurchase = Math.max(100, Number(settings.minimumPurchase || 100));
+
+  if (orderAmount < minimumPurchase) {
     return null;
   }
 
-  const rewardAmount = Math.max(0, Number(user.referralRewardAmount) || 0);
-  if (!rewardAmount) return null;
+  const newUserReward = Math.max(0, Number(settings.newUserReward || 0));
 
-  await creditWallet(
-    user._id,
-    rewardAmount,
-    "Referral reward after first successful order",
-    order?._id || null
-  );
+  if (newUserReward > 0) {
+    await creditWallet(
+      user._id,
+      newUserReward,
+      "Signup referral bonus",
+      order?._id || null
+    );
+  }
 
-  user.referralRewardedAt = new Date();
-  user.referralRewardedOrder = order?._id || null;
+  user.referralRewardClaimed = true;
+  user.referralRewardClaimedAt = new Date();
+  user.referralRewardOrder = order?._id || null;
+  user.newUserRewardGranted = newUserReward;
+  await user.save();
+
+  return user;
+};
+
+export const buildReferralMeta = (user, settings, referralLink = "") => ({
+  code: user?.referralCode || "",
+  referralLink,
+  referrerReward: Math.max(0, Number(settings?.referrerReward || 0)),
+  newUserReward: Math.max(0, Number(settings?.newUserReward || 0)),
+  minimumPurchase: Math.max(100, Number(settings?.minimumPurchase || 100)),
+  enabled: Boolean(settings?.referralEnabled),
+  displayEnabled: Boolean(settings?.referralDisplayEnabled),
+  pendingReward: Boolean(user?.referredBy && !user?.referralRewardClaimed),
+  suspended: Boolean(user?.referralSuspended)
+});
+
+export const resetUserReferralState = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  await ensureUserReferralCode(user);
+  user.referredBy = null;
+  user.referralRewardClaimed = false;
+  user.referralRewardClaimedAt = null;
+  user.referralRewardOrder = null;
+  user.referrerRewardGranted = 0;
+  user.referrerRewardCreditedAt = null;
+  user.newUserRewardGranted = 0;
+  user.referralSuspended = false;
+  user.referralSuspendedAt = null;
   await user.save();
   return user;
 };
 
-export const buildReferralWalletMessage = (user) => {
-  if (!user) return null;
+export const regenerateUserReferralCode = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
 
-  return {
-    code: user.referralCode || "",
-    referrerReward: Math.max(0, Number(user.referralRewardAmount || 0)),
-    newUserReward: Math.max(0, Number(user.referralRewardAmount || 0)),
-    minimumOrder: Math.max(100, Number(user.referralMinPurchase || 100)),
-    pendingFirstOrderReward: Boolean(user.referredBy && !user.referralRewardedAt),
-    assignedOfferTitle: user.referralOfferTitle || "",
-    assignedOfferMessage: user.referralOfferMessage || ""
-  };
+  user.referralCode = await generateUniqueReferralCode(user.name || "USER");
+  await user.save();
+  return user;
 };
+
+export const suspendUserReferral = async (userId, suspended = true) => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  await ensureUserReferralCode(user);
+  user.referralSuspended = suspended;
+  user.referralSuspendedAt = suspended ? new Date() : null;
+  await user.save();
+  return user;
+};
+
+export const getReferralActivity = async () =>
+  User.find({ referredBy: { $ne: null } })
+    .populate("referredBy", "name email referralCode")
+    .populate("referralRewardOrder", "orderId grandTotal")
+    .select(
+      "name email referralCode referredBy referralRewardClaimed referralRewardClaimedAt referralRewardOrder referrerRewardGranted referrerRewardCreditedAt newUserRewardGranted createdAt referralSuspended"
+    )
+    .sort({ createdAt: -1 })
+    .lean();
 
 export { normalizeReferralCode };

@@ -1,4 +1,10 @@
 import User from "../models/User.js";
+import {
+  ensureUserReferralCode,
+  regenerateUserReferralCode,
+  resetUserReferralState,
+  suspendUserReferral
+} from "../services/referralServices.js";
 
 const buildPagination = (currentPage, totalPages) => {
   const items = [];
@@ -47,6 +53,8 @@ export const getUserManagement = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
+    await Promise.all(users.map((user) => ensureUserReferralCode(user)));
+
     res.render("admin/usermanagement", {
       users,
       admin: req.admin,
@@ -58,5 +66,45 @@ export const getUserManagement = async (req, res) => {
   } catch (error) {
     console.log(error, "pagination error in the admin usermanagement controller");
     res.redirect("/api/admin/adminusermanagement");
+  }
+};
+
+export const resetUserReferralController = async (req, res) => {
+  try {
+    await resetUserReferralState(req.params.id);
+    return res.redirect("/api/admin/adminusermanagement");
+  } catch (error) {
+    console.log(error, "reset user referral error");
+    return res.redirect("/api/admin/adminusermanagement");
+  }
+};
+
+export const regenerateUserReferralCodeController = async (req, res) => {
+  try {
+    await regenerateUserReferralCode(req.params.id);
+    return res.redirect("/api/admin/adminusermanagement");
+  } catch (error) {
+    console.log(error, "regenerate user referral code error");
+    return res.redirect("/api/admin/adminusermanagement");
+  }
+};
+
+export const suspendUserReferralController = async (req, res) => {
+  try {
+    await suspendUserReferral(req.params.id, true);
+    return res.redirect("/api/admin/adminusermanagement");
+  } catch (error) {
+    console.log(error, "suspend user referral error");
+    return res.redirect("/api/admin/adminusermanagement");
+  }
+};
+
+export const resumeUserReferralController = async (req, res) => {
+  try {
+    await suspendUserReferral(req.params.id, false);
+    return res.redirect("/api/admin/adminusermanagement");
+  } catch (error) {
+    console.log(error, "resume user referral error");
+    return res.redirect("/api/admin/adminusermanagement");
   }
 };

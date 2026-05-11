@@ -70,49 +70,40 @@ const userSchema = new mongoose.Schema(
       ref: "User",
       default: null
     },
-    referredByCode: {
-      type: String,
-      default: "",
-      uppercase: true,
-      trim: true
+    referralSuspended: {
+      type: Boolean,
+      default: false
     },
-    referralOffer: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "ReferralOffer",
-      default: null
-    },
-    referralOfferTitle: {
-      type: String,
-      default: "",
-      trim: true
-    },
-    referralOfferMessage: {
-      type: String,
-      default: "",
-      trim: true
-    },
-    referralRewardAmount: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    referralMinPurchase: {
-      type: Number,
-      default: 100,
-      min: 0
-    },
-    referralRewardedAt: {
+    referralSuspendedAt: {
       type: Date,
       default: null
     },
-    referralRewardedOrder: {
+    referralRewardClaimed: {
+      type: Boolean,
+      default: false
+    },
+    referralRewardClaimedAt: {
+      type: Date,
+      default: null
+    },
+    referralRewardOrder: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Order",
       default: null
     },
-    referrerRewardedAt: {
+    referrerRewardGranted: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    referrerRewardCreditedAt: {
       type: Date,
       default: null
+    },
+    newUserRewardGranted: {
+      type: Number,
+      default: 0,
+      min: 0
     },
     wallet: {
       balance: {

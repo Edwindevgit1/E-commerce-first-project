@@ -9,13 +9,17 @@
 <section class="dashboard-card">
   <%
     const offerFilters = filters || {};
+    const sectionPages = paginations || {};
+    const productPager = sectionPages.products || { currentPage: 1, totalPages: 1, hasPrev: false, hasNext: false };
+    const categoryPager = sectionPages.categories || { currentPage: 1, totalPages: 1, hasPrev: false, hasNext: false };
+    const referralPager = sectionPages.referralActivity || { currentPage: 1, totalPages: 1, hasPrev: false, hasNext: false };
   %>
   <%- include("partials/admin-navbar", { active: "offers" }) %>
 
   <section class="hero-panel">
     <div class="hero-copy">
       <h1>Offer Module</h1>
-      <p>Product offer, category offer, referral offer.</p>
+      <p>Product offer, category offer, referral settings.</p>
     </div>
   </section>
 
@@ -106,6 +110,18 @@
         </tbody>
       </table>
     </div>
+
+    <% if (productPager.totalPages > 1) { %>
+      <div class="pagination">
+        <% if (productPager.hasPrev) { %>
+          <a class="page-btn" href="/api/admin/offers?productSearch=<%= encodeURIComponent(offerFilters.productSearch || '') %>&productSort=<%= encodeURIComponent(offerFilters.productSort || 'newest') %>&categorySearch=<%= encodeURIComponent(offerFilters.categorySearch || '') %>&categorySort=<%= encodeURIComponent(offerFilters.categorySort || 'az') %>&productPage=<%= productPager.currentPage - 1 %>&categoryPage=<%= categoryPager.currentPage %>&referralPage=<%= referralPager.currentPage %>">Prev</a>
+        <% } %>
+        <span class="page-btn active"><%= productPager.currentPage %></span>
+        <% if (productPager.hasNext) { %>
+          <a class="page-btn" href="/api/admin/offers?productSearch=<%= encodeURIComponent(offerFilters.productSearch || '') %>&productSort=<%= encodeURIComponent(offerFilters.productSort || 'newest') %>&categorySearch=<%= encodeURIComponent(offerFilters.categorySearch || '') %>&categorySort=<%= encodeURIComponent(offerFilters.categorySort || 'az') %>&productPage=<%= productPager.currentPage + 1 %>&categoryPage=<%= categoryPager.currentPage %>&referralPage=<%= referralPager.currentPage %>">Next</a>
+        <% } %>
+      </div>
+    <% } %>
   </section>
 
   <section class="content-panel">
@@ -176,127 +192,166 @@
         </tbody>
       </table>
     </div>
-  </section>
 
-  <section class="content-panel">
-    <div class="panel-head">
-      <div>
-        <h2>User Referral Code Control</h2>
-        <p>Control user-side profile code display and signup referral usage.</p>
-      </div>
-    </div>
-
-    <form method="POST" action="/api/admin/offers/referral-control" class="toolbar-grid">
-      <select name="signupEnabled">
-        <option value="true" <%= referralConfig?.signupEnabled ? 'selected' : '' %>>Referral signup enabled</option>
-        <option value="false" <%= !referralConfig?.signupEnabled ? 'selected' : '' %>>Referral signup disabled</option>
-      </select>
-      <select name="profileVisible">
-        <option value="true" <%= referralConfig?.profileVisible ? 'selected' : '' %>>Show user referral code in profile</option>
-        <option value="false" <%= !referralConfig?.profileVisible ? 'selected' : '' %>>Hide user referral code in profile</option>
-      </select>
-      <button class="btn btn-dark" type="submit">Save Referral Control</button>
-    </form>
-
-    <form method="POST" action="/api/admin/offers/referral-control/clear-users" style="margin-top:12px;">
-      <button class="btn btn-light" type="submit" onclick="return confirm('Clear referral code data for all users?')">Clear All User Referral Codes</button>
-    </form>
-  </section>
-
-  <section class="content-panel">
-    <div class="panel-head">
-      <div>
-        <h2>Referral Offers</h2>
-        <p>Control running referral campaigns for user referral codes.</p>
-      </div>
-    </div>
-
-    <div class="controls-form">
-      <form method="GET" action="/api/admin/offers" class="search-bar">
-        <input type="text" name="referralSearch" placeholder="Search referral title or message" value="<%= offerFilters.referralSearch || '' %>" />
-        <input type="hidden" name="referralSort" value="<%= offerFilters.referralSort || 'newest' %>" />
-        <input type="hidden" name="productSearch" value="<%= offerFilters.productSearch || '' %>" />
-        <input type="hidden" name="productSort" value="<%= offerFilters.productSort || 'newest' %>" />
-        <input type="hidden" name="categorySearch" value="<%= offerFilters.categorySearch || '' %>" />
-        <input type="hidden" name="categorySort" value="<%= offerFilters.categorySort || 'az' %>" />
-        <button type="submit" class="btn btn-dark">Search</button>
-        <% if (offerFilters.referralSearch) { %>
-          <a href="/api/admin/offers?referralSort=<%= encodeURIComponent(offerFilters.referralSort || 'newest') %>&productSearch=<%= encodeURIComponent(offerFilters.productSearch || '') %>&productSort=<%= encodeURIComponent(offerFilters.productSort || 'newest') %>&categorySearch=<%= encodeURIComponent(offerFilters.categorySearch || '') %>&categorySort=<%= encodeURIComponent(offerFilters.categorySort || 'az') %>" class="btn btn-light">Clear</a>
+    <% if (categoryPager.totalPages > 1) { %>
+      <div class="pagination">
+        <% if (categoryPager.hasPrev) { %>
+          <a class="page-btn" href="/api/admin/offers?productSearch=<%= encodeURIComponent(offerFilters.productSearch || '') %>&productSort=<%= encodeURIComponent(offerFilters.productSort || 'newest') %>&categorySearch=<%= encodeURIComponent(offerFilters.categorySearch || '') %>&categorySort=<%= encodeURIComponent(offerFilters.categorySort || 'az') %>&productPage=<%= productPager.currentPage %>&categoryPage=<%= categoryPager.currentPage - 1 %>&referralPage=<%= referralPager.currentPage %>">Prev</a>
         <% } %>
-      </form>
+        <span class="page-btn active"><%= categoryPager.currentPage %></span>
+        <% if (categoryPager.hasNext) { %>
+          <a class="page-btn" href="/api/admin/offers?productSearch=<%= encodeURIComponent(offerFilters.productSearch || '') %>&productSort=<%= encodeURIComponent(offerFilters.productSort || 'newest') %>&categorySearch=<%= encodeURIComponent(offerFilters.categorySearch || '') %>&categorySort=<%= encodeURIComponent(offerFilters.categorySort || 'az') %>&productPage=<%= productPager.currentPage %>&categoryPage=<%= categoryPager.currentPage + 1 %>&referralPage=<%= referralPager.currentPage %>">Next</a>
+        <% } %>
+      </div>
+    <% } %>
+  </section>
 
-      <form method="GET" action="/api/admin/offers" class="sort-row">
-        <label for="referralSort">Sort by</label>
-        <input type="hidden" name="referralSearch" value="<%= offerFilters.referralSearch || '' %>" />
-        <input type="hidden" name="productSearch" value="<%= offerFilters.productSearch || '' %>" />
-        <input type="hidden" name="productSort" value="<%= offerFilters.productSort || 'newest' %>" />
-        <input type="hidden" name="categorySearch" value="<%= offerFilters.categorySearch || '' %>" />
-        <input type="hidden" name="categorySort" value="<%= offerFilters.categorySort || 'az' %>" />
-        <select id="referralSort" name="referralSort" class="sort-select">
-          <option value="newest" <%= offerFilters.referralSort === 'newest' ? 'selected' : '' %>>Newest First</option>
-          <option value="oldest" <%= offerFilters.referralSort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
-          <option value="az" <%= offerFilters.referralSort === 'az' ? 'selected' : '' %>>A → Z</option>
-          <option value="za" <%= offerFilters.referralSort === 'za' ? 'selected' : '' %>>Z → A</option>
-          <option value="reward_low" <%= offerFilters.referralSort === 'reward_low' ? 'selected' : '' %>>Reward Low to High</option>
-          <option value="reward_high" <%= offerFilters.referralSort === 'reward_high' ? 'selected' : '' %>>Reward High to Low</option>
-        </select>
-        <button type="submit" class="btn btn-light">Apply Sort</button>
-      </form>
+  <section class="content-panel">
+    <div class="panel-head">
+      <div>
+        <h2>Referral Settings</h2>
+        <p>One global referral system for signup and first successful order rewards.</p>
+      </div>
     </div>
 
-    <form method="POST" action="/api/admin/offers/referral" class="toolbar-grid">
-      <input name="title" placeholder="Referral title" required />
-      <input name="rewardAmount" type="number" min="1" placeholder="Wallet reward amount" required />
-      <input name="minPurchase" type="number" min="100" placeholder="Minimum purchase" required />
-      <input name="usageLimit" type="number" min="0" placeholder="Usage limit (0 = unlimited)" />
-      <input name="message" placeholder="Message for user side" />
-      <select name="isActive">
-        <option value="true">Active</option>
-        <option value="false">Inactive</option>
+    <form method="POST" action="/api/admin/offers/referral-settings" class="toolbar-grid">
+      <input
+        name="referrerReward"
+        type="number"
+        min="0"
+        placeholder="Referrer reward"
+        value="<%= Number(referralSettings?.referrerReward || 0) %>"
+        required
+      />
+      <input
+        name="newUserReward"
+        type="number"
+        min="0"
+        placeholder="New user reward"
+        value="<%= Number(referralSettings?.newUserReward || 0) %>"
+        required
+      />
+      <input
+        name="minimumPurchase"
+        type="number"
+        min="100"
+        placeholder="Minimum purchase"
+        value="<%= Number(referralSettings?.minimumPurchase || 100) %>"
+        required
+      />
+      <select name="referralEnabled">
+        <option value="true" <%= referralSettings?.referralEnabled ? 'selected' : '' %>>Referral enabled</option>
+        <option value="false" <%= !referralSettings?.referralEnabled ? 'selected' : '' %>>Referral disabled</option>
       </select>
-      <button class="btn btn-dark">Create Referral Offer</button>
+      <select name="referralDisplayEnabled">
+        <option value="true" <%= referralSettings?.referralDisplayEnabled !== false ? 'selected' : '' %>>Show code and link to users</option>
+        <option value="false" <%= referralSettings?.referralDisplayEnabled === false ? 'selected' : '' %>>Hide code and link from users</option>
+      </select>
+      <button class="btn btn-dark" type="submit">Save Referral Settings</button>
     </form>
 
     <div class="table-wrap">
       <table class="product-table">
         <thead>
           <tr>
-            <th>Title</th>
-            <th>Reward</th>
-            <th>Min Purchase</th>
-            <th>Usage</th>
-            <th>Message</th>
-            <th>Status</th>
-            <th>Action</th>
+            <th>Setting</th>
+            <th>Current Value</th>
           </tr>
         </thead>
         <tbody>
-          <% referralOffers.forEach((offer) => { %>
+          <tr>
+            <td><strong>Referrer reward</strong></td>
+            <td>₹<%= Number(referralSettings?.referrerReward || 0).toLocaleString("en-IN") %></td>
+          </tr>
+          <tr>
+            <td><strong>New user reward</strong></td>
+            <td>₹<%= Number(referralSettings?.newUserReward || 0).toLocaleString("en-IN") %></td>
+          </tr>
+          <tr>
+            <td><strong>Minimum purchase</strong></td>
+            <td>₹<%= Number(referralSettings?.minimumPurchase || 100).toLocaleString("en-IN") %></td>
+          </tr>
+          <tr>
+            <td><strong>Status</strong></td>
+            <td><%= referralSettings?.referralEnabled ? "Enabled" : "Disabled" %></td>
+          </tr>
+          <tr>
+            <td><strong>Code and link display</strong></td>
+            <td><%= referralSettings?.referralDisplayEnabled === false ? "Hidden" : "Visible" %></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="content-panel">
+    <div class="panel-head">
+      <div>
+        <h2>Referral Activity</h2>
+        <p>Admin can see who referred who and reward status.</p>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th>New User</th>
+            <th>Referred By</th>
+            <th>Referrer Reward</th>
+            <th>New User Reward</th>
+            <th>Status</th>
+            <th>Order</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!referralActivity || !referralActivity.length) { %>
             <tr>
-              <td><input form="referral-edit-<%= offer._id %>" name="title" value="<%= offer.title %>" class="search-input" required /></td>
-              <td><input form="referral-edit-<%= offer._id %>" name="rewardAmount" type="number" min="1" value="<%= offer.rewardAmount %>" class="search-input" required /></td>
-              <td><input form="referral-edit-<%= offer._id %>" name="minPurchase" type="number" min="100" value="<%= offer.minPurchase || 100 %>" class="search-input" required /></td>
-              <td><%= Number(offer.usedCount || 0) %>/<%= Number(offer.usageLimit || 0) > 0 ? offer.usageLimit : "∞" %><input form="referral-edit-<%= offer._id %>" name="usageLimit" type="number" min="0" value="<%= offer.usageLimit || 0 %>" class="search-input" /></td>
-              <td><input form="referral-edit-<%= offer._id %>" name="message" value="<%= offer.message || '' %>" class="search-input" placeholder="Message" /></td>
+              <td colspan="6">No referral activity yet.</td>
+            </tr>
+          <% } %>
+          <% (referralActivity || []).forEach((item) => { %>
+            <tr>
               <td>
-                  <select form="referral-edit-<%= offer._id %>" name="isActive" class="search-input">
-                    <option value="true" <%= offer.isActive ? 'selected' : '' %>>Active</option>
-                    <option value="false" <%= !offer.isActive ? 'selected' : '' %>>Inactive</option>
-                  </select>
+                <strong><%= item.name %></strong><br />
+                <span><%= item.email %></span>
               </td>
-              <td style="display:flex;gap:8px;">
-                  <form id="referral-edit-<%= offer._id %>" method="POST" action="/api/admin/offers/referral/<%= offer._id %>">
-                    <button class="btn btn-dark" type="submit">Save</button>
-                  </form>
-                  <form method="POST" action="/api/admin/offers/referral/<%= offer._id %>/delete">
-                    <button class="btn btn-light" type="submit">Delete</button>
-                  </form>
+              <td>
+                <% if (item.referredBy) { %>
+                  <strong><%= item.referredBy.name %></strong><br />
+                  <span><%= item.referredBy.email %></span>
+                <% } else { %>
+                  --
+                <% } %>
+              </td>
+              <td>₹<%= Number(item.referrerRewardGranted || 0).toLocaleString("en-IN") %></td>
+              <td>₹<%= Number(item.newUserRewardGranted || 0).toLocaleString("en-IN") %></td>
+              <td><%= item.referralRewardClaimed ? "Rewarded" : "Pending first order" %></td>
+              <td>
+                <% if (item.referralRewardOrder?.orderId) { %>
+                  <strong><%= item.referralRewardOrder.orderId %></strong><br />
+                  <span>₹<%= Number(item.referralRewardOrder.grandTotal || 0).toLocaleString("en-IN") %></span>
+                <% } else { %>
+                  --
+                <% } %>
               </td>
             </tr>
           <% }) %>
         </tbody>
       </table>
     </div>
+
+    <% if (referralPager.totalPages > 1) { %>
+      <div class="pagination">
+        <% if (referralPager.hasPrev) { %>
+          <a class="page-btn" href="/api/admin/offers?productSearch=<%= encodeURIComponent(offerFilters.productSearch || '') %>&productSort=<%= encodeURIComponent(offerFilters.productSort || 'newest') %>&categorySearch=<%= encodeURIComponent(offerFilters.categorySearch || '') %>&categorySort=<%= encodeURIComponent(offerFilters.categorySort || 'az') %>&productPage=<%= productPager.currentPage %>&categoryPage=<%= categoryPager.currentPage %>&referralPage=<%= referralPager.currentPage - 1 %>">Prev</a>
+        <% } %>
+        <span class="page-btn active"><%= referralPager.currentPage %></span>
+        <% if (referralPager.hasNext) { %>
+          <a class="page-btn" href="/api/admin/offers?productSearch=<%= encodeURIComponent(offerFilters.productSearch || '') %>&productSort=<%= encodeURIComponent(offerFilters.productSort || 'newest') %>&categorySearch=<%= encodeURIComponent(offerFilters.categorySearch || '') %>&categorySort=<%= encodeURIComponent(offerFilters.categorySort || 'az') %>&productPage=<%= productPager.currentPage %>&categoryPage=<%= categoryPager.currentPage %>&referralPage=<%= referralPager.currentPage + 1 %>">Next</a>
+        <% } %>
+      </div>
+    <% } %>
   </section>
 </section>
 </main>

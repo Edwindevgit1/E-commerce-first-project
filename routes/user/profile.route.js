@@ -3,10 +3,9 @@ import User from '../../models/User.js'
 import fs from 'fs'
 import path from 'path'
 import {
-  buildReferralWalletMessage,
+  buildReferralMeta,
   ensureUserReferralCode,
-  getActiveReferralOffers,
-  getReferralConfig
+  getReferralSettings
 } from '../../services/referralServices.js'
 
 const router = express.Router()
@@ -16,6 +15,9 @@ const sumTransactions = (transactions, predicate) =>
     if (!predicate(transaction)) return total
     return total + (Number(transaction.amount) || 0)
   }, 0)
+
+const buildReferralLink = (req, referralCode = "") =>
+  `${req.protocol}://${req.get("host")}/api/auth/register?ref=${encodeURIComponent(referralCode || "")}`
 
 router.get('/profile', async (req, res) => {
 
@@ -27,17 +29,24 @@ router.get('/profile', async (req, res) => {
   }
   try {
     const user = await User.findById(req.session.user.id)
-    const referralConfig = await getReferralConfig()
+    const referralSettings = await getReferralSettings()
 
     if (!user) {
       req.session.destroy()
       return res.redirect('/api/auth/login')
     }
 
-    if (referralConfig.profileVisible) {
+    if (referralSettings.referralDisplayEnabled !== false) {
       await ensureUserReferralCode(user)
     }
-    res.render('user/profile', { user, referralConfig })
+    res.render('user/profile', {
+      user,
+      referralSettings,
+      referralLink:
+        referralSettings.referralDisplayEnabled === false
+          ? ""
+          : buildReferralLink(req, user.referralCode)
+    })
 
   } catch (error) {
     console.log("Profile load error:", error)
@@ -55,11 +64,11 @@ router.get('/wallet', async (req, res) => {
   }
 
   try {
-    const [user, referralConfig] = await Promise.all([
+    const [user, referralSettings] = await Promise.all([
       User.findById(req.session.user.id)
       .populate('wallet.transactions.order', 'orderId')
       .populate('referredBy', 'name referralCode'),
-      getReferralConfig()
+      getReferralSettings()
     ])
 
     if (!user) {
@@ -67,7 +76,7 @@ router.get('/wallet', async (req, res) => {
       return res.redirect('/api/auth/login')
     }
 
-    if (referralConfig.profileVisible) {
+    if (referralSettings.referralDisplayEnabled !== false) {
       await ensureUserReferralCode(user)
     }
 
@@ -97,17 +106,18 @@ router.get('/wallet', async (req, res) => {
       lastAdded: Number(creditTransactions[0]?.amount || 0)
     }
 
-    const [activeReferralOffers] = await Promise.all([
-      getActiveReferralOffers(),
-    ])
-
     res.render('user/wallet', {
       user,
       wallet,
       stats,
-      referralMeta: buildReferralWalletMessage(user),
-      activeReferralOffers,
-      referralConfig,
+      referralMeta: buildReferralMeta(
+        user,
+        referralSettings,
+        referralSettings.referralDisplayEnabled === false
+          ? ""
+          : buildReferralLink(req, user.referralCode)
+      ),
+      referralSettings,
       transactions: transactions.slice(startIndex, startIndex + pageSize),
       pagination: {
         currentPage,

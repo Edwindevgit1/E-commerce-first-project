@@ -63,7 +63,7 @@
             <input id="email" name="email" type="text" placeholder="Email address" value="<%= email || '' %>"  />
           </div>
 
-          <% if (typeof referralConfig === "undefined" || referralConfig.signupEnabled) { %>
+          <% if (typeof referralSettings === "undefined" || referralSettings.referralEnabled) { %>
             <label for="referralCode" class="sr-only">Referral code</label>
             <div class="field field-dark">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -102,7 +102,7 @@
 
           <button type="submit" class="primary-btn">Create account</button>
 
-          <a href="/api/auth/google?intent=signup<%= (typeof referralConfig === 'undefined' || referralConfig.signupEnabled) && referralCode ? '&ref=' + encodeURIComponent(referralCode) : '' %>" class="google-btn">
+          <a href="/api/auth/google?intent=signup<%= (typeof referralSettings === 'undefined' || referralSettings.referralEnabled) && referralCode ? '&ref=' + encodeURIComponent(referralCode) : '' %>" class="google-btn">
             <span class="google-mark" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="20" height="20" role="img" aria-label="Google">
                 <path

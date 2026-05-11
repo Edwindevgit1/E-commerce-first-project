@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
 import {
   generateUniqueReferralCode,
-  getReferralConfig,
+  getReferralSettings,
   normalizeReferralCode,
   rewardReferrerAfterSignup,
   validateReferralSignup
@@ -49,6 +49,7 @@ const signupUser = async (req, res) => {
   try {
     const { name, email, password, confirmPassword } = req.body;
     const referralCode = normalizeReferralCode(req.body.referralCode || req.query.ref || "");
+    const referralSettings = await getReferralSettings();
 
     const trimmedName = name?.trim();
     const trimmedEmail = email?.trim();
@@ -61,7 +62,8 @@ const signupUser = async (req, res) => {
         error: "All fields are required",
         name: trimmedName,
         email: trimmedEmail,
-        referralCode
+        referralCode,
+        referralSettings
       });
     }
 
@@ -71,7 +73,8 @@ const signupUser = async (req, res) => {
         error: emailError,
         name: trimmedName,
         email: trimmedEmail,
-        referralCode
+        referralCode,
+        referralSettings
       });
     }
 
@@ -80,7 +83,8 @@ const signupUser = async (req, res) => {
         error: "Passwords do not match",
         name: trimmedName,
         email: trimmedEmail,
-        referralCode
+        referralCode,
+        referralSettings
       });
     }
 
@@ -90,13 +94,15 @@ const signupUser = async (req, res) => {
         error: "Password must contain 8 character, 1 uppercase, 1 lowercase, 1 special character",
         name: trimmedName,
         email: trimmedEmail,
-        referralCode
+        referralCode,
+        referralSettings
       });
     }
 
-    const referralSetup = referralCode ? await validateReferralSignup(referralCode) : null;
+    const referralSetup = referralCode
+      ? await validateReferralSignup(referralCode, trimmedEmail)
+      : null;
     const referrer = referralSetup?.referrer || null;
-    const activeReferralOffer = referralSetup?.activeOffer || null;
 
     const existingUser = await User.findOne({ email: trimmedEmail });
     
@@ -106,7 +112,8 @@ const signupUser = async (req, res) => {
           error: "This account is blocked. You cannot sign up with this email.",
           name: trimmedName,
           email: trimmedEmail,
-          referralCode
+          referralCode,
+          referralSettings
         });
       }
       if (existingUser.provider === "google") {
@@ -114,7 +121,8 @@ const signupUser = async (req, res) => {
           error: "Account exists. Please login using Google.",
           name: trimmedName,
           email: trimmedEmail,
-          referralCode
+          referralCode,
+          referralSettings
         });
       }
 
@@ -122,7 +130,8 @@ const signupUser = async (req, res) => {
         error: "User already exists please login",
         name: trimmedName,
         email: trimmedEmail,
-        referralCode
+        referralCode,
+        referralSettings
       });
     }
 
@@ -139,12 +148,7 @@ const signupUser = async (req, res) => {
       password: hashedPassword,
       provider:"local",
       referralCode,
-      referredBy: referrer?._id || null,
-      referralOffer: activeReferralOffer?._id || null,
-      referralOfferTitle: activeReferralOffer?.title || "",
-      referralOfferMessage: activeReferralOffer?.message || "",
-      referralRewardAmount: Number(activeReferralOffer?.rewardAmount || 0),
-      referralMinPurchase: Math.max(100, Number(activeReferralOffer?.minPurchase || 100))
+      referredBy: referrer?._id || null
     };
 
     await transporter.sendMail({
@@ -160,7 +164,8 @@ const signupUser = async (req, res) => {
       error: error.message || "Registration failed",
       name: req.body?.name?.trim?.() || "",
       email: req.body?.email?.trim?.() || "",
-      referralCode: normalizeReferralCode(req.body?.referralCode || req.query.ref || "")
+      referralCode: normalizeReferralCode(req.body?.referralCode || req.query.ref || ""),
+      referralSettings: await getReferralSettings().catch(() => ({ referralEnabled: true }))
     });
   }
 };
@@ -169,18 +174,18 @@ export const getSignupPage=(req,res)=>{
     return res.redirect('/api/auth/signupotp')
   }
   const referralCode = normalizeReferralCode(req.query.ref || "");
-  getReferralConfig().then((referralConfig) => res.render('user/signup', {
+  getReferralSettings().then((referralSettings) => res.render('user/signup', {
     error: req.query.error || null,
     name: "",
     email: "",
     referralCode,
-    referralConfig
+    referralSettings
   })).catch(() => res.render('user/signup', {
     error: req.query.error || null,
     name: "",
     email: "",
     referralCode,
-    referralConfig: { signupEnabled: true }
+    referralSettings: { referralEnabled: true }
   }))
 }
 
@@ -263,20 +268,18 @@ export const verifySignupOtp = async (req, res) => {
       password,
       provider,
       referralCode,
-      referredBy,
-      referralOffer,
-      referralOfferTitle,
-      referralOfferMessage,
-      referralRewardAmount,
-      referralMinPurchase
+      referredBy
     } = req.session.signupData;
 
     const existing = await User.findOne({ email });
     if (existing) {
+      const referralSettings = await getReferralSettings().catch(() => ({ referralEnabled: true }));
       return res.status(400).render("user/signup", {
         error: "User already exists. Please login.",
         name,
         email,
+        referralCode,
+        referralSettings
       });
     }
 
@@ -288,15 +291,9 @@ export const verifySignupOtp = async (req, res) => {
       isVerified: true,
       referralCode: await generateUniqueReferralCode(name),
       referredBy: referredBy || null,
-      referredByCode: referralCode || "",
-      referralOffer: referralOffer || null,
-      referralOfferTitle: referralOfferTitle || "",
-      referralOfferMessage: referralOfferMessage || "",
-      referralRewardAmount: Number(referralRewardAmount || 0),
-      referralMinPurchase: Math.max(100, Number(referralMinPurchase || 100))
+      referralRewardClaimed: false
     });
-
-    await rewardReferrerAfterSignup(createdUser);
+    await rewardReferrerAfterSignup(createdUser._id);
     delete req.session.signupOtp;
     delete req.session.signupOtpExpiry;
     delete req.session.otpLastSentAt;
@@ -368,9 +365,10 @@ export const googleAuthCallback = async (req, res) => {
       );
     }
 
-    const referralSetup = referralCode ? await validateReferralSignup(referralCode) : null;
+    const referralSetup = referralCode
+      ? await validateReferralSignup(referralCode, email)
+      : null;
     const referrer = referralSetup?.referrer || null;
-    const activeReferralOffer = referralSetup?.activeOffer || null;
 
     const createdUser = await User.create({
       name,
@@ -380,15 +378,9 @@ export const googleAuthCallback = async (req, res) => {
       isVerified: true,
       referralCode: await generateUniqueReferralCode(name),
       referredBy: referrer?._id || null,
-      referredByCode: referralCode || "",
-      referralOffer: activeReferralOffer?._id || null,
-      referralOfferTitle: activeReferralOffer?.title || "",
-      referralOfferMessage: activeReferralOffer?.message || "",
-      referralRewardAmount: Number(activeReferralOffer?.rewardAmount || 0),
-      referralMinPurchase: Math.max(100, Number(activeReferralOffer?.minPurchase || 100))
+      referralRewardClaimed: false
     });
-
-    await rewardReferrerAfterSignup(createdUser);
+    await rewardReferrerAfterSignup(createdUser._id);
 
     delete req.session.signupOtp;
     delete req.session.signupOtpExpiry;

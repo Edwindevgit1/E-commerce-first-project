@@ -53,6 +53,8 @@ value="<%= search || '' %>"
 <% } %>
 
 <th>Total</th>
+<th>Referral Code</th>
+<th>Referral</th>
 <th>Actions</th>
 </tr>
 </thead>
@@ -61,7 +63,7 @@ value="<%= search || '' %>"
 
 <% if (users.length === 0) { %>
 <tr>
-<td colspan="<%= admin && admin.role === 'superadmin' ? 6 : 5 %>" class="empty-cell">No users found</td>
+<td colspan="<%= admin && admin.role === 'superadmin' ? 8 : 7 %>" class="empty-cell">No users found</td>
 </tr>
 <% } %>
 
@@ -85,16 +87,26 @@ value="<%= search || '' %>"
 
 <td>₹0</td>
 
+<td><%= user.referralCode || '--' %></td>
+
+<td>
+  <% if (user.referralSuspended) { %>
+    <span class="status blocked">Suspended</span>
+  <% } else { %>
+    <span class="status active">Enabled</span>
+  <% } %>
+</td>
+
 <td>
 <div class="action-row">
 
   <% if (admin && (admin.role === "admin" || admin.role === "superadmin")) { %>
     <% if (!user.isBlocked) { %>
-      <form action="/api/admin/adminusermanagement/block/<%= user._id %>" method="POST" onsubmit="return confirm('Block this user?')">
+      <form action="/api/admin/adminusermanagement/block/<%= user._id %>" method="POST" class="js-confirm-form" data-confirm-title="Block User" data-confirm-message="Block this user?">
         <button class="btn btn-danger" type="submit">Block</button>
       </form>
     <% } else { %>
-      <form action="/api/admin/adminusermanagement/unblock/<%= user._id %>" method="POST" onsubmit="return confirm('Unblock this user?')">
+      <form action="/api/admin/adminusermanagement/unblock/<%= user._id %>" method="POST" class="js-confirm-form" data-confirm-title="Unblock User" data-confirm-message="Unblock this user?">
         <button class="btn btn-success" type="submit">Unblock</button>
       </form>
     <% } %>
@@ -102,16 +114,34 @@ value="<%= search || '' %>"
 
   <% if (admin && admin.role === "superadmin") { %>
     <% if (user.role === "user") { %>
-      <form action="/api/admin/makeadmin/<%= user._id %>" method="POST" onsubmit="return confirm('Promote this user to admin?')">
+      <form action="/api/admin/makeadmin/<%= user._id %>" method="POST" class="js-confirm-form" data-confirm-title="Make Admin" data-confirm-message="Promote this user to admin?">
         <button class="btn btn-dark" type="submit">Make Admin</button>
       </form>
     <% } %>
 
     <% if (user.role === "admin") { %>
-      <form action="/api/admin/removeadmin/<%= user._id %>" method="POST" onsubmit="return confirm('Remove admin privileges?')">
+      <form action="/api/admin/removeadmin/<%= user._id %>" method="POST" class="js-confirm-form" data-confirm-title="Remove Admin" data-confirm-message="Remove admin privileges?">
         <button class="btn btn-light" type="submit">Remove Admin</button>
       </form>
     <% } %>
+  <% } %>
+
+  <form action="/api/admin/adminusermanagement/referral/<%= user._id %>/reset" method="POST" class="js-confirm-form" data-confirm-title="Reset Referral State" data-confirm-message="Reset referral reward state for this user?">
+    <button class="btn btn-light" type="submit">Reset State</button>
+  </form>
+
+  <form action="/api/admin/adminusermanagement/referral/<%= user._id %>/regenerate" method="POST" class="js-confirm-form" data-confirm-title="Regenerate Referral Code" data-confirm-message="Regenerate referral code for this user?">
+    <button class="btn btn-dark" type="submit">Regen Code</button>
+  </form>
+
+  <% if (!user.referralSuspended) { %>
+    <form action="/api/admin/adminusermanagement/referral/<%= user._id %>/suspend" method="POST" class="js-confirm-form" data-confirm-title="Suspend Referral" data-confirm-message="Suspend referral account for this user?">
+      <button class="btn btn-danger" type="submit">Suspend Ref</button>
+    </form>
+  <% } else { %>
+    <form action="/api/admin/adminusermanagement/referral/<%= user._id %>/resume" method="POST" class="js-confirm-form" data-confirm-title="Resume Referral" data-confirm-message="Resume referral account for this user?">
+      <button class="btn btn-success" type="submit">Resume Ref</button>
+    </form>
   <% } %>
 
 </div>
@@ -157,12 +187,66 @@ href="/api/admin/adminusermanagement?page=<%= currentPage + 1 %><%= search ? '&s
 </section>
 </main>
 
+<div class="admin-modal-backdrop" id="adminConfirmModal" aria-hidden="true">
+  <div class="admin-modal-box" role="dialog" aria-modal="true" aria-labelledby="adminConfirmTitle">
+    <h3 id="adminConfirmTitle">Confirm Action</h3>
+    <p id="adminConfirmText">Are you sure?</p>
+    <div class="admin-modal-actions">
+      <button type="button" class="btn btn-light" id="adminConfirmCancel">Cancel</button>
+      <button type="button" class="btn btn-dark" id="adminConfirmProceed">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <script>
 window.addEventListener("pageshow", function (e) {
   if (e.persisted) {
     location.reload();
   }
 });
+
+(() => {
+  const modal = document.getElementById("adminConfirmModal");
+  const titleEl = document.getElementById("adminConfirmTitle");
+  const textEl = document.getElementById("adminConfirmText");
+  const cancelBtn = document.getElementById("adminConfirmCancel");
+  const proceedBtn = document.getElementById("adminConfirmProceed");
+  let pendingForm = null;
+
+  const openModal = (form) => {
+    pendingForm = form;
+    titleEl.textContent = form.dataset.confirmTitle || "Confirm Action";
+    textEl.textContent = form.dataset.confirmMessage || "Are you sure you want to continue?";
+    modal.classList.add("show");
+    modal.setAttribute("aria-hidden", "false");
+  };
+
+  const closeModal = () => {
+    pendingForm = null;
+    modal.classList.remove("show");
+    modal.setAttribute("aria-hidden", "true");
+  };
+
+  document.querySelectorAll(".js-confirm-form").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      openModal(form);
+    });
+  });
+
+  cancelBtn?.addEventListener("click", closeModal);
+  proceedBtn?.addEventListener("click", () => {
+    if (pendingForm) pendingForm.submit();
+  });
+  modal?.addEventListener("click", (event) => {
+    if (event.target === modal) closeModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && modal.classList.contains("show")) {
+      closeModal();
+    }
+  });
+})();
 </script>
 
 </body>

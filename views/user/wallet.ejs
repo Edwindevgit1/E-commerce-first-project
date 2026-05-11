@@ -40,42 +40,41 @@
           </div>
         </header>
 
-        <% if ((!referralConfig || referralConfig.profileVisible) && referralMeta?.pendingFirstOrderReward) { %>
+        <% if (referralMeta?.displayEnabled && referralMeta?.pendingReward) { %>
           <section class="wallet-panel referral-panel">
             <h2>Referral Reward Pending</h2>
             <div class="referral-offer-list">
               <article class="referral-offer-card">
                 <strong>Get ₹<%= Number(referralMeta.newUserReward || 0).toLocaleString("en-IN") %> wallet reward</strong>
-                <span>Referral used: <b><%= user.referredByCode || "--" %></b></span>
-                <span>Unlock after first successful order of ₹<%= Number(referralMeta.minimumOrder || 0).toLocaleString("en-IN") %> or more.</span>
-                <% if (referralMeta.assignedOfferTitle) { %>
-                  <span>Offer: <b><%= referralMeta.assignedOfferTitle %></b></span>
-                <% } %>
-                <% if (referralMeta.assignedOfferMessage) { %>
-                  <span><%= referralMeta.assignedOfferMessage %></span>
-                <% } %>
+                <span>Unlock after first successful order of ₹<%= Number(referralMeta.minimumPurchase || 0).toLocaleString("en-IN") %> or more.</span>
+                <span>Your referrer gets ₹<%= Number(referralMeta.referrerReward || 0).toLocaleString("en-IN") %> too.</span>
               </article>
             </div>
           </section>
         <% } %>
 
-        <% if ((!referralConfig || referralConfig.profileVisible) && Array.isArray(activeReferralOffers) && activeReferralOffers.length && referralMeta?.code) { %>
+        <% if (referralMeta?.displayEnabled && !referralMeta?.suspended && referralMeta?.enabled && referralMeta?.code) { %>
           <section class="wallet-panel referral-panel">
-            <h2>Running Referral Offers</h2>
-            <p>Admin running offers. Share your own code during signup.</p>
+            <h2>Referral Program</h2>
+            <p>Share your own code or link during signup.</p>
             <div class="referral-offer-list">
-              <% activeReferralOffers.forEach((offer) => { %>
-                <article class="referral-offer-card">
-                  <strong><%= offer.title %></strong>
-                  <span>Use Code: <b><%= referralMeta.code %></b></span>
-                  <span>Get ₹<%= Number(offer.rewardAmount || 0).toLocaleString("en-IN") %> wallet reward</span>
-                  <span>Friend also gets ₹<%= Number(offer.rewardAmount || 0).toLocaleString("en-IN") %> after first successful order.</span>
-                  <span>Minimum order: ₹<%= Math.max(100, Number(offer.minPurchase || 100)).toLocaleString("en-IN") %></span>
-                  <% if (offer.message) { %>
-                    <span><%= offer.message %></span>
-                  <% } %>
-                </article>
-              <% }) %>
+              <article class="referral-offer-card">
+                <strong>Use Code: <%= referralMeta.code %></strong>
+                <span>Referral link: <b><%= referralMeta.referralLink %></b></span>
+                <span>Referrer reward: ₹<%= Number(referralMeta.referrerReward || 0).toLocaleString("en-IN") %></span>
+                <span>New user reward: ₹<%= Number(referralMeta.newUserReward || 0).toLocaleString("en-IN") %></span>
+                <span>Minimum order: ₹<%= Number(referralMeta.minimumPurchase || 0).toLocaleString("en-IN") %></span>
+              </article>
+            </div>
+          </section>
+        <% } else if (referralMeta?.displayEnabled && referralMeta?.code) { %>
+          <section class="wallet-panel referral-panel">
+            <h2>Referral Program</h2>
+            <div class="referral-offer-list">
+              <article class="referral-offer-card">
+                <strong>Your code: <%= referralMeta.code %></strong>
+                <span><%= referralMeta.suspended ? "Referral account suspended by admin." : "Referral system disabled now." %></span>
+              </article>
             </div>
           </section>
         <% } %>

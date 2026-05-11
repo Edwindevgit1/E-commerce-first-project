@@ -113,16 +113,25 @@
               </div>
             </div>
 
-            <% if (!referralConfig || referralConfig.profileVisible) { %>
+            <% if (referralSettings?.referralDisplayEnabled !== false) { %>
               <section class="referral-summary">
                 <div class="referral-copy">
                   <span class="referral-label">Your Referral Code</span>
-                  <strong><%= user.referralCode || "USER" %></strong>
+                  <strong id="referralCodeValue"><%= user.referralCode || "USER" %></strong>
                 </div>
-                <p>
-                  Share this code with friend. Friend enters code during signup.
-                  You get referral reward if admin running offer active.
-                </p>
+                <% if (user.referralSuspended) { %>
+                  <p>Your referral account is suspended by admin.</p>
+                <% } else { %>
+                  <p>
+                    Share your code or copy your referral link. Rewards unlock after
+                    referred user places first successful order meeting admin minimum purchase.
+                  </p>
+                  <div class="button-group top-actions">
+                    <button type="button" id="copyReferralCodeBtn" class="btn btn-light">Copy Code</button>
+                    <button type="button" id="copyReferralLinkBtn" class="btn btn-dark">Copy Referral Link</button>
+                  </div>
+                  <input type="hidden" id="referralLinkValue" value="<%= referralLink %>" />
+                <% } %>
               </section>
             <% } %>
           </form>
@@ -157,6 +166,10 @@
       const cancelBtn = document.getElementById("cancelBtn");
       const nameInput = document.getElementById("nameInput");
       const emailInput = document.getElementById("emailInput");
+      const copyReferralCodeBtn = document.getElementById("copyReferralCodeBtn");
+      const copyReferralLinkBtn = document.getElementById("copyReferralLinkBtn");
+      const referralCodeValue = document.getElementById("referralCodeValue");
+      const referralLinkValue = document.getElementById("referralLinkValue");
 
         editBtn?.addEventListener("click", function () {
         nameInput.disabled = false;
@@ -190,6 +203,31 @@
         const errorBox = document.getElementById("errorBox");
         if (errorBox) errorBox.style.display = "none";
       }, 3000);
+
+      const copyText = async (value, button, successText) => {
+        if (!value || !button) return;
+        const originalText = button.textContent;
+        try {
+          await navigator.clipboard.writeText(value);
+          button.textContent = successText;
+          setTimeout(() => {
+            button.textContent = originalText;
+          }, 1500);
+        } catch (error) {
+          button.textContent = "Copy failed";
+          setTimeout(() => {
+            button.textContent = originalText;
+          }, 1500);
+        }
+      };
+
+      copyReferralCodeBtn?.addEventListener("click", () => {
+        copyText(referralCodeValue?.textContent?.trim(), copyReferralCodeBtn, "Code Copied");
+      });
+
+      copyReferralLinkBtn?.addEventListener("click", () => {
+        copyText(referralLinkValue?.value?.trim(), copyReferralLinkBtn, "Link Copied");
+      });
     </script>
     <%- include("partials/site-footer") %>
   </body>
