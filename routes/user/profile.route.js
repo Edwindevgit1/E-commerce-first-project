@@ -1,8 +1,13 @@
 import express from 'express'
 import User from '../../models/User.js'
-import ReferralOffer from '../../models/ReferralOffer.js'
 import fs from 'fs'
 import path from 'path'
+import {
+  buildReferralWalletMessage,
+  ensureUserReferralCode,
+  getActiveReferralOffers,
+  getReferralConfig
+} from '../../services/referralServices.js'
 
 const router = express.Router()
 
@@ -22,13 +27,17 @@ router.get('/profile', async (req, res) => {
   }
   try {
     const user = await User.findById(req.session.user.id)
+    const referralConfig = await getReferralConfig()
 
     if (!user) {
       req.session.destroy()
       return res.redirect('/api/auth/login')
     }
 
-    res.render('user/profile', { user })
+    if (referralConfig.profileVisible) {
+      await ensureUserReferralCode(user)
+    }
+    res.render('user/profile', { user, referralConfig })
 
   } catch (error) {
     console.log("Profile load error:", error)
@@ -46,13 +55,20 @@ router.get('/wallet', async (req, res) => {
   }
 
   try {
-    const user = await User.findById(req.session.user.id)
+    const [user, referralConfig] = await Promise.all([
+      User.findById(req.session.user.id)
       .populate('wallet.transactions.order', 'orderId')
-      .populate('referral.offer')
+      .populate('referredBy', 'name referralCode'),
+      getReferralConfig()
+    ])
 
     if (!user) {
       req.session.destroy()
       return res.redirect('/api/auth/login')
+    }
+
+    if (referralConfig.profileVisible) {
+      await ensureUserReferralCode(user)
     }
 
     const wallet = user.wallet || { balance: 0, transactions: [] }
@@ -81,19 +97,17 @@ router.get('/wallet', async (req, res) => {
       lastAdded: Number(creditTransactions[0]?.amount || 0)
     }
 
-    const activeReferralOffers = await ReferralOffer.find({
-      isActive: true
-    })
-      .sort({ createdAt: -1 })
-      .limit(6)
-      .lean()
+    const [activeReferralOffers] = await Promise.all([
+      getActiveReferralOffers(),
+    ])
 
     res.render('user/wallet', {
       user,
       wallet,
       stats,
+      referralMeta: buildReferralWalletMessage(user),
       activeReferralOffers,
-      claimedReferralOffer: user.referral?.offer || null,
+      referralConfig,
       transactions: transactions.slice(startIndex, startIndex + pageSize),
       pagination: {
         currentPage,

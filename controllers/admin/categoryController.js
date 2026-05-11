@@ -22,8 +22,7 @@ const buildPaginationItems = (currentPage, totalPages) => {
 const buildCategoryFormData = (source = {}) => ({
   name: source.name || "",
   status: source.status || "active",
-  description: source.description || "",
-  offerPercentage: source.offerPercentage ?? ""
+  description: source.description || ""
 });
 
 const renderCategoryPage = async (res, options = {}) => {

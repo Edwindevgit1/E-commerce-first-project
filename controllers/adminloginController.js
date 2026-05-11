@@ -65,7 +65,7 @@ export const adminlogin = async(req,res)=>{
       email:user.email,
       role:user.role
     }
-    return res.redirect('/api/admin/adminusermanagement')
+    return res.redirect('/api/admin/dashboard')
   }catch(error){
     console.log(error,'Admin login error')
     return res.render('admin/adminlogin',{

@@ -1,8 +1,13 @@
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
-import { creditWallet } from "../services/walletServices.js";
-import { getActiveReferralOfferByCode } from "../services/referralOfferServices.js";
+import {
+  generateUniqueReferralCode,
+  getReferralConfig,
+  normalizeReferralCode,
+  rewardReferrerAfterSignup,
+  validateReferralSignup
+} from "../services/referralServices.js";
 
 const OTP_COOLDOWN_SECONDS = 30;
 const OTP_EXPIRY_MS = OTP_COOLDOWN_SECONDS * 1000;
@@ -39,8 +44,6 @@ const renderSignupOtp = (req, res, options = {}, statusCode = 200) =>
     error: options.error || null,
     retryAfter: getSignupOtpRetryAfter(req),
   });
-
-const normalizeReferralCode = (value = "") => String(value || "").trim().toUpperCase();
 
 const signupUser = async (req, res) => {
   try {
@@ -91,9 +94,9 @@ const signupUser = async (req, res) => {
       });
     }
 
-    if (referralCode) {
-      await getActiveReferralOfferByCode(referralCode);
-    }
+    const referralSetup = referralCode ? await validateReferralSignup(referralCode) : null;
+    const referrer = referralSetup?.referrer || null;
+    const activeReferralOffer = referralSetup?.activeOffer || null;
 
     const existingUser = await User.findOne({ email: trimmedEmail });
     
@@ -135,7 +138,13 @@ const signupUser = async (req, res) => {
       email: trimmedEmail,
       password: hashedPassword,
       provider:"local",
-      referralCode
+      referralCode,
+      referredBy: referrer?._id || null,
+      referralOffer: activeReferralOffer?._id || null,
+      referralOfferTitle: activeReferralOffer?.title || "",
+      referralOfferMessage: activeReferralOffer?.message || "",
+      referralRewardAmount: Number(activeReferralOffer?.rewardAmount || 0),
+      referralMinPurchase: Math.max(100, Number(activeReferralOffer?.minPurchase || 100))
     };
 
     await transporter.sendMail({
@@ -160,12 +169,19 @@ export const getSignupPage=(req,res)=>{
     return res.redirect('/api/auth/signupotp')
   }
   const referralCode = normalizeReferralCode(req.query.ref || "");
-  res.render('user/signup', {
+  getReferralConfig().then((referralConfig) => res.render('user/signup', {
     error: req.query.error || null,
     name: "",
     email: "",
-    referralCode
-  })
+    referralCode,
+    referralConfig
+  })).catch(() => res.render('user/signup', {
+    error: req.query.error || null,
+    name: "",
+    email: "",
+    referralCode,
+    referralConfig: { signupEnabled: true }
+  }))
 }
 
 export const resendSignupOtp = async (req, res) => {
@@ -241,7 +257,19 @@ export const verifySignupOtp = async (req, res) => {
         error: "Invalid OTP.",
       }, 400);
     }
-    const { name, email, password ,provider, referralCode } = req.session.signupData;
+    const {
+      name,
+      email,
+      password,
+      provider,
+      referralCode,
+      referredBy,
+      referralOffer,
+      referralOfferTitle,
+      referralOfferMessage,
+      referralRewardAmount,
+      referralMinPurchase
+    } = req.session.signupData;
 
     const existing = await User.findOne({ email });
     if (existing) {
@@ -252,24 +280,23 @@ export const verifySignupOtp = async (req, res) => {
       });
     }
 
-    const referralOffer = referralCode
-      ? await getActiveReferralOfferByCode(referralCode)
-      : null;
-
-    await User.create({
+    const createdUser = await User.create({
       name,
       email,
       password, 
       provider,
       isVerified: true,
-      referral: referralOffer
-        ? {
-            code: referralCode,
-            offer: referralOffer._id,
-            claimedAt: new Date()
-          }
-        : undefined
+      referralCode: await generateUniqueReferralCode(name),
+      referredBy: referredBy || null,
+      referredByCode: referralCode || "",
+      referralOffer: referralOffer || null,
+      referralOfferTitle: referralOfferTitle || "",
+      referralOfferMessage: referralOfferMessage || "",
+      referralRewardAmount: Number(referralRewardAmount || 0),
+      referralMinPurchase: Math.max(100, Number(referralMinPurchase || 100))
     });
+
+    await rewardReferrerAfterSignup(createdUser);
     delete req.session.signupOtp;
     delete req.session.signupOtpExpiry;
     delete req.session.otpLastSentAt;
@@ -341,24 +368,27 @@ export const googleAuthCallback = async (req, res) => {
       );
     }
 
-    const referralOffer = referralCode
-      ? await getActiveReferralOfferByCode(referralCode)
-      : null;
+    const referralSetup = referralCode ? await validateReferralSignup(referralCode) : null;
+    const referrer = referralSetup?.referrer || null;
+    const activeReferralOffer = referralSetup?.activeOffer || null;
 
-    await User.create({
+    const createdUser = await User.create({
       name,
       email,
       googleId: googleUser.googleId || null,
       provider: "google",
       isVerified: true,
-      referral: referralOffer
-        ? {
-            code: referralCode,
-            offer: referralOffer._id,
-            claimedAt: new Date()
-          }
-        : undefined
+      referralCode: await generateUniqueReferralCode(name),
+      referredBy: referrer?._id || null,
+      referredByCode: referralCode || "",
+      referralOffer: activeReferralOffer?._id || null,
+      referralOfferTitle: activeReferralOffer?.title || "",
+      referralOfferMessage: activeReferralOffer?.message || "",
+      referralRewardAmount: Number(activeReferralOffer?.rewardAmount || 0),
+      referralMinPurchase: Math.max(100, Number(activeReferralOffer?.minPurchase || 100))
     });
+
+    await rewardReferrerAfterSignup(createdUser);
 
     delete req.session.signupOtp;
     delete req.session.signupOtpExpiry;

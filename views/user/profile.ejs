@@ -112,6 +112,19 @@
                 />
               </div>
             </div>
+
+            <% if (!referralConfig || referralConfig.profileVisible) { %>
+              <section class="referral-summary">
+                <div class="referral-copy">
+                  <span class="referral-label">Your Referral Code</span>
+                  <strong><%= user.referralCode || "USER" %></strong>
+                </div>
+                <p>
+                  Share this code with friend. Friend enters code during signup.
+                  You get referral reward if admin running offer active.
+                </p>
+              </section>
+            <% } %>
           </form>
         </section>
       </section>

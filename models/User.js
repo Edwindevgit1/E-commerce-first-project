@@ -58,29 +58,61 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "/images/avatar.png"
     },
-    referral: {
-      code: {
-        type: String,
-        default: ""
-      },
-      offer: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "ReferralOffer",
-        default: null
-      },
-      claimedAt: {
-        type: Date,
-        default: null
-      },
-      rewardedAt: {
-        type: Date,
-        default: null
-      },
-      rewardedOrder: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Order",
-        default: null
-      }
+    referralCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      uppercase: true,
+      trim: true
+    },
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+    referredByCode: {
+      type: String,
+      default: "",
+      uppercase: true,
+      trim: true
+    },
+    referralOffer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ReferralOffer",
+      default: null
+    },
+    referralOfferTitle: {
+      type: String,
+      default: "",
+      trim: true
+    },
+    referralOfferMessage: {
+      type: String,
+      default: "",
+      trim: true
+    },
+    referralRewardAmount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    referralMinPurchase: {
+      type: Number,
+      default: 100,
+      min: 0
+    },
+    referralRewardedAt: {
+      type: Date,
+      default: null
+    },
+    referralRewardedOrder: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+      default: null
+    },
+    referrerRewardedAt: {
+      type: Date,
+      default: null
     },
     wallet: {
       balance: {

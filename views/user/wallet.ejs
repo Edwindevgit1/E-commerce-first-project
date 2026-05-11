@@ -40,34 +40,37 @@
           </div>
         </header>
 
-        <% if (claimedReferralOffer && user?.referral?.code && !user?.referral?.rewardedAt) { %>
+        <% if ((!referralConfig || referralConfig.profileVisible) && referralMeta?.pendingFirstOrderReward) { %>
           <section class="wallet-panel referral-panel">
             <h2>Referral Reward Pending</h2>
             <div class="referral-offer-list">
               <article class="referral-offer-card">
-                <strong>Get ₹<%= Number(claimedReferralOffer.rewardAmount || 0).toLocaleString("en-IN") %> wallet reward</strong>
-                <span>Use Code: <b><%= user.referral.code %></b></span>
-                <span>Minimum order: ₹<%= Math.max(100, Number(claimedReferralOffer.minPurchase || 0)).toLocaleString("en-IN") %></span>
-                <% if (claimedReferralOffer.message) { %>
-                  <span><%= claimedReferralOffer.message %></span>
+                <strong>Get ₹<%= Number(referralMeta.newUserReward || 0).toLocaleString("en-IN") %> wallet reward</strong>
+                <span>Referral used: <b><%= user.referredByCode || "--" %></b></span>
+                <span>Unlock after first successful order of ₹<%= Number(referralMeta.minimumOrder || 0).toLocaleString("en-IN") %> or more.</span>
+                <% if (referralMeta.assignedOfferTitle) { %>
+                  <span>Offer: <b><%= referralMeta.assignedOfferTitle %></b></span>
+                <% } %>
+                <% if (referralMeta.assignedOfferMessage) { %>
+                  <span><%= referralMeta.assignedOfferMessage %></span>
                 <% } %>
               </article>
             </div>
           </section>
         <% } %>
 
-        <% if (Array.isArray(activeReferralOffers) && activeReferralOffers.length) { %>
+        <% if ((!referralConfig || referralConfig.profileVisible) && Array.isArray(activeReferralOffers) && activeReferralOffers.length && referralMeta?.code) { %>
           <section class="wallet-panel referral-panel">
-            <h2>Referral Rewards</h2>
-            <p>Claim wallet reward after successful qualifying order.</p>
+            <h2>Running Referral Offers</h2>
+            <p>Admin running offers. Share your own code during signup.</p>
             <div class="referral-offer-list">
-              <% activeReferralOffers.forEach((offer) => {
-                const offerMinimum = Math.max(100, Number(offer.minPurchase || 0));
-              %>
+              <% activeReferralOffers.forEach((offer) => { %>
                 <article class="referral-offer-card">
-                  <strong>Get ₹<%= Number(offer.rewardAmount || 0).toLocaleString("en-IN") %> wallet reward</strong>
-                  <span>Use Code: <b><%= offer.code %></b></span>
-                  <span>Minimum order: ₹<%= offerMinimum.toLocaleString("en-IN") %></span>
+                  <strong><%= offer.title %></strong>
+                  <span>Use Code: <b><%= referralMeta.code %></b></span>
+                  <span>Get ₹<%= Number(offer.rewardAmount || 0).toLocaleString("en-IN") %> wallet reward</span>
+                  <span>Friend also gets ₹<%= Number(offer.rewardAmount || 0).toLocaleString("en-IN") %> after first successful order.</span>
+                  <span>Minimum order: ₹<%= Math.max(100, Number(offer.minPurchase || 100)).toLocaleString("en-IN") %></span>
                   <% if (offer.message) { %>
                     <span><%= offer.message %></span>
                   <% } %>

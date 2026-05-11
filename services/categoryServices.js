@@ -17,7 +17,6 @@ const validateCategoryInput = (data = {}) => {
     ? data.description.trim()
     : "";
   const status = String(data.status || "active").trim();
-  const rawOfferPercentage = data.offerPercentage;
 
   if (!name) {
     fieldErrors.name = "Category name is required.";
@@ -35,20 +34,6 @@ const validateCategoryInput = (data = {}) => {
     fieldErrors.description = "Description must be 240 characters or less.";
   }
 
-  let normalizedOfferPercentage = 0;
-
-  if (rawOfferPercentage !== "" && rawOfferPercentage !== null && rawOfferPercentage !== undefined) {
-    const offerPercentage = Number(rawOfferPercentage);
-
-    if (Number.isNaN(offerPercentage)) {
-      fieldErrors.offerPercentage = "Category offer must be a number.";
-    } else if (offerPercentage < 0 || offerPercentage > 90) {
-      fieldErrors.offerPercentage = "Category offer must be between 0 and 90.";
-    } else {
-      normalizedOfferPercentage = offerPercentage;
-    }
-  }
-
   if (Object.keys(fieldErrors).length > 0) {
     throw createValidationError(fieldErrors);
   }
@@ -56,23 +41,8 @@ const validateCategoryInput = (data = {}) => {
   return {
     name,
     status,
-    description,
-    offerPercentage: normalizedOfferPercentage
+    description
   };
-};
-
-const normalizeOfferPercentage = (value) => {
-  const offerPercentage = Number(value);
-
-  if (Number.isNaN(offerPercentage)) {
-    return 0;
-  }
-
-  if (offerPercentage < 0 || offerPercentage > 90) {
-    throw new Error("Category offer must be between 0 and 90");
-  }
-
-  return offerPercentage;
 };
 
 export const getCategoryService = async (search,page,limit,sort) => {
@@ -130,7 +100,6 @@ export const addCategoryService = async (data) => {
     name,
     status: validatedData.status,
     description: validatedData.description,
-    offerPercentage: normalizeOfferPercentage(validatedData.offerPercentage),
     isDeleted:false
   });
   return category.save();
@@ -153,7 +122,6 @@ export const editCategoryService = async (id,data)=>{
   category.name = name;
   category.status = validatedData.status || category.status;
   category.description = validatedData.description;
-  category.offerPercentage = normalizeOfferPercentage(validatedData.offerPercentage);
 
   return await category.save()
 }
