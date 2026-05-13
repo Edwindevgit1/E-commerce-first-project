@@ -48,11 +48,11 @@
         <section class="checkout-panel">
           <div class="checkout-panel-head">
             <h2>Delivery Address</h2>
-            <button type="button" class="checkout-link" id="toggleAddressFormBtn">Add / Edit Address</button>
+            <button type="button" class="checkout-link" id="toggleAddressFormBtn">Add Address</button>
           </div>
 
           <div class="checkout-address-editor" id="checkoutAddressEditor" hidden>
-            <form method="POST" action="/api/user/add-address" class="coupon-form">
+            <form method="POST" action="/api/user/add-address" class="coupon-form" novalidate>
               <input type="hidden" name="redirect" value="<%= checkoutRedirectUrl %>" />
               <input type="text" name="type" class="coupon-input" placeholder="Address type" required />
               <input type="text" name="street" class="coupon-input" placeholder="Street" required />
@@ -61,37 +61,18 @@
               <input type="text" name="pincode" class="coupon-input" placeholder="Pincode" required />
               <button type="submit" class="checkout-submit">Save New Address</button>
             </form>
-
-            <% if (savedAddresses.length) { %>
-              <div class="checkout-inline-edit-list">
-                <% savedAddresses.forEach(function(address) { %>
-                  <form method="POST" action="/api/user/update-address/<%= address._id %>" class="coupon-form">
-                    <input type="hidden" name="redirect" value="<%= checkoutRedirectUrl %>" />
-                    <input type="text" name="type" class="coupon-input" value="<%= address.type %>" required />
-                    <input type="text" name="street" class="coupon-input" value="<%= address.street %>" required />
-                    <input type="text" name="city" class="coupon-input" value="<%= address.city %>" required />
-                    <input type="text" name="state" class="coupon-input" value="<%= address.state %>" required />
-                    <input type="text" name="pincode" class="coupon-input" value="<%= address.pincode %>" required />
-                    <button type="submit" class="checkout-submit">Update Address</button>
-                  </form>
-                <% }) %>
-              </div>
-            <% } %>
           </div>
 
           <% if (!savedAddresses.length) { %>
             <p class="empty-address">No saved address found. Please add an address before placing the order.</p>
           <% } else { %>
-            <form id="placeOrderForm" action="/api/user/cart/place-order" method="POST">
-              <% selectedItems.forEach(function(itemId) { %>
-                <input type="hidden" name="selectedCartItemIds" value="<%= itemId %>" />
-              <% }); %>
-              <div class="address-list">
-                <% savedAddresses.forEach(function(address, index) { %>
+            <div class="address-list">
+              <% savedAddresses.forEach(function(address, index) { %>
+                <div class="address-card-wrap">
                   <label class="address-option">
                     <input
                       type="radio"
-                      name="addressId"
+                      name="checkoutAddressId"
                       value="<%= address._id %>"
                       <%= address.isDefault || index === 0 ? "checked" : "" %>
                       required
@@ -109,9 +90,44 @@
                       <%= address.pincode %>
                     </span>
                   </label>
-                <% }); %>
-              </div>
-            </form>
+
+                  <div class="address-card-actions">
+                    <button
+                      type="button"
+                      class="checkout-link checkout-link--small"
+                      data-edit-address-toggle="<%= address._id %>"
+                    >
+                      Edit
+                    </button>
+                  </div>
+
+                  <div
+                    class="checkout-address-editor checkout-address-editor--inline"
+                    id="addressEditForm-<%= address._id %>"
+                    hidden
+                  >
+                    <form method="POST" action="/api/user/update-address/<%= address._id %>" class="coupon-form" novalidate>
+                      <input type="hidden" name="redirect" value="<%= checkoutRedirectUrl %>" />
+                      <input type="text" name="type" class="coupon-input" value="<%= address.type %>" required />
+                      <input type="text" name="street" class="coupon-input" value="<%= address.street %>" required />
+                      <input type="text" name="city" class="coupon-input" value="<%= address.city %>" required />
+                      <input type="text" name="state" class="coupon-input" value="<%= address.state %>" required />
+                      <input type="text" name="pincode" class="coupon-input" value="<%= address.pincode %>" required />
+                      <div class="address-editor-actions">
+                        <button type="submit" class="checkout-submit">Update Address</button>
+                        <button
+                          type="button"
+                          class="checkout-link checkout-link--small"
+                          data-edit-address-close="<%= address._id %>"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
           <% } %>
         </section>
 
@@ -153,6 +169,18 @@
       </div>
 
       <aside class="checkout-summary">
+        <form id="placeOrderForm" action="/api/user/cart/place-order" method="POST">
+          <% selectedItems.forEach(function(itemId) { %>
+            <input type="hidden" name="selectedCartItemIds" value="<%= itemId %>" />
+          <% }); %>
+          <input
+            type="hidden"
+            name="addressId"
+            id="placeOrderAddressId"
+            value="<%= savedAddresses.find(function(address) { return address.isDefault; })?._id || savedAddresses[0]?._id || '' %>"
+          />
+        </form>
+
         <h2>Price Details</h2>
 
         <% if (typeof message !== "undefined" && message) { %>
@@ -389,6 +417,7 @@
       const toggleBtn = document.getElementById("toggleAddressFormBtn");
       const editor = document.getElementById("checkoutAddressEditor");
       const couponInput = document.getElementById("couponCodeInput");
+      const placeOrderAddressId = document.getElementById("placeOrderAddressId");
 
       toggleBtn?.addEventListener("click", () => {
         const willShow = editor.hasAttribute("hidden");
@@ -404,6 +433,41 @@
           if (!couponInput) return;
           couponInput.value = button.dataset.couponCode || "";
           couponInput.focus();
+        });
+      });
+
+      const hideAllEditForms = () => {
+        document.querySelectorAll("[id^='addressEditForm-']").forEach((panel) => {
+          panel.setAttribute("hidden", "");
+        });
+      };
+
+      document.querySelectorAll("[data-edit-address-toggle]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const targetId = button.getAttribute("data-edit-address-toggle");
+          const panel = document.getElementById(`addressEditForm-${targetId}`);
+          if (!panel) return;
+          const willShow = panel.hasAttribute("hidden");
+          hideAllEditForms();
+          if (willShow) {
+            panel.removeAttribute("hidden");
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-edit-address-close]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const targetId = button.getAttribute("data-edit-address-close");
+          const panel = document.getElementById(`addressEditForm-${targetId}`);
+          panel?.setAttribute("hidden", "");
+        });
+      });
+
+      document.querySelectorAll('input[name="checkoutAddressId"]').forEach((radio) => {
+        radio.addEventListener("change", () => {
+          if (radio.checked && placeOrderAddressId) {
+            placeOrderAddressId.value = radio.value;
+          }
         });
       });
     })();

@@ -97,6 +97,10 @@ body {
   background: #f8fbff;
 }
 
+.checkout-address-editor[hidden] {
+  display: none !important;
+}
+
 .checkout-inline-edit-list {
   display: grid;
   gap: 10px;
@@ -105,6 +109,11 @@ body {
 .address-list {
   display: grid;
   gap: 10px;
+}
+
+.address-card-wrap {
+  display: grid;
+  gap: 8px;
 }
 
 .address-option {
@@ -136,6 +145,27 @@ body {
   color: #637086;
   font-size: 12px;
   line-height: 1.6;
+}
+
+.address-card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.checkout-link--small {
+  min-height: 30px;
+  padding: 0 12px;
+  font-size: 11px;
+}
+
+.checkout-address-editor--inline {
+  margin-bottom: 0;
+}
+
+.address-editor-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .default-badge {

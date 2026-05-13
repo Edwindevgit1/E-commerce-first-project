@@ -50,11 +50,66 @@
           "",
           cleanUrl.pathname + cleanUrl.search
         );
+        syncNavbarState(cleanUrl);
       }
 
       bindListingInteractions();
       bindNavbarCategoryLinks();
       document.getElementById("listingShell")?.scrollIntoView({ block: "start" });
+    }
+
+    function syncNavbarState(urlLike = window.location.href) {
+      const currentUrl = new URL(urlLike, window.location.origin);
+      const params = currentUrl.searchParams;
+      const searchForm = document.querySelector(".store-search");
+      const searchInput = searchForm?.querySelector('input[name="search"]');
+      const clearBtn = searchForm?.querySelector("[data-store-search-clear]");
+
+      if (searchInput) {
+        searchInput.value = params.get("search") || "";
+      }
+
+      const syncHiddenField = (name, value) => {
+        if (!searchForm) return;
+        let field = searchForm.querySelector(`input[name="${name}"]`);
+        if (!value) {
+          field?.remove();
+          return;
+        }
+        if (!field) {
+          field = document.createElement("input");
+          field.type = "hidden";
+          field.name = name;
+          searchForm.appendChild(field);
+        }
+        field.value = value;
+      };
+
+      syncHiddenField("category", params.get("category") || "");
+      syncHiddenField("sort", params.get("sort") || "");
+      syncHiddenField("priceRange", params.get("priceRange") || "");
+      syncHiddenField("size", params.get("size") || "");
+      syncHiddenField("color", params.get("color") || "");
+
+      clearBtn?.classList.toggle("visible", Boolean((params.get("search") || "").trim()));
+
+      document.querySelectorAll(".store-category-track a").forEach((link) => {
+        const linkUrl = new URL(link.href, window.location.origin);
+        const categoryValue = linkUrl.searchParams.get("category") || "";
+        const activeCategory = params.get("category") || "";
+
+        link.classList.toggle("active", categoryValue === activeCategory);
+
+        const rebuilt = new URL("/api/user/products", window.location.origin);
+        if (categoryValue) rebuilt.searchParams.set("category", categoryValue);
+        ["search", "sort", "priceRange", "size", "color"].forEach((key) => {
+          const value = params.get(key);
+          if (value) {
+            rebuilt.searchParams.set(key, value);
+          }
+        });
+        link.href = rebuilt.pathname + rebuilt.search;
+      });
     }
 
     function bindNavbarCategoryLinks() {
@@ -140,6 +195,7 @@
 
     bindListingInteractions();
     bindNavbarCategoryLinks();
+    syncNavbarState(window.location.href);
   </script>
 <%- include("partials/site-footer") %>
 </body>

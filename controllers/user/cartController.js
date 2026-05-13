@@ -3,12 +3,9 @@ import {
   addToCartService,
   removeFromCartService,
   updateCartQuantityService,
-  isExpectedCartError,
-  validateCartForCheckoutService
+  isExpectedCartError
 } from "../../services/cartServices.js";
-import { validateCouponForCheckout } from "../../services/couponServices.js";
 import { placeOrderService } from "../../services/orderServices.js";
-import User from "../../models/User.js";
 import Order from "../../models/Order.js";
 
 const buildRedirectWithMessage = (target, message, key = "error") => {
@@ -245,32 +242,20 @@ export const checkoutCartController = async (req, res) => {
       return res.redirect("/api/auth/login");
     }
 
-    const userId = req.user._id;
-    const selectedProductIds = req.body.selectedCartItemIds || req.body.selectedProductIds || [];
+    const rawSelectedIds = req.body.selectedCartItemIds || req.body.selectedProductIds || [];
+    const selectedProductIds = Array.isArray(rawSelectedIds)
+      ? rawSelectedIds.filter(Boolean)
+      : [rawSelectedIds].filter(Boolean);
 
-    const { checkoutItems, grandTotal } = await validateCartForCheckoutService(
-      userId,
-      selectedProductIds
-    );
+    if (!selectedProductIds.length) {
+      return res.redirect("/api/user/cart?error=No items selected");
+    }
 
-    const user = await User.findById(userId);
-    const couponResult = await validateCouponForCheckout(
-      req.session.checkoutCouponCode || "",
-      grandTotal
-    );
+    const query = selectedProductIds
+      .map((itemId) => `selectedCartItemIds=${encodeURIComponent(itemId)}`)
+      .join("&");
 
-    return res.render("user/checkout", {
-      checkoutItems,
-      grandTotal,
-      coupon: couponResult.coupon,
-      couponDiscount: couponResult.discount,
-      addresses: user?.addresses || [],
-      razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
-      walletBalance:user?.wallet?.balance || 0,
-      selectedProductIds: Array.isArray(selectedProductIds)
-        ? selectedProductIds
-        : [selectedProductIds]
-    });
+    return res.redirect(`/api/user/checkout?${query}`);
   } catch (error) {
     if (!isExpectedCartError(error)) {
       console.log(error, "Checkout validation error");

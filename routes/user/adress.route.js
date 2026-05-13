@@ -11,6 +11,22 @@ const getRedirectTarget = (req)=>{
   return "/api/user/adress"
 }
 
+const buildRedirectWithMessage = (target, message, key = "error") => {
+  const separator = target.includes("?") ? "&" : "?";
+  return `${target}${separator}${key}=${encodeURIComponent(message)}`;
+};
+
+const validateAddressPayload = ({ type, street, city, state, pincode }) => {
+  if (!String(type || "").trim()) return "Address type is required";
+  if (!String(street || "").trim()) return "Street is required";
+  if (!String(city || "").trim()) return "City is required";
+  if (!String(state || "").trim()) return "State is required";
+  const cleanPincode = String(pincode || "").trim();
+  if (!cleanPincode) return "Pincode is required";
+  if (!/^\d{6}$/.test(cleanPincode)) return "Pincode must be 6 digits";
+  return "";
+};
+
 router.get('/adress', async (req, res) => {
 
   if (!req.session.user) {
@@ -49,6 +65,11 @@ router.post('/add-address', async (req, res) => {
 
     if (!user) return res.redirect('/api/auth/login')
 
+    const validationError = validateAddressPayload({ type, street, city, state, pincode });
+    if (validationError) {
+      return res.redirect(buildRedirectWithMessage(getRedirectTarget(req), validationError));
+    }
+
     const isFirstAddress = user.addresses.length === 0
 
     user.addresses.push({
@@ -66,7 +87,7 @@ router.post('/add-address', async (req, res) => {
 
   } catch (error) {
     console.log('Add address error:', error)
-    res.redirect(getRedirectTarget(req))
+    res.redirect(buildRedirectWithMessage(getRedirectTarget(req), "Unable to add address right now"))
   }
 })
 
@@ -162,9 +183,13 @@ router.post('/update-address/:id', async (req, res) => {
   if (!user) return res.redirect('/api/auth/login')
 
   const address = user.addresses.id(req.params.id)
-  if (!address) return res.redirect(getRedirectTarget(req))
+  if (!address) return res.redirect(buildRedirectWithMessage(getRedirectTarget(req), "Address not found"))
 
   const { type, street, city, state, pincode } = req.body
+  const validationError = validateAddressPayload({ type, street, city, state, pincode });
+  if (validationError) {
+    return res.redirect(buildRedirectWithMessage(getRedirectTarget(req), validationError));
+  }
 
   address.type = type
   address.street = street
