@@ -16,11 +16,13 @@ const userAuth = async (req, res, next) => {
     }
 
     req.user = user;
+    req.user.authProvider = req.session.authProvider || user.provider || "local";
     req.session.user = {
       id: user._id,
       name: user.name,
       email: user.email,
       isBlocked: user.isBlocked,
+      authProvider: req.user.authProvider,
     };
 
     next();

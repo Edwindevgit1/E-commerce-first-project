@@ -22,7 +22,7 @@
           <a href="/api/user/wallet" class="chip">Wallet</a>
           <a href="/api/user/orders" class="chip chip-dark">My orders</a>
           <a href="/api/user/adress" class="chip">Address management</a>
-          <% if (user?.provider === "local") { %>
+          <% if ((user?.authProvider || user?.provider) === "local") { %>
             <a href="/api/user/change-password" class="chip">Change password</a>
           <% } %>
         </div>

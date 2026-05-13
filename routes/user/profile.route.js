@@ -39,6 +39,7 @@ router.get('/profile', async (req, res) => {
     if (referralSettings.referralDisplayEnabled !== false) {
       await ensureUserReferralCode(user)
     }
+    user.authProvider = req.session.authProvider || user.provider || "local";
     res.render('user/profile', {
       user,
       referralSettings,
@@ -79,6 +80,7 @@ router.get('/wallet', async (req, res) => {
     if (referralSettings.referralDisplayEnabled !== false) {
       await ensureUserReferralCode(user)
     }
+    user.authProvider = req.session.authProvider || user.provider || "local";
 
     const wallet = user.wallet || { balance: 0, transactions: [] }
     const transactions = [...(wallet.transactions || [])]

@@ -22,7 +22,7 @@
             <a href="/api/user/wallet" class="chip">Wallet</a>
             <a href="/api/user/orders" class="chip">My orders</a>
             <a href="/api/user/adress" class="chip">Address management</a>
-            <% if (user.provider === "local") { %>
+            <% if ((user.authProvider || user.provider) === "local") { %>
               <a href="/api/user/change-password" class="chip">Change password</a>
             <% } %>
           </div>
@@ -110,9 +110,9 @@
                   name="email"
                   value="<%= user.email %>"
                   id="emailInput"
-                  data-editable="<%= user.provider === 'local' ? 'true' : 'false' %>"
+                  data-editable="<%= (user.authProvider || user.provider) === 'local' ? 'true' : 'false' %>"
                   disabled
-                  <%= user.provider === "google" ? 'readonly' : '' %>
+                  <%= (user.authProvider || user.provider) === "google" ? 'readonly' : '' %>
                 />
               </div>
             </div>

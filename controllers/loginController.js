@@ -55,9 +55,20 @@ const loginUser = async (req, res) => {
     req.session.user = {
       id: user._id,
       name: user.name,
-      email: user.email
+      email: user.email,
+      authProvider: "local"
     };
-    return res.redirect('/api/auth/home')
+    req.session.authProvider = "local";
+    return req.session.save((saveError) => {
+      if (saveError) {
+        console.error("Login session save error:", saveError);
+        return res.render("user/login", {
+          error: "Login failed. Please try again."
+        });
+      }
+
+      return res.redirect('/api/auth/home');
+    })
 
   } catch (error) {
     console.error("Login error:", error);

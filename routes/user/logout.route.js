@@ -4,6 +4,7 @@ const router=express.Router()
 
 router.post('/logout',(req,res)=>{
   delete req.session.user;
+  delete req.session.authProvider;
   return res.redirect("/api/auth/login")
 })
 

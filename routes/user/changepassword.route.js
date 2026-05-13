@@ -21,10 +21,11 @@ router.get('/change-password', async (req, res) => {
       return res.redirect('/api/auth/login')
     }
 
-    if (user.provider === "google") {
+    if ((req.session.authProvider || user.provider) === "google") {
       return res.redirect('/api/user/profile')
     }
 
+    user.authProvider = req.session.authProvider || user.provider || "local";
     res.render('user/change-password', { user })
 
   } catch (error) {
@@ -54,10 +55,11 @@ router.post('/change-password', async (req, res) => {
       return res.redirect('/api/auth/login')
     }
 
-    if (user.provider === "google") {
+    if ((req.session.authProvider || user.provider) === "google") {
       return res.redirect('/api/user/profile')
     }
 
+    user.authProvider = req.session.authProvider || user.provider || "local";
 
     if (!currentPassword || !newPassword || !confirmPassword) {
       return res.render('user/change-password', {
@@ -116,6 +118,9 @@ router.post('/change-password', async (req, res) => {
 
     if (req.session?.user?.id) {
       user = await User.findById(req.session.user.id)
+      if (user) {
+        user.authProvider = req.session.authProvider || user.provider || "local";
+      }
     }
 
     return res.render('user/change-password', {

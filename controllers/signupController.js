@@ -322,6 +322,20 @@ export const cancelSignup=(req,res)=>{
 }
 export const googleAuthCallback = async (req, res) => {
   try {
+    const saveSessionAndRedirect = (sessionData, target) => {
+      req.session.user = sessionData;
+      req.session.authProvider = sessionData.authProvider || "local";
+
+      return req.session.save((saveError) => {
+        if (saveError) {
+          console.log("Google auth session save error", saveError);
+          return res.redirect("/api/auth/login");
+        }
+
+        return res.redirect(target);
+      });
+    };
+
     const googleUser = req.user;
 
     if (!googleUser?.email) {
@@ -349,13 +363,12 @@ export const googleAuthCallback = async (req, res) => {
         return res.redirect("/api/auth/login");
       }
 
-      req.session.user = {
+      return saveSessionAndRedirect({
         id: existingUser._id,
         email: existingUser.email,
         name: existingUser.name,
-      };
-
-      return res.redirect("/api/auth/home");
+        authProvider: "google",
+      }, "/api/auth/home");
     }
 
     if (googleAuthIntent !== "signup") {
@@ -387,7 +400,10 @@ export const googleAuthCallback = async (req, res) => {
     delete req.session.otpLastSentAt;
     delete req.session.signupData;
 
-    return res.redirect("/api/auth/login");
+    return res.redirect(
+      "/api/auth/login?message=" +
+        encodeURIComponent("Google signup successful. Please login with Google.")
+    );
 
   } catch (error) {
     console.log("Google auth error", error);

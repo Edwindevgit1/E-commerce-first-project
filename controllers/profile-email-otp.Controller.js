@@ -14,7 +14,8 @@ export const updateProfile = async (req,res) => {
     if(!user) return res.redirect('/api/auth/login');
 
     const name = (req.body.name || "").trim()
-    const newEmail = user.provider === "google"
+    const isGoogleAuth = (req.session.authProvider || user.provider) === "google";
+    const newEmail = isGoogleAuth
       ? user.email
       : (req.body.email || "").toLowerCase()
 
