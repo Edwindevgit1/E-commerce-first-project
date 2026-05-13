@@ -23,7 +23,9 @@
             <a href="/api/user/wallet" class="chip chip-dark">Wallet</a>
             <a href="/api/user/orders" class="chip">My orders</a>
             <a href="/api/user/adress" class="chip">Address management</a>
-            <a href="/api/user/change-password" class="chip">Change password</a>
+            <% if (user?.provider === "local") { %>
+              <a href="/api/user/change-password" class="chip">Change password</a>
+            <% } %>
           </div>
 
           <form action="/api/user/logout" method="POST">

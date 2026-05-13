@@ -87,8 +87,8 @@
         <div class="metric-value">₹<%= Number(dashboard.stats.revenue || 0).toLocaleString("en-IN") %></div>
       </article>
       <article class="metric-card">
-        <div class="metric-head"><span class="metric-icon refunds">F</span><span>Refunds</span></div>
-        <div class="metric-value"><%= Number(dashboard.stats.refunds || 0).toLocaleString("en-IN") %></div>
+        <div class="metric-head"><span class="metric-icon refunds">F</span><span>Collected Revenue</span></div>
+        <div class="metric-value">₹<%= Number(dashboard.stats.collectedRevenue || 0).toLocaleString("en-IN") %></div>
       </article>
     </section>
 

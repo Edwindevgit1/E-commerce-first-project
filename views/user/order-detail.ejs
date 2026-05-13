@@ -22,7 +22,9 @@
           <a href="/api/user/wallet" class="chip">Wallet</a>
           <a href="/api/user/orders" class="chip chip-dark">My orders</a>
           <a href="/api/user/adress" class="chip">Address management</a>
-          <a href="/api/user/change-password" class="chip">Change password</a>
+          <% if (user?.provider === "local") { %>
+            <a href="/api/user/change-password" class="chip">Change password</a>
+          <% } %>
         </div>
 
         <form action="/api/user/logout" method="POST">
@@ -100,7 +102,23 @@
             <div class="order-detail-row"><strong>Status:</strong> <%= order.status.replaceAll("_", " ") %></div>
             <div class="order-detail-row"><strong>Order Date:</strong> <%= new Date(order.createdAt).toLocaleDateString("en-IN") %></div>
             <div class="order-detail-row"><strong>Payment:</strong> <%= order.paymentMethod %></div>
+            <div class="order-detail-row"><strong>Payment Status:</strong> <%= order.paymentStatus %></div>
             <div class="order-detail-row"><strong>Total:</strong> ₹<%= order.grandTotal %></div>
+
+            <h2>Delivery Address</h2>
+            <div class="order-detail-row"><strong>Type:</strong> <%= order.address?.addressType || order.address?.type || "--" %></div>
+            <div class="order-detail-row"><strong>Name:</strong> <%= order.address?.fullName || user?.name || "--" %></div>
+            <% if (order.address?.mobile) { %>
+              <div class="order-detail-row"><strong>Mobile:</strong> <%= order.address.mobile %></div>
+            <% } %>
+            <div class="order-detail-row"><strong>Street:</strong> <%= order.address?.street || "--" %></div>
+            <div class="order-detail-row"><strong>City:</strong> <%= order.address?.city || "--" %></div>
+            <div class="order-detail-row"><strong>State:</strong> <%= order.address?.state || "--" %></div>
+            <div class="order-detail-row"><strong>Pincode:</strong> <%= order.address?.pincode || "--" %></div>
+
+            <% if (order.status === "failed" && order.retryCartItemIds && order.retryCartItemIds.length) { %>
+              <a href="/api/user/checkout?<%= order.retryCartItemIds.map((itemId) => 'selectedCartItemIds=' + encodeURIComponent(itemId)).join('&') %>" class="orders-link orders-link--primary">Retry Payment</a>
+            <% } %>
 
             <%
               const canCancelFullOrder = ["pending", "shipped"].includes(order.status) &&

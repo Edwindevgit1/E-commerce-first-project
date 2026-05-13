@@ -22,7 +22,9 @@
           <a href="/api/user/wallet" class="chip">Wallet</a>
           <a href="/api/user/orders" class="chip chip-dark">My orders</a>
           <a href="/api/user/adress" class="chip">Address management</a>
-          <a href="/api/user/change-password" class="chip">Change password</a>
+          <% if (user?.provider === "local") { %>
+            <a href="/api/user/change-password" class="chip">Change password</a>
+          <% } %>
         </div>
 
         <form action="/api/user/logout" method="POST">
@@ -96,6 +98,10 @@
                     <span>₹<%= order.grandTotal %></span>
                   </div>
                   <div class="order-card__row">
+                    <strong>Payment:</strong>
+                    <span><%= order.paymentStatus %></span>
+                  </div>
+                  <div class="order-card__row">
                     <button type="button" class="expand-toggle" data-expand-toggle>
                       <%= order.items[0]?.productName || "Product" %><% if (order.items.length > 1) { %> <span class="expand-count">+<%= order.items.length - 1 %> more</span><% } %> <span class="expand-arrow">▼</span>
                     </button>
@@ -118,6 +124,9 @@
                   <div class="order-card__row">
                     <span class="status-pill status-pill--<%= order.status %>"><%= order.status.replaceAll("_", " ") %></span>
                   </div>
+                  <% if (order.status === "failed" && order.retryCartItemIds && order.retryCartItemIds.length) { %>
+                    <a href="/api/user/checkout?<%= order.retryCartItemIds.map((itemId) => 'selectedCartItemIds=' + encodeURIComponent(itemId)).join('&') %>" class="orders-link">Retry</a>
+                  <% } %>
                   <a href="/api/user/orders/<%= order._id %>" class="orders-link orders-link--primary">View Details</a>
                 </div>
               </article>

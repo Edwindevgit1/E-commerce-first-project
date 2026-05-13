@@ -22,7 +22,9 @@
             <a href="/api/user/wallet" class="chip">Wallet</a>
             <a href="/api/user/orders" class="chip">My orders</a>
             <a href="/api/user/adress" class="chip">Address management</a>
-            <a href="/api/user/change-password" class="chip">Change password</a>
+            <% if (user.provider === "local") { %>
+              <a href="/api/user/change-password" class="chip">Change password</a>
+            <% } %>
           </div>
 
           <form action="/api/user/logout" method="POST">
@@ -108,7 +110,9 @@
                   name="email"
                   value="<%= user.email %>"
                   id="emailInput"
+                  data-editable="<%= user.provider === 'local' ? 'true' : 'false' %>"
                   disabled
+                  <%= user.provider === "google" ? 'readonly' : '' %>
                 />
               </div>
             </div>
@@ -173,7 +177,9 @@
 
         editBtn?.addEventListener("click", function () {
         nameInput.disabled = false;
-        emailInput.disabled = false;
+        if (emailInput && emailInput.dataset.editable === "true") {
+          emailInput.disabled = false;
+        }
         imageInput.disabled = false;
 
         editBtn.style.display = "none";

@@ -49,17 +49,31 @@
       <tbody>
       <% coupons.forEach((coupon) => { %>
         <tr>
-          <td><strong><%= coupon.code %></strong></td>
-          <td><%= coupon.discountType %></td>
-          <td><%= coupon.discountValue %></td>
-          <td>₹<%= coupon.minOrderAmount %></td>
-          <td><%= coupon.usedCount %>/<%= coupon.usageLimit || "∞" %></td>
-          <td><%= coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString("en-IN") : "No expiry" %></td>
-          <td>
-            <form method="POST" action="/api/admin/coupons/<%= coupon._id %>/delete">
-              <button class="btn btn-light">Delete</button>
-            </form>
-          </td>
+          <form method="POST" action="/api/admin/coupons/<%= coupon._id %>/update">
+            <td><input name="code" value="<%= coupon.code %>" required /></td>
+            <td>
+              <select name="discountType">
+                <option value="flat" <%= coupon.discountType === "flat" ? "selected" : "" %>>Flat</option>
+                <option value="percentage" <%= coupon.discountType === "percentage" ? "selected" : "" %>>Percentage</option>
+              </select>
+            </td>
+            <td><input name="discountValue" type="number" min="1" value="<%= coupon.discountValue %>" required /></td>
+            <td><input name="minOrderAmount" type="number" min="0" value="<%= coupon.minOrderAmount %>" /></td>
+            <td><%= coupon.usedCount %>/<%= coupon.usageLimit || "∞" %><input type="hidden" name="usageLimit" value="<%= coupon.usageLimit %>" /></td>
+            <td><input name="expiresAt" type="date" value="<%= coupon.expiresAt ? new Date(coupon.expiresAt).toISOString().slice(0,10) : '' %>" /></td>
+            <td>
+              <input type="hidden" name="maxDiscount" value="<%= coupon.maxDiscount %>" />
+              <input type="hidden" name="description" value="<%= coupon.description || '' %>" />
+              <select name="isActive">
+                <option value="true" <%= coupon.isActive ? "selected" : "" %>>Active</option>
+                <option value="false" <%= !coupon.isActive ? "selected" : "" %>>Inactive</option>
+              </select>
+              <button class="btn btn-dark" type="submit">Save</button>
+          </form>
+              <form method="POST" action="/api/admin/coupons/<%= coupon._id %>/delete" style="margin-top:8px;">
+                <button class="btn btn-light" type="submit">Delete</button>
+              </form>
+            </td>
         </tr>
       <% }) %>
       </tbody>

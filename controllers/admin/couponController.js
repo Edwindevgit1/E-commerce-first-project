@@ -1,7 +1,8 @@
 import {
   createCouponService,
   deleteCouponService,
-  listCouponsService
+  listCouponsService,
+  updateCouponService
 } from "../../services/couponServices.js";
 
 export const getCouponsController = async (req, res) => {
@@ -21,6 +22,17 @@ export const createCouponController = async (req, res) => {
   } catch (error) {
     return res.redirect(
       `/api/admin/coupons?error=${encodeURIComponent(error.message || "Unable to create coupon")}`
+    );
+  }
+};
+
+export const updateCouponController = async (req, res) => {
+  try {
+    await updateCouponService(req.params.id, req.body);
+    return res.redirect("/api/admin/coupons?message=Coupon updated");
+  } catch (error) {
+    return res.redirect(
+      `/api/admin/coupons?error=${encodeURIComponent(error.message || "Unable to update coupon")}`
     );
   }
 };

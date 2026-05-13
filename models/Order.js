@@ -36,7 +36,7 @@ const orderItemSchema = new mongoose.Schema({
   },
   status:{
     type:String,
-    enum:["pending","shipped","out_for_delivery","delivered","cancelled","cancellation_requested","return_requested","returned","return_rejected"],
+    enum:["pending","shipped","out_for_delivery","delivered","cancelled","cancellation_requested","return_requested","returned","return_rejected","failed"],
     default:"pending"
   },
   cancellationReason:{
@@ -180,9 +180,13 @@ const orderSchema = new mongoose.Schema({
     required:true,
     default:0
   },
+  retryCartItemIds:{
+    type:[String],
+    default:[]
+  },
   status:{
     type:String,
-    enum:["pending","shipped","out_for_delivery","delivered","cancelled","partially_cancelled","cancellation_requested","return_requested","returned","return_rejected"],
+    enum:["pending","shipped","out_for_delivery","delivered","cancelled","partially_cancelled","cancellation_requested","return_requested","returned","return_rejected","failed"],
     default:"pending"
   },
   cancellationReason:{

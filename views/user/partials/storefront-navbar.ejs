@@ -13,6 +13,15 @@
     typeof navbarCartCount !== "undefined" && Number.isFinite(Number(navbarCartCount))
       ? Number(navbarCartCount)
       : 0;
+  const wishlistCount =
+    typeof navbarWishlistCount !== "undefined" && Number.isFinite(Number(navbarWishlistCount))
+      ? Number(navbarWishlistCount)
+      : 0;
+  const activeSearch = typeof search !== "undefined" ? search : "";
+  const activeSort = typeof sort !== "undefined" ? sort : "";
+  const activePriceRange = typeof priceRange !== "undefined" ? priceRange : "";
+  const activeSize = typeof size !== "undefined" ? size : "";
+  const activeColor = typeof color !== "undefined" ? color : "";
 %>
 
 <header class="store-navbar">
@@ -33,7 +42,7 @@
         <nav class="store-category-track track-pending">
           <% categoryItems.forEach((item) => { %>
             <a
-              href="/api/user/products?category=<%= item._id %>"
+              href="/api/user/products?category=<%= item._id %><%= activeSearch ? '&search=' + encodeURIComponent(activeSearch) : '' %><%= activeSort ? '&sort=' + encodeURIComponent(activeSort) : '' %><%= activePriceRange ? '&priceRange=' + encodeURIComponent(activePriceRange) : '' %><%= activeSize ? '&size=' + encodeURIComponent(activeSize) : '' %><%= activeColor ? '&color=' + encodeURIComponent(activeColor) : '' %>"
               class="store-category-link <%= activeCategoryId === String(item._id) ? 'active' : '' %>"
             >
               <%= item.name %>
@@ -57,18 +66,35 @@
         <% if (activeCategoryId) { %>
           <input type="hidden" name="category" value="<%= activeCategoryId %>" />
         <% } %>
+        <% if (activeSort) { %>
+          <input type="hidden" name="sort" value="<%= activeSort %>" />
+        <% } %>
+        <% if (activePriceRange) { %>
+          <input type="hidden" name="priceRange" value="<%= activePriceRange %>" />
+        <% } %>
+        <% if (activeSize) { %>
+          <input type="hidden" name="size" value="<%= activeSize %>" />
+        <% } %>
+        <% if (activeColor) { %>
+          <input type="hidden" name="color" value="<%= activeColor %>" />
+        <% } %>
         <input
           type="text"
           name="search"
           placeholder="Search"
-          value="<%= typeof search !== 'undefined' ? search : '' %>"
+          value="<%= activeSearch %>"
           data-store-search-input
         />
         <button type="button" class="store-search-clear <%= (typeof search !== 'undefined' && search) ? 'visible' : '' %>" aria-label="Clear search" data-store-search-clear>×</button>
       </form>
 
       <a href="/api/user/profile" class="store-icon" aria-label="Profile">👤</a>
-      <a href="/api/user/wishlist" class="store-icon" aria-label="Wishlist">♡</a>
+      <a href="/api/user/wishlist" class="store-icon store-icon-cart" aria-label="Wishlist">
+        <span aria-hidden="true">♡</span>
+        <span
+          class="store-cart-badge <%= wishlistCount > 0 ? 'visible' : '' %>"
+        ><%= wishlistCount %></span>
+      </a>
       <a href="/api/user/cart" class="store-icon store-icon-cart" aria-label="Cart">
         <span aria-hidden="true">🛒</span>
         <span

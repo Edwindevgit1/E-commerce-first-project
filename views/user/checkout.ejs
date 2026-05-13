@@ -27,6 +27,7 @@
     const shipping = subtotal >= 1000 ? 0 : 50;
     const finalTotal = subtotal + shipping + tax - discount;
     const availableWallet = Number(typeof walletBalance !== "undefined" ? walletBalance : 0) || 0;
+    const availableCouponsList = Array.isArray(availableCoupons) ? availableCoupons : [];
     const canPayFullWithWallet = availableWallet >= finalTotal && finalTotal > 0;
     const redirectQuery = selectedItems
       .map(function(itemId) {
@@ -47,7 +48,35 @@
         <section class="checkout-panel">
           <div class="checkout-panel-head">
             <h2>Delivery Address</h2>
-            <a href="/api/user/adress?redirect=<%= encodeURIComponent(checkoutRedirectUrl) %>" class="checkout-link">Add / Edit Address</a>
+            <button type="button" class="checkout-link" id="toggleAddressFormBtn">Add / Edit Address</button>
+          </div>
+
+          <div class="checkout-address-editor" id="checkoutAddressEditor" hidden>
+            <form method="POST" action="/api/user/add-address" class="coupon-form">
+              <input type="hidden" name="redirect" value="<%= checkoutRedirectUrl %>" />
+              <input type="text" name="type" class="coupon-input" placeholder="Address type" required />
+              <input type="text" name="street" class="coupon-input" placeholder="Street" required />
+              <input type="text" name="city" class="coupon-input" placeholder="City" required />
+              <input type="text" name="state" class="coupon-input" placeholder="State" required />
+              <input type="text" name="pincode" class="coupon-input" placeholder="Pincode" required />
+              <button type="submit" class="checkout-submit">Save New Address</button>
+            </form>
+
+            <% if (savedAddresses.length) { %>
+              <div class="checkout-inline-edit-list">
+                <% savedAddresses.forEach(function(address) { %>
+                  <form method="POST" action="/api/user/update-address/<%= address._id %>" class="coupon-form">
+                    <input type="hidden" name="redirect" value="<%= checkoutRedirectUrl %>" />
+                    <input type="text" name="type" class="coupon-input" value="<%= address.type %>" required />
+                    <input type="text" name="street" class="coupon-input" value="<%= address.street %>" required />
+                    <input type="text" name="city" class="coupon-input" value="<%= address.city %>" required />
+                    <input type="text" name="state" class="coupon-input" value="<%= address.state %>" required />
+                    <input type="text" name="pincode" class="coupon-input" value="<%= address.pincode %>" required />
+                    <button type="submit" class="checkout-submit">Update Address</button>
+                  </form>
+                <% }) %>
+              </div>
+            <% } %>
           </div>
 
           <% if (!savedAddresses.length) { %>
@@ -140,6 +169,26 @@
 
         <section class="summary-payment">
           <h3>Coupon</h3>
+          <% if (availableCouponsList.length) { %>
+            <details class="available-coupons">
+              <summary>Show available coupons</summary>
+              <div class="available-coupons__list">
+                <% availableCouponsList.forEach(function(item) { %>
+                  <button
+                    type="button"
+                    class="available-coupon-chip"
+                    data-coupon-code="<%= item.code %>"
+                  >
+                    <strong><%= item.code %></strong>
+                    <span>
+                      <%= item.discountType === "percentage" ? item.discountValue + "% off" : "₹" + item.discountValue + " off" %>
+                      <% if (item.minOrderAmount) { %> | Min ₹<%= item.minOrderAmount %><% } %>
+                    </span>
+                  </button>
+                <% }) %>
+              </div>
+            </details>
+          <% } %>
           <% if (coupon) { %>
             <form method="POST" action="/api/user/checkout/coupon/remove">
               <% selectedItems.forEach(function(itemId) { %>
@@ -156,7 +205,7 @@
               <% selectedItems.forEach(function(itemId) { %>
                 <input type="hidden" name="selectedCartItemIds" value="<%= itemId %>" />
               <% }); %>
-              <input type="text" name="couponCode" class="coupon-input" placeholder="Enter coupon code" required />
+              <input type="text" name="couponCode" id="couponCodeInput" class="coupon-input" placeholder="Enter coupon code" required />
               <button type="submit" class="checkout-submit">Apply Coupon</button>
             </form>
           <% } %>
@@ -309,10 +358,13 @@
             },
             modal: {
               ondismiss: function () {
-                window.location.href = "/api/user/payment-failure?message="
-                  + encodeURIComponent("Payment cancelled. Please try again.")
-                  + "&retryUrl="
-                  + encodeURIComponent("<%= checkoutRedirectUrl %>");
+                fetch("/api/user/checkout/razorpay/failure", { method: "POST" })
+                  .finally(function () {
+                    window.location.href = "/api/user/payment-failure?message="
+                      + encodeURIComponent("Payment cancelled. Please try again.")
+                      + "&retryUrl="
+                      + encodeURIComponent("<%= checkoutRedirectUrl %>");
+                  });
               }
             },
             theme: {
@@ -330,6 +382,29 @@
           button.disabled = false;
           button.textContent = "Place Order";
         }
+      });
+    })();
+
+    (() => {
+      const toggleBtn = document.getElementById("toggleAddressFormBtn");
+      const editor = document.getElementById("checkoutAddressEditor");
+      const couponInput = document.getElementById("couponCodeInput");
+
+      toggleBtn?.addEventListener("click", () => {
+        const willShow = editor.hasAttribute("hidden");
+        if (willShow) {
+          editor.removeAttribute("hidden");
+        } else {
+          editor.setAttribute("hidden", "");
+        }
+      });
+
+      document.querySelectorAll("[data-coupon-code]").forEach((button) => {
+        button.addEventListener("click", () => {
+          if (!couponInput) return;
+          couponInput.value = button.dataset.couponCode || "";
+          couponInput.focus();
+        });
       });
     })();
   </script>

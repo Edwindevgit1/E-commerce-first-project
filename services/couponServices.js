@@ -52,8 +52,65 @@ export const listCouponsService = async () => {
   return Coupon.find().sort({ createdAt: -1 }).lean();
 };
 
+export const getCouponByIdService = async (id) => Coupon.findById(id);
+
+export const updateCouponService = async (id, data = {}) => {
+  const coupon = await Coupon.findById(id);
+  if (!coupon) throw new Error("Coupon not found");
+
+  const code = normalizeCode(data.code);
+  if (!code) throw new Error("Coupon code required");
+
+  const discountType = data.discountType === "percentage" ? "percentage" : "flat";
+  const discountValue = Number(data.discountValue);
+
+  if (!discountValue || discountValue < 1) {
+    throw new Error("Discount value must be greater than zero");
+  }
+
+  if (discountType === "percentage" && discountValue > 90) {
+    throw new Error("Percentage discount cannot exceed 90%");
+  }
+
+  const exists = await Coupon.findOne({ code, _id: { $ne: id } });
+  if (exists) throw new Error("Coupon code already exists");
+
+  coupon.code = code;
+  coupon.description = data.description || "";
+  coupon.discountType = discountType;
+  coupon.discountValue = discountValue;
+  coupon.maxDiscount = Number(data.maxDiscount) || 0;
+  coupon.minOrderAmount = Number(data.minOrderAmount) || 0;
+  coupon.usageLimit = Number(data.usageLimit) || 0;
+  coupon.expiresAt = data.expiresAt ? new Date(data.expiresAt) : null;
+  coupon.isActive = data.isActive !== "false";
+  coupon.updatedAtAdmin = new Date();
+
+  await coupon.save();
+  return coupon;
+};
+
 export const deleteCouponService = async (id) => {
   return Coupon.findByIdAndDelete(id);
+};
+
+export const listAvailableCouponsForCheckout = async (subtotal = 0) => {
+  const now = new Date();
+  const amount = Number(subtotal) || 0;
+  const coupons = await Coupon.find({
+    isActive: true,
+    $or: [{ expiresAt: null }, { expiresAt: { $gte: now } }]
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return coupons.filter((coupon) => {
+    const withinUsageLimit =
+      Number(coupon.usageLimit || 0) <= 0 ||
+      Number(coupon.usedCount || 0) < Number(coupon.usageLimit || 0);
+    const meetsMinimum = Number(coupon.minOrderAmount || 0) <= amount;
+    return withinUsageLimit && meetsMinimum;
+  });
 };
 
 export const validateCouponForCheckout = async (code = "", subtotal = 0) => {

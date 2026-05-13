@@ -61,6 +61,34 @@ const buildSimplePdfBuffer = (lines = []) => {
   ]);
 };
 
+const buildReportPdfLines = (report) => {
+  const header = [
+    "Sales Report",
+    `Sales Count: ${report.totals.salesCount}`,
+    `Order Amount: Rs. ${report.totals.orderAmount}`,
+    `Discount: Rs. ${report.totals.discount}`,
+    `Coupon Deductions: Rs. ${report.totals.couponDiscount}`,
+    "------------------------------------------------------------",
+    "Order ID | Date | Customer | Status | Coupon | Discount | Amount",
+    "------------------------------------------------------------"
+  ];
+
+  const rows = report.orders.flatMap((order) => {
+    const date = new Date(order.createdAt).toLocaleDateString("en-IN");
+    const customer = order.user?.email || "User";
+    const coupon = order.coupon?.code || "--";
+    const amount = getOrderAmount(order);
+
+    return [
+      `${order.orderId} | ${date} |`,
+      `${customer.slice(0, 42)} | ${order.status} | ${coupon} | Rs. ${order.discount || 0} | Rs. ${amount}`,
+      "------------------------------------------------------------"
+    ];
+  });
+
+  return [...header, ...rows].slice(0, 42);
+};
+
 export const getDashboardController = async (req, res) => {
   const period = req.query.period || "monthly";
   const dashboard = await getDashboardService(period, {
@@ -84,17 +112,7 @@ export const getSalesReportController = async (req, res) => {
 
 export const downloadSalesReportPdfController = async (req, res) => {
   const report = await getSalesReportService(req.query);
-  const lines = [
-    "Sales Report",
-    `Sales Count: ${report.totals.salesCount}`,
-    `Order Amount: Rs. ${report.totals.orderAmount}`,
-    `Discount: Rs. ${report.totals.discount}`,
-    `Coupon Deductions: Rs. ${report.totals.couponDiscount}`,
-    "",
-    ...report.orders.map((order) =>
-      `${order.orderId} | ${order.user?.email || "User"} | ${order.status} | Rs. ${getOrderAmount(order)}`
-    )
-  ];
+  const lines = buildReportPdfLines(report);
   const pdfBuffer = buildSimplePdfBuffer(lines);
 
   res.setHeader("Content-Type", "application/pdf");
@@ -105,26 +123,61 @@ export const downloadSalesReportPdfController = async (req, res) => {
 
 export const downloadSalesReportExcelController = async (req, res) => {
   const report = await getSalesReportService(req.query);
+  const tableRows = report.orders.map((order) => `
+    <tr>
+      <td>${order.orderId}</td>
+      <td>${new Date(order.createdAt).toLocaleDateString("en-IN")}</td>
+      <td>${order.user?.email || ""}</td>
+      <td>${order.status}</td>
+      <td>${order.coupon?.code || "--"}</td>
+      <td>₹${order.discount || 0}</td>
+      <td>₹${getOrderAmount(order)}</td>
+    </tr>
+  `).join("");
 
-  const rows = [
-    ["Order ID", "Date", "Customer", "Status", "Coupon", "Discount", "Amount"],
-    ...report.orders.map((order) => [
-      order.orderId,
-      new Date(order.createdAt).toISOString().slice(0, 10),
-      order.user?.email || "",
-      order.status,
-      order.coupon?.code || "",
-      order.discount || 0,
-      getOrderAmount(order)
-    ])
-  ];
+  const workbookHtml = `
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <style>
+          body { font-family: Arial, sans-serif; }
+          h1 { font-size: 20px; }
+          .stats { margin: 12px 0 18px; }
+          .stats div { margin-bottom: 6px; font-weight: 700; }
+          table { border-collapse: collapse; width: 100%; }
+          th, td { border: 1px solid #9fb2d8; padding: 8px 10px; text-align: left; }
+          th { background: #dfe8f5; color: #173b80; }
+          tr:nth-child(even) td { background: #f6f9ff; }
+        </style>
+      </head>
+      <body>
+        <h1>Sales Report</h1>
+        <div class="stats">
+          <div>Sales Count: ${report.totals.salesCount}</div>
+          <div>Order Amount: ₹${report.totals.orderAmount}</div>
+          <div>Discount: ₹${report.totals.discount}</div>
+          <div>Coupon Deductions: ₹${report.totals.couponDiscount}</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Status</th>
+              <th>Coupon</th>
+              <th>Discount</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows || '<tr><td colspan="7">No report data</td></tr>'}</tbody>
+        </table>
+      </body>
+    </html>
+  `;
 
-  const csv = rows
-    .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","))
-    .join("\n");
-
-  res.setHeader("Content-Type", "application/vnd.ms-excel");
+  res.setHeader("Content-Type", "application/vnd.ms-excel; charset=utf-8");
   res.setHeader("Content-Disposition", "attachment; filename=sales-report.xls");
 
-  return res.send(csv);
+  return res.send(workbookHtml);
 };

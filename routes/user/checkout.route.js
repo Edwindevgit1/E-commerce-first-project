@@ -1,9 +1,9 @@
 import express from "express";
 import User from "../../models/User.js";
 import { validateCartForCheckoutService } from "../../services/cartServices.js";
-import { validateCouponForCheckout } from "../../services/couponServices.js";
+import { listAvailableCouponsForCheckout, validateCouponForCheckout } from "../../services/couponServices.js";
 import { createRazorpayOrder, verifyRazorpaySignature } from "../../services/razorpayServices.js";
-import { placeOrderService } from "../../services/orderServices.js";
+import { createFailedOrderService, placeOrderService } from "../../services/orderServices.js";
 
 const router = express.Router()
 const buildSelectedItemsQuery = (selectedProductIds = []) =>
@@ -59,6 +59,7 @@ router.get('/checkout', async (req, res) => {
       req.session.checkoutCouponCode || ""
     );
     const user = await User.findById(userId);
+    const availableCoupons = await listAvailableCouponsForCheckout(summary.grandTotal);
 
     return res.render("user/checkout", {
       addresses: user?.addresses || [],
@@ -68,6 +69,7 @@ router.get('/checkout', async (req, res) => {
       couponDiscount: summary.couponDiscount,
       razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
       walletBalance: user?.wallet?.balance || 0,
+      availableCoupons,
       selectedProductIds,
       message: req.query.message || null,
       error: req.query.error || null
@@ -214,7 +216,24 @@ router.post("/checkout/razorpay/verify", async (req, res) => {
       redirectUrl: `/api/user/order-success/${order._id}`
     });
   } catch (error) {
-    const retryUrl = req.session.pendingRazorpayCheckout?.retryUrl || "/api/user/cart";
+    const pending = req.session.pendingRazorpayCheckout;
+    const retryUrl = pending?.retryUrl || "/api/user/cart";
+    if (pending) {
+      try {
+        await createFailedOrderService(
+          req.user._id,
+          pending.selectedCartItemIds,
+          pending.addressId,
+          {
+            paymentMethod: "RAZORPAY",
+            couponCode: pending.couponCode || "",
+            razorpayOrderId: req.body.razorpay_order_id || pending.razorpayOrderId || ""
+          }
+        );
+      } catch (createError) {
+        console.log(createError, "failed order capture error");
+      }
+    }
     req.session.pendingRazorpayCheckout = null;
     return res.status(400).json({
       success: false,
@@ -222,6 +241,32 @@ router.post("/checkout/razorpay/verify", async (req, res) => {
       redirectUrl: `/api/user/payment-failure?message=${encodeURIComponent(error.message || "Payment verification failed")}&retryUrl=${encodeURIComponent(retryUrl)}`
     });
   }
+});
+
+router.post("/checkout/razorpay/failure", async (req, res) => {
+  try {
+    const pending = req.session.pendingRazorpayCheckout;
+    if (!pending) {
+      return res.json({ success: true });
+    }
+
+    await createFailedOrderService(
+      req.user._id,
+      pending.selectedCartItemIds,
+      pending.addressId,
+      {
+        paymentMethod: "RAZORPAY",
+        couponCode: pending.couponCode || "",
+        razorpayOrderId: pending.razorpayOrderId || ""
+      }
+    );
+  } catch (error) {
+    console.log(error, "razorpay failure capture error");
+  } finally {
+    req.session.pendingRazorpayCheckout = null;
+  }
+
+  return res.json({ success: true });
 });
 
 export default router

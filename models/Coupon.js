@@ -50,6 +50,10 @@ const couponSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+    updatedAtAdmin: {
+      type: Date,
+      default: null
     }
   },
   { timestamps: true }

@@ -14,7 +14,9 @@ export const updateProfile = async (req,res) => {
     if(!user) return res.redirect('/api/auth/login');
 
     const name = (req.body.name || "").trim()
-    const newEmail = (req.body.email || "").toLowerCase()
+    const newEmail = user.provider === "google"
+      ? user.email
+      : (req.body.email || "").toLowerCase()
 
     const newProfileImage = req.file ? `/uploads/${req.file.filename}` : user.profileImage;
     console.log("New email:", newEmail);

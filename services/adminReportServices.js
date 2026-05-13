@@ -180,11 +180,11 @@ export const getDashboardService = async (period = "monthly", options = {}) => {
     { $limit: 10 }
   ]);
 
-  const [totalUsers, totalOrders, allOrders, refundCount, recentOrderCount, weeklyChart] = await Promise.all([
+  const [totalUsers, totalOrders, allOrders, paidOrders, recentOrderCount, weeklyChart] = await Promise.all([
     User.countDocuments({ role: "user" }),
     Order.countDocuments(),
     Order.find(dashboardMatch).select("grandTotal subtotal shippingCharge tax discount").lean(),
-    Order.countDocuments({ status: { $in: ["cancelled", "returned"] } }),
+    Order.find({ paymentStatus: "paid" }).select("grandTotal subtotal shippingCharge tax discount").lean(),
     Order.countDocuments(),
     Order.aggregate([
       {
@@ -202,6 +202,7 @@ export const getDashboardService = async (period = "monthly", options = {}) => {
   ]);
 
   const revenue = allOrders.reduce((sum, order) => sum + getOrderAmount(order), 0);
+  const collectedRevenue = paidOrders.reduce((sum, order) => sum + getOrderAmount(order), 0);
   const recentTotalPages = Math.max(1, Math.ceil(recentOrderCount / recentPageSize));
   const safeRecentPage = Math.min(requestedRecentPage, recentTotalPages);
   const recentOrders = await Order.find()
@@ -220,7 +221,7 @@ export const getDashboardService = async (period = "monthly", options = {}) => {
       totalUsers,
       totalOrders,
       revenue,
-      refunds: refundCount
+      collectedRevenue
     },
     recentOrders,
     recentPagination: {

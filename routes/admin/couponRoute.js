@@ -4,13 +4,15 @@ import noCache from "../../middleware/noCacheMiddleware.js";
 import {
   createCouponController,
   deleteCouponController,
-  getCouponsController
+  getCouponsController,
+  updateCouponController
 } from "../../controllers/admin/couponController.js";
 
 const router = express.Router();
 
 router.get("/coupons", noCache, adminMiddleware, getCouponsController);
 router.post("/coupons", adminMiddleware, createCouponController);
+router.post("/coupons/:id/update", adminMiddleware, updateCouponController);
 router.post("/coupons/:id/delete", adminMiddleware, deleteCouponController);
 
 export default router;

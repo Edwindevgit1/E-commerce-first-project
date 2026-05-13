@@ -232,3 +232,125 @@ export const placeOrderService = async (userId, selectedCartItemIds = [], addres
 
   return order;
 };
+
+export const createFailedOrderService = async (
+  userId,
+  selectedCartItemIds = [],
+  addressId,
+  options = {}
+) => {
+  if (!userId) {
+    throw new Error("User is required");
+  }
+
+  const normalizedSelectedIds = (Array.isArray(selectedCartItemIds)
+    ? selectedCartItemIds
+    : [selectedCartItemIds]
+  )
+    .map((id) => String(id || "").trim())
+    .filter(Boolean);
+
+  if (!normalizedSelectedIds.length) {
+    throw new Error("No valid cart items selected");
+  }
+
+  const cart = await Cart.findOne({ user: userId });
+  if (!cart || !cart.items.length) {
+    throw new Error("Your cart is empty");
+  }
+
+  const selectedIdSet = new Set(normalizedSelectedIds);
+  const itemsToOrder = cart.items.filter((item) =>
+    selectedIdSet.has(buildCartItemId(item.product, item.size, item.color))
+  );
+
+  if (!itemsToOrder.length) {
+    throw new Error("No valid cart items selected");
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const selectedAddress = user.addresses.id(addressId);
+  if (!selectedAddress) {
+    throw new Error("Please select a delivery address");
+  }
+
+  const orderItems = [];
+  let grandTotal = 0;
+
+  for (const item of itemsToOrder) {
+    const product = await Product.findById(item.product).populate("category");
+    if (!product) continue;
+
+    const selectedVariant = getProductVariant(product, item.size, item.color);
+    if (!selectedVariant) continue;
+
+    const pricing = getEffectiveProductPricing({
+      ...product.toObject(),
+      price: Number(selectedVariant.price) || 0,
+      offerPrice: Number(selectedVariant.offerPrice) || 0
+    });
+    const price = pricing.effectivePrice;
+    const subtotal = price * item.quantity;
+    const imageIndex = selectedVariant.mainImageIndex ?? 0;
+
+    orderItems.push({
+      product: product._id,
+      productName: product.productName,
+      productImage:
+        selectedVariant.images?.[imageIndex] ||
+        selectedVariant.images?.[0] ||
+        product.images?.[product.mainImageIndex ?? 0] ||
+        product.images?.[0] ||
+        "",
+      price,
+      quantity: item.quantity,
+      size: item.size || "",
+      color: item.color || "",
+      subtotal,
+      status: "failed"
+    });
+
+    grandTotal += subtotal;
+  }
+
+  if (!orderItems.length) {
+    throw new Error("No valid cart items selected");
+  }
+
+  const shippingCharge = grandTotal >= 1000 ? 0 : 50;
+  const tax = 0;
+  const couponResult = await validateCouponForCheckout(options.couponCode || "", grandTotal);
+  const discount = couponResult.discount;
+  const totalBeforeWallet = Math.max(0, grandTotal + shippingCharge + tax - discount);
+  const orderId = await generateOrderId();
+
+  return Order.create({
+    orderId,
+    user: userId,
+    address: selectedAddress.toObject(),
+    items: orderItems,
+    subtotal: grandTotal,
+    discount,
+    coupon: couponResult.coupon
+      ? { code: couponResult.coupon.code, discount }
+      : { code: "", discount: 0 },
+    tax,
+    shippingCharge,
+    grandTotal: totalBeforeWallet,
+    walletAmountUsed: 0,
+    paymentMethod: String(options.paymentMethod || "RAZORPAY").toUpperCase(),
+    paymentStatus: "failed",
+    status: "failed",
+    retryCartItemIds: normalizedSelectedIds,
+    razorpay: {
+      orderId: String(options.razorpayOrderId || ""),
+      paymentId: String(options.razorpayPaymentId || ""),
+      signature: "",
+      paidAt: null
+    }
+  });
+};

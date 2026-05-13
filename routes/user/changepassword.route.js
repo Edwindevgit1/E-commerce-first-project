@@ -21,6 +21,10 @@ router.get('/change-password', async (req, res) => {
       return res.redirect('/api/auth/login')
     }
 
+    if (user.provider === "google") {
+      return res.redirect('/api/user/profile')
+    }
+
     res.render('user/change-password', { user })
 
   } catch (error) {
@@ -50,45 +54,10 @@ router.post('/change-password', async (req, res) => {
       return res.redirect('/api/auth/login')
     }
 
-
-    // USER REGISTERED THROUGH GOOGLE (NO PASSWORD YET)
-    if (!user.password) {
-
-      if (!newPassword || !confirmPassword) {
-        return res.render('user/change-password', {
-          user,
-          error: "Please enter a new password."
-        })
-      }
-
-      if (newPassword !== confirmPassword) {
-        return res.render('user/change-password', {
-          user,
-          error: "Passwords do not match."
-        })
-      }
-
-      if (!passwordRegex.test(newPassword)) {
-        return res.render('user/change-password', {
-          user,
-          error: "Password must contain 8 characters, uppercase, lowercase, and special character."
-        })
-      }
-
-      const hashedPassword = await bcrypt.hash(newPassword, 10)
-
-      user.password = hashedPassword
-      await user.save()
-
-      return res.render('user/change-password', {
-        user,
-        success: "Password set successfully."
-      })
-
+    if (user.provider === "google") {
+      return res.redirect('/api/user/profile')
     }
 
-
-    // NORMAL USER (HAS PASSWORD)
 
     if (!currentPassword || !newPassword || !confirmPassword) {
       return res.render('user/change-password', {
