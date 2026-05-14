@@ -2,6 +2,18 @@ import Coupon from "../models/Coupon.js";
 
 const normalizeCode = (code = "") => String(code).trim().toUpperCase();
 
+const parseCouponExpiry = (rawValue) => {
+  if (!rawValue) return null;
+
+  const expiry = new Date(rawValue);
+  if (Number.isNaN(expiry.getTime())) {
+    return null;
+  }
+
+  expiry.setHours(23, 59, 59, 999);
+  return expiry;
+};
+
 export const calculateCouponDiscount = (coupon, subtotal) => {
   const amount = Number(subtotal) || 0;
   if (!coupon || amount <= 0) return 0;
@@ -43,7 +55,7 @@ export const createCouponService = async (data = {}) => {
     maxDiscount: Number(data.maxDiscount) || 0,
     minOrderAmount: Number(data.minOrderAmount) || 0,
     usageLimit: Number(data.usageLimit) || 0,
-    expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+    expiresAt: parseCouponExpiry(data.expiresAt),
     isActive: data.isActive !== "false"
   });
 };
@@ -82,7 +94,7 @@ export const updateCouponService = async (id, data = {}) => {
   coupon.maxDiscount = Number(data.maxDiscount) || 0;
   coupon.minOrderAmount = Number(data.minOrderAmount) || 0;
   coupon.usageLimit = Number(data.usageLimit) || 0;
-  coupon.expiresAt = data.expiresAt ? new Date(data.expiresAt) : null;
+  coupon.expiresAt = parseCouponExpiry(data.expiresAt);
   coupon.isActive = data.isActive !== "false";
   coupon.updatedAtAdmin = new Date();
 

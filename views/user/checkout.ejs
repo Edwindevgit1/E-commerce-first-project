@@ -83,26 +83,23 @@
                         <% if (address.isDefault) { %>
                           <span class="default-badge">Default</span>
                         <% } %>
-                      </strong>
-                      <%= address.street %>,
-                      <%= address.city %>,
-                      <%= address.state %> -
-                      <%= address.pincode %>
-                    </span>
-                  </label>
+                        </strong>
+                        <%= address.street %>,
+                        <%= address.city %>,
+                        <%= address.state %> -
+                        <%= address.pincode %>
+                      </span>
+                      <button
+                        type="button"
+                        class="checkout-link checkout-link--small"
+                        data-edit-address-toggle="<%= address._id %>"
+                      >
+                        Edit
+                      </button>
+                    </label>
 
-                  <div class="address-card-actions">
-                    <button
-                      type="button"
-                      class="checkout-link checkout-link--small"
-                      data-edit-address-toggle="<%= address._id %>"
-                    >
-                      Edit
-                    </button>
-                  </div>
-
-                  <div
-                    class="checkout-address-editor checkout-address-editor--inline"
+                    <div
+                      class="checkout-address-editor checkout-address-editor--inline"
                     id="addressEditForm-<%= address._id %>"
                     hidden
                   >
@@ -198,24 +195,18 @@
         <section class="summary-payment">
           <h3>Coupon</h3>
           <% if (availableCouponsList.length) { %>
-            <details class="available-coupons">
-              <summary>Show available coupons</summary>
-              <div class="available-coupons__list">
+            <div class="coupon-dropdown-wrap">
+              <select id="availableCouponSelect" class="coupon-input coupon-select">
+                <option value="">Show available coupons</option>
                 <% availableCouponsList.forEach(function(item) { %>
-                  <button
-                    type="button"
-                    class="available-coupon-chip"
-                    data-coupon-code="<%= item.code %>"
-                  >
-                    <strong><%= item.code %></strong>
-                    <span>
-                      <%= item.discountType === "percentage" ? item.discountValue + "% off" : "₹" + item.discountValue + " off" %>
-                      <% if (item.minOrderAmount) { %> | Min ₹<%= item.minOrderAmount %><% } %>
-                    </span>
-                  </button>
+                  <option value="<%= item.code %>">
+                    <%= item.code %> -
+                    <%= item.discountType === "percentage" ? item.discountValue + "% off" : "₹" + item.discountValue + " off" %>
+                    <% if (item.minOrderAmount) { %> | Min ₹<%= item.minOrderAmount %><% } %>
+                  </option>
                 <% }) %>
-              </div>
-            </details>
+              </select>
+            </div>
           <% } %>
           <% if (coupon) { %>
             <form method="POST" action="/api/user/checkout/coupon/remove">
@@ -417,6 +408,7 @@
       const toggleBtn = document.getElementById("toggleAddressFormBtn");
       const editor = document.getElementById("checkoutAddressEditor");
       const couponInput = document.getElementById("couponCodeInput");
+      const couponSelect = document.getElementById("availableCouponSelect");
       const placeOrderAddressId = document.getElementById("placeOrderAddressId");
 
       toggleBtn?.addEventListener("click", () => {
@@ -428,12 +420,12 @@
         }
       });
 
-      document.querySelectorAll("[data-coupon-code]").forEach((button) => {
-        button.addEventListener("click", () => {
-          if (!couponInput) return;
-          couponInput.value = button.dataset.couponCode || "";
+      couponSelect?.addEventListener("change", () => {
+        if (!couponInput) return;
+        couponInput.value = couponSelect.value || "";
+        if (couponInput.value) {
           couponInput.focus();
-        });
+        }
       });
 
       const hideAllEditForms = () => {

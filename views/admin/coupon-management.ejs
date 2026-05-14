@@ -3,6 +3,18 @@
 <head>
   <title>Coupons</title>
   <link rel="stylesheet" href="/css/product-management.css" />
+  <style>
+    [hidden] { display: none !important; }
+    .coupon-readonly { background: #f6f8fc; }
+    .coupon-action-stack {
+      display: grid;
+      gap: 8px;
+    }
+    .coupon-action-stack .btn {
+      width: 100%;
+      min-width: 0;
+    }
+  </style>
 </head>
 <body>
 <main class="dashboard-scene">
@@ -49,31 +61,45 @@
       <tbody>
       <% coupons.forEach((coupon) => { %>
         <tr>
-          <form method="POST" action="/api/admin/coupons/<%= coupon._id %>/update">
-            <td><input name="code" value="<%= coupon.code %>" required /></td>
-            <td>
-              <select name="discountType">
+          <td>
+            <input form="coupon-update-<%= coupon._id %>" name="code" value="<%= coupon.code %>" required data-coupon-field data-coupon-row="<%= coupon._id %>" />
+          </td>
+          <td>
+            <select form="coupon-update-<%= coupon._id %>" name="discountType" data-coupon-field data-coupon-row="<%= coupon._id %>">
                 <option value="flat" <%= coupon.discountType === "flat" ? "selected" : "" %>>Flat</option>
                 <option value="percentage" <%= coupon.discountType === "percentage" ? "selected" : "" %>>Percentage</option>
-              </select>
-            </td>
-            <td><input name="discountValue" type="number" min="1" value="<%= coupon.discountValue %>" required /></td>
-            <td><input name="minOrderAmount" type="number" min="0" value="<%= coupon.minOrderAmount %>" /></td>
-            <td><%= coupon.usedCount %>/<%= coupon.usageLimit || "∞" %><input type="hidden" name="usageLimit" value="<%= coupon.usageLimit %>" /></td>
-            <td><input name="expiresAt" type="date" value="<%= coupon.expiresAt ? new Date(coupon.expiresAt).toISOString().slice(0,10) : '' %>" /></td>
-            <td>
-              <input type="hidden" name="maxDiscount" value="<%= coupon.maxDiscount %>" />
-              <input type="hidden" name="description" value="<%= coupon.description || '' %>" />
-              <select name="isActive">
+            </select>
+          </td>
+          <td>
+            <input form="coupon-update-<%= coupon._id %>" name="discountValue" type="number" min="1" value="<%= coupon.discountValue %>" required data-coupon-field data-coupon-row="<%= coupon._id %>" />
+          </td>
+          <td>
+            <input form="coupon-update-<%= coupon._id %>" name="minOrderAmount" type="number" min="0" value="<%= coupon.minOrderAmount %>" data-coupon-field data-coupon-row="<%= coupon._id %>" />
+          </td>
+          <td>
+            <%= coupon.usedCount %>/<%= coupon.usageLimit || "∞" %>
+          </td>
+          <td>
+            <input form="coupon-update-<%= coupon._id %>" name="expiresAt" type="date" value="<%= coupon.expiresAt ? new Date(coupon.expiresAt).toISOString().slice(0,10) : '' %>" data-coupon-field data-coupon-row="<%= coupon._id %>" />
+          </td>
+          <td>
+            <select form="coupon-update-<%= coupon._id %>" name="isActive" data-coupon-field data-coupon-row="<%= coupon._id %>">
                 <option value="true" <%= coupon.isActive ? "selected" : "" %>>Active</option>
                 <option value="false" <%= !coupon.isActive ? "selected" : "" %>>Inactive</option>
-              </select>
-              <button class="btn btn-dark" type="submit">Save</button>
-          </form>
-              <form method="POST" action="/api/admin/coupons/<%= coupon._id %>/delete" style="margin-top:8px;">
-                <button class="btn btn-light" type="submit">Delete</button>
-              </form>
-            </td>
+            </select>
+            <div class="coupon-action-stack" style="margin-top:8px;">
+              <button class="btn btn-dark" type="button" data-coupon-edit data-coupon-row="<%= coupon._id %>">Edit</button>
+              <button class="btn btn-dark" type="submit" form="coupon-update-<%= coupon._id %>" data-coupon-save data-coupon-row="<%= coupon._id %>" hidden>Save</button>
+              <button class="btn btn-light" type="button" data-coupon-cancel data-coupon-row="<%= coupon._id %>" hidden>Cancel</button>
+              <button class="btn btn-light" type="submit" form="coupon-delete-<%= coupon._id %>" data-coupon-delete data-coupon-row="<%= coupon._id %>">Delete</button>
+            </div>
+            <form id="coupon-update-<%= coupon._id %>" method="POST" action="/api/admin/coupons/<%= coupon._id %>/update" hidden>
+              <input type="hidden" name="usageLimit" value="<%= coupon.usageLimit %>" />
+              <input type="hidden" name="maxDiscount" value="<%= coupon.maxDiscount %>" />
+              <input type="hidden" name="description" value="<%= coupon.description || '' %>" />
+            </form>
+            <form id="coupon-delete-<%= coupon._id %>" method="POST" action="/api/admin/coupons/<%= coupon._id %>/delete" hidden></form>
+          </td>
         </tr>
       <% }) %>
       </tbody>
@@ -81,5 +107,52 @@
   </div>
 </section>
 </main>
+<script>
+  const couponRows = new Set(
+    Array.from(document.querySelectorAll("[data-coupon-row]")).map(function(node) {
+      return node.getAttribute("data-coupon-row");
+    })
+  );
+
+  const setCouponRowMode = function(rowId, editing, resetValues) {
+    const fields = document.querySelectorAll('[data-coupon-field][data-coupon-row="' + rowId + '"]');
+    const editBtn = document.querySelector('[data-coupon-edit][data-coupon-row="' + rowId + '"]');
+    const saveBtn = document.querySelector('[data-coupon-save][data-coupon-row="' + rowId + '"]');
+    const cancelBtn = document.querySelector('[data-coupon-cancel][data-coupon-row="' + rowId + '"]');
+    const deleteBtn = document.querySelector('[data-coupon-delete][data-coupon-row="' + rowId + '"]');
+
+    fields.forEach(function(field) {
+      if (resetValues) {
+        field.value = field.dataset.originalValue || "";
+      }
+      field.disabled = !editing;
+      field.classList.toggle("coupon-readonly", !editing);
+    });
+
+    if (editBtn) editBtn.hidden = editing;
+    if (saveBtn) saveBtn.hidden = !editing;
+    if (cancelBtn) cancelBtn.hidden = !editing;
+    if (deleteBtn) deleteBtn.hidden = editing;
+  };
+
+  couponRows.forEach(function(rowId) {
+    document.querySelectorAll('[data-coupon-field][data-coupon-row="' + rowId + '"]').forEach(function(field) {
+      field.dataset.originalValue = field.value;
+    });
+    setCouponRowMode(rowId, false, false);
+  });
+
+  document.querySelectorAll("[data-coupon-edit]").forEach(function(button) {
+    button.addEventListener("click", function() {
+      setCouponRowMode(button.getAttribute("data-coupon-row"), true, false);
+    });
+  });
+
+  document.querySelectorAll("[data-coupon-cancel]").forEach(function(button) {
+    button.addEventListener("click", function() {
+      setCouponRowMode(button.getAttribute("data-coupon-row"), false, true);
+    });
+  });
+</script>
 </body>
 </html>
