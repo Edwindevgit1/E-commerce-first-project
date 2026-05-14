@@ -3,6 +3,12 @@
 <head>
   <title>Sales Report</title>
   <link rel="stylesheet" href="/css/product-management.css" />
+  <style>
+    [hidden] { display: none !important; }
+    .custom-date-grid {
+      display: contents;
+    }
+  </style>
 </head>
 <body>
 <main class="dashboard-scene">
@@ -30,26 +36,28 @@
 
   <section class="content-panel">
     <form method="GET" action="/api/admin/sales-report" class="toolbar-grid">
-      <select name="filter" class="toolbar-select">
+      <select name="filter" class="toolbar-select" id="salesReportFilter">
         <option value="daily" <%= query.filter === "daily" ? "selected" : "" %>>Daily</option>
         <option value="weekly" <%= query.filter === "weekly" ? "selected" : "" %>>Weekly</option>
         <option value="yearly" <%= query.filter === "yearly" ? "selected" : "" %>>Yearly</option>
         <option value="custom" <%= query.filter === "custom" ? "selected" : "" %>>Custom</option>
       </select>
 
-      <input
-        type="date"
-        name="startDate"
-        class="search-input"
-        value="<%= query.startDate || '' %>"
-      />
+      <div class="custom-date-grid" id="customDateFields" <%= query.filter === "custom" ? "" : "hidden" %>>
+        <input
+          type="date"
+          name="startDate"
+          class="search-input"
+          value="<%= query.startDate || '' %>"
+        />
 
-      <input
-        type="date"
-        name="endDate"
-        class="search-input"
-        value="<%= query.endDate || '' %>"
-      />
+        <input
+          type="date"
+          name="endDate"
+          class="search-input"
+          value="<%= query.endDate || '' %>"
+        />
+      </div>
 
       <button class="btn btn-dark">Filter</button>
       <a href="/api/admin/sales-report" class="btn btn-light">Clear</a>
@@ -125,5 +133,15 @@
   </section>
 </section>
 </main>
+<script>
+  const salesReportFilter = document.getElementById("salesReportFilter");
+  const customDateFields = document.getElementById("customDateFields");
+
+  if (salesReportFilter && customDateFields) {
+    salesReportFilter.addEventListener("change", function() {
+      customDateFields.hidden = salesReportFilter.value !== "custom";
+    });
+  }
+</script>
 </body>
 </html>
