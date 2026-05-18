@@ -9,7 +9,6 @@ const router = express.Router();
 router.get("/register",noCache,blockAuthPages,getSignupPage);
 
 router.post("/register",(req,res,next)=>{
-console.log(req.body)
 next()
 } ,signupUser);
 
