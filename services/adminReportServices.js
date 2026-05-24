@@ -31,6 +31,11 @@ const getOrderAmount = (order) =>
     (Number(order.tax) || 0) -
     (Number(order.discount) || 0));
 
+const getRefundedAmount = (order) =>
+  Array.isArray(order?.items)
+    ? order.items.reduce((sum, item) => sum + (Number(item.refundAmount) || 0), 0)
+    : 0;
+
 export const getSalesReportService = async (query = {}) => {
   const { start, end } = getDateRange(query);
 
@@ -183,8 +188,8 @@ export const getDashboardService = async (period = "monthly", options = {}) => {
   const [totalUsers, totalOrders, allOrders, paidOrders, recentOrderCount, weeklyChart] = await Promise.all([
     User.countDocuments({ role: "user" }),
     Order.countDocuments(),
-    Order.find(dashboardMatch).select("grandTotal subtotal shippingCharge tax discount").lean(),
-    Order.find({ paymentStatus: "paid" }).select("grandTotal subtotal shippingCharge tax discount").lean(),
+    Order.find(dashboardMatch).select("grandTotal subtotal shippingCharge tax discount items.refundAmount").lean(),
+    Order.find({ paymentStatus: "paid" }).select("grandTotal subtotal shippingCharge tax discount items.refundAmount").lean(),
     Order.countDocuments(),
     Order.aggregate([
       {
@@ -202,7 +207,7 @@ export const getDashboardService = async (period = "monthly", options = {}) => {
   ]);
 
   const revenue = allOrders.reduce((sum, order) => sum + getOrderAmount(order), 0);
-  const collectedRevenue = paidOrders.reduce((sum, order) => sum + getOrderAmount(order), 0);
+  const collectedRevenue = paidOrders.reduce((sum, order) => sum + Math.max(0, getOrderAmount(order) - getRefundedAmount(order)), 0);
   const recentTotalPages = Math.max(1, Math.ceil(recentOrderCount / recentPageSize));
   const safeRecentPage = Math.min(requestedRecentPage, recentTotalPages);
   const recentOrders = await Order.find()

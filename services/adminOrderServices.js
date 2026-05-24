@@ -1,7 +1,9 @@
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import Coupon from "../models/Coupon.js";
 import { creditWallet } from "./walletServices.js";
+import { calculateCouponDiscount } from "./couponServices.js";
 
 // Defines which statuses each order status can transition to
 const STATUS_TRANSITIONS = {
@@ -43,6 +45,15 @@ const getAllowedStatusTransitions = (order) => {
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const normalizeSearchTerm = (value = "") => String(value).trim().replace(/\s+/g, " ");
 const normalizeVariantValue = (value = "") => String(value || "").trim().toLowerCase();
+const activeFinancialStatuses = new Set([
+  "pending",
+  "shipped",
+  "out_for_delivery",
+  "delivered",
+  "return_requested",
+  "return_rejected",
+  "failed"
+]);
 
 const findRestockVariant = (product, item) => {
   const variants = product.variants || [];
@@ -90,6 +101,49 @@ const restockOrderItem = async (item) => {
   }
 
   await product.save();
+};
+
+const getActiveOrderSubtotal = (order) =>
+  order.items.reduce((sum, item) => {
+    if (!activeFinancialStatuses.has(item.status)) return sum;
+    return sum + (Number(item.subtotal) || 0);
+  }, 0);
+
+const revalidateOrderCouponAfterItemFinalization = async (order) => {
+  const previousGrandTotal = Number(order.grandTotal || 0);
+  const previousCouponCode = String(order.coupon?.code || "").trim();
+  const activeSubtotal = getActiveOrderSubtotal(order);
+  const shippingCharge = activeSubtotal <= 0 ? 0 : activeSubtotal >= 1000 ? 0 : 50;
+  const tax = Number(order.tax || 0);
+  let discount = 0;
+
+  if (previousCouponCode) {
+    const coupon = await Coupon.findOne({ code: previousCouponCode });
+    const minimumAmount = Number(coupon?.minOrderAmount || 0);
+
+    if (!coupon || !coupon.isActive || (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) || activeSubtotal < minimumAmount) {
+      order.coupon = { code: "", discount: 0 };
+      order.discount = 0;
+
+      if (coupon) {
+        coupon.usedCount = Math.max(0, Number(coupon.usedCount || 0) - 1);
+        await coupon.save();
+      }
+    } else {
+      discount = calculateCouponDiscount(coupon, activeSubtotal);
+      order.coupon = { code: coupon.code, discount };
+      order.discount = discount;
+    }
+  } else {
+    order.coupon = { code: "", discount: 0 };
+    order.discount = 0;
+  }
+
+  order.subtotal = activeSubtotal;
+  order.shippingCharge = shippingCharge;
+  order.grandTotal = Math.max(0, activeSubtotal + shippingCharge + tax - Number(order.discount || 0));
+
+  return Math.max(0, previousGrandTotal - Number(order.grandTotal || 0));
 };
 
 export const getAdminOrdersService = async ({
@@ -240,32 +294,27 @@ export const verifyAndRestockOrderItemService = async (id, itemIndex) => {
   await restockOrderItem(item);
   if (item.status === "cancellation_requested") {
     item.status = "cancelled";
-    item.refundAmount = item.refundAmount || item.subtotal;
-    item.refundedAt = item.refundedAt || new Date();
-
-    if (order.paymentMethod !== "COD" || Number(order.walletAmountUsed || 0) > 0) {
-      await creditWallet(
-        order.user,
-        item.refundAmount,
-        "Refund for accepted cancellation",
-        order._id
-      );
-    }
   }
   if (item.status === "return_requested") {
     item.status = "returned";
-    item.refundAmount = item.refundAmount || item.subtotal;
-    item.refundedAt = item.refundedAt || new Date();
-
-    await creditWallet(
-      order.user,
-      item.refundAmount,
-      "Refund for accepted return",
-      order._id
-    )
   }
   item.stockRestored = true;
   item.restockVerifiedAt = new Date();
+
+  const refundDelta = await revalidateOrderCouponAfterItemFinalization(order);
+  item.refundAmount = refundDelta;
+  item.refundedAt = refundDelta > 0 ? (item.refundedAt || new Date()) : item.refundedAt;
+
+  if (refundDelta > 0 && (order.paymentMethod !== "COD" || Number(order.walletAmountUsed || 0) > 0)) {
+    await creditWallet(
+      order.user,
+      order.paymentMethod === "COD"
+        ? Math.min(Number(order.walletAmountUsed || 0), refundDelta)
+        : refundDelta,
+      item.status === "returned" ? "Refund for accepted return" : "Refund for accepted cancellation",
+      order._id
+    );
+  }
 
   const returnItems = order.items.filter((orderItem) =>
     ["return_requested", "returned", "return_rejected"].includes(orderItem.status)

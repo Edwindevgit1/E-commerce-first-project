@@ -1,6 +1,8 @@
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import Coupon from "../models/Coupon.js";
 import { creditWallet } from "./walletServices.js";
+import { calculateCouponDiscount } from "./couponServices.js";
 
 const normalizeVariantValue = (value = "") => String(value || "").trim().toLowerCase();
 
@@ -43,6 +45,66 @@ const refundCancelledOrder = async (order,amount,reason) => {
 
 const canRequestCancellation = (item) =>
   ["pending", "shipped"].includes(item.status) && !item.cancellationRejected;
+
+const activeFinancialStatuses = new Set([
+  "pending",
+  "shipped",
+  "out_for_delivery",
+  "delivered",
+  "return_requested",
+  "return_rejected",
+  "failed"
+]);
+
+const getActiveOrderSubtotal = (order) =>
+  order.items.reduce((sum, item) => {
+    if (!activeFinancialStatuses.has(item.status)) return sum;
+    return sum + (Number(item.subtotal) || 0);
+  }, 0);
+
+const revalidateOrderCouponAfterCancellation = async (order) => {
+  const previousGrandTotal = Number(order.grandTotal || 0);
+  const previousCouponCode = String(order.coupon?.code || "").trim();
+  const activeSubtotal = getActiveOrderSubtotal(order);
+  const shippingCharge = activeSubtotal <= 0 ? 0 : activeSubtotal >= 1000 ? 0 : 50;
+  const tax = Number(order.tax || 0);
+  let discount = 0;
+  let couponMessage = "";
+
+  if (previousCouponCode) {
+    const coupon = await Coupon.findOne({ code: previousCouponCode });
+    const minimumAmount = Number(coupon?.minOrderAmount || 0);
+
+    if (!coupon || !coupon.isActive || (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) || activeSubtotal < minimumAmount) {
+      order.coupon = { code: "", discount: 0 };
+      order.discount = 0;
+      couponMessage = minimumAmount > 0
+        ? `Coupon removed because remaining order total is below minimum order amount of Rs. ${minimumAmount}`
+        : "Coupon removed because it is no longer valid";
+
+      if (coupon) {
+        coupon.usedCount = Math.max(0, Number(coupon.usedCount || 0) - 1);
+        await coupon.save();
+      }
+    } else {
+      discount = calculateCouponDiscount(coupon, activeSubtotal);
+      order.coupon = { code: coupon.code, discount };
+      order.discount = discount;
+    }
+  } else {
+    order.coupon = { code: "", discount: 0 };
+    order.discount = 0;
+  }
+
+  order.subtotal = activeSubtotal;
+  order.shippingCharge = shippingCharge;
+  order.grandTotal = Math.max(0, activeSubtotal + shippingCharge + tax - Number(order.discount || 0));
+
+  return {
+    refundDelta: Math.max(0, previousGrandTotal - Number(order.grandTotal || 0)),
+    couponMessage
+  };
+};
 
 export const getOrdersService = async (userId, search = "", page = 1, limit = 5) => {
   const query = { user: userId };
@@ -110,20 +172,32 @@ export const cancelOrderService = async (userId, orderId, reason = "") => {
     order.status = hasActiveItems ? "partially_cancelled" : "cancelled";
   }
   order.cancellationReason = reason || "";
+  let couponMessage = "";
   if (order.status === "cancelled") {
+    const recalculation = await revalidateOrderCouponAfterCancellation(order);
+    couponMessage = recalculation.couponMessage;
     order.refundStatus = order.paymentMethod === "COD" ? "none" : "refunded";
     const fullRefundAmount = order.paymentMethod === "COD"
-    ? Number(order.walletAmountUsed || 0)
-    : Math.max(Number(order.grandTotal || 0), Number(order.walletAmountUsed || 0));
+    ? Math.min(Number(order.walletAmountUsed || 0), recalculation.refundDelta || Number(order.walletAmountUsed || 0))
+    : recalculation.refundDelta;
     await refundCancelledOrder(order,fullRefundAmount,"Refund for cancelled order");
   } else if (hasCancellationRequest) {
     order.refundStatus = "pending";
   } else {
+    const recalculation = await revalidateOrderCouponAfterCancellation(order);
+    couponMessage = recalculation.couponMessage;
     order.refundStatus = order.paymentMethod === "COD" ? "none" : "refunded";
+    await refundCancelledOrder(
+      order,
+      order.paymentMethod === "COD"
+        ? Math.min(Number(order.walletAmountUsed || 0), recalculation.refundDelta)
+        : recalculation.refundDelta,
+      "Refund for cancelled order"
+    );
   }
   await order.save();
 
-  return order;
+  return { order, couponMessage };
 };
 
 export const cancelOrderItemService = async (userId, orderId, itemIndex, reason = "") => {
@@ -152,12 +226,6 @@ export const cancelOrderItemService = async (userId, orderId, itemIndex, reason 
 
   if (!needsAdminApproval) {
     await restockOrderItem(item);
-    item.refundAmount = item.refundAmount || item.subtotal;
-    item.refundedAt = item.refundedAt || new Date();
-    const itemRefundAmount = order.paymentMethod === "COD"
-    ? Math.min(Number(order.walletAmountUsed || 0),item.subtotal)
-    : item.subtotal;
-    await refundCancelledOrder(order,itemRefundAmount,"Refund for cancelled item");
   }
 
   const activeItems = order.items.filter((orderItem) => !["cancelled", "cancellation_requested"].includes(orderItem.status));
@@ -175,8 +243,23 @@ export const cancelOrderItemService = async (userId, orderId, itemIndex, reason 
       ? "none"
       : "refunded";
 
+  let couponMessage = "";
+  if (!needsAdminApproval) {
+    const recalculation = await revalidateOrderCouponAfterCancellation(order);
+    couponMessage = recalculation.couponMessage;
+    item.refundAmount = recalculation.refundDelta;
+    item.refundedAt = recalculation.refundDelta > 0 ? (item.refundedAt || new Date()) : item.refundedAt;
+    await refundCancelledOrder(
+      order,
+      order.paymentMethod === "COD"
+        ? Math.min(Number(order.walletAmountUsed || 0), recalculation.refundDelta)
+        : recalculation.refundDelta,
+      "Refund for cancelled item"
+    );
+  }
+
   await order.save();
-  return order;
+  return { order, couponMessage };
 };
 
 export const returnOrderService = async (userId, orderId, reason = "") => {

@@ -352,8 +352,11 @@ export const getOrderDetailPage = async (req, res) => {
 
 export const cancelOrderController = async (req, res) => {
   try {
-    await cancelOrderService(req.user._id, req.params.orderId, req.body.reason || "");
-    return res.redirect(`/api/user/orders/${req.params.orderId}?message=Order cancelled successfully`);
+    const { couponMessage = "" } = await cancelOrderService(req.user._id, req.params.orderId, req.body.reason || "");
+    const message = couponMessage
+      ? `Order cancelled successfully. ${couponMessage}`
+      : "Order cancelled successfully";
+    return res.redirect(`/api/user/orders/${req.params.orderId}?message=${encodeURIComponent(message)}`);
   } catch (error) {
     console.log(error, "Cancel order error");
     return res.redirect(`/api/user/orders/${req.params.orderId}?error=${encodeURIComponent(error.message || "Unable to cancel order")}`);
@@ -362,13 +365,16 @@ export const cancelOrderController = async (req, res) => {
 
 export const cancelOrderItemController = async (req, res) => {
   try {
-    await cancelOrderItemService(
+    const { couponMessage = "" } = await cancelOrderItemService(
       req.user._id,
       req.params.orderId,
       req.params.itemIndex,
       req.body.reason || ""
     );
-    return res.redirect(`/api/user/orders/${req.params.orderId}?message=Item cancelled successfully`);
+    const message = couponMessage
+      ? `Item cancelled successfully. ${couponMessage}`
+      : "Item cancelled successfully";
+    return res.redirect(`/api/user/orders/${req.params.orderId}?message=${encodeURIComponent(message)}`);
   } catch (error) {
     console.log(error, "Cancel order item error");
     return res.redirect(`/api/user/orders/${req.params.orderId}?error=${encodeURIComponent(error.message || "Unable to cancel item")}`);
