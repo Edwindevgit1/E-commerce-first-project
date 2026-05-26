@@ -59,6 +59,9 @@ app.use((req, res, next) => {
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(loadNavbarCategories);
+app.get('/', (req, res) => {
+  res.redirect('/api/auth/home');
+});
 //admin
 app.use('/api/admin',adminAuthrouter);
 app.use('/api/admin',usermanagement)
