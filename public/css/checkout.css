@@ -270,6 +270,40 @@ body {
   padding: 16px;
 }
 
+.checkout-feedback-stack {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.feedback {
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.feedback--success {
+  background: #ebf8f1;
+  border-color: #c8ead8;
+  color: #1e7a47;
+}
+
+.feedback--error {
+  background: #fff2f1;
+  border-color: #f4c8c4;
+  color: #b3261e;
+}
+
+.feedback--hidden {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
 .summary-row {
   display: flex;
   justify-content: space-between;

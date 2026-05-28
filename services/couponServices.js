@@ -29,6 +29,22 @@ export const calculateCouponDiscount = (coupon, subtotal) => {
   return Math.min(Math.max(0, discount), amount);
 };
 
+const validateCouponSetup = ({ discountType, discountValue, maxDiscount, minOrderAmount }) => {
+  const minAmount = Math.max(0, Number(minOrderAmount) || 0);
+  const maxCap = Math.max(0, Number(maxDiscount) || 0);
+
+  if (discountType === "flat") {
+    if (minAmount > 0 && discountValue >= minAmount) {
+      throw new Error("Minimum order amount must be greater than flat discount value");
+    }
+    return;
+  }
+
+  if (maxCap > 0 && minAmount > 0 && maxCap >= minAmount) {
+    throw new Error("Minimum order amount must be greater than max discount amount");
+  }
+};
+
 export const createCouponService = async (data = {}) => {
   const code = normalizeCode(data.code);
   if (!code) throw new Error("Coupon code required");
@@ -44,6 +60,16 @@ export const createCouponService = async (data = {}) => {
     throw new Error("Percentage discount cannot exceed 90%");
   }
 
+  const maxDiscount = Number(data.maxDiscount) || 0;
+  const minOrderAmount = Number(data.minOrderAmount) || 0;
+
+  validateCouponSetup({
+    discountType,
+    discountValue,
+    maxDiscount,
+    minOrderAmount
+  });
+
   const exists = await Coupon.findOne({ code });
   if (exists) throw new Error("Coupon code already exists");
 
@@ -52,8 +78,8 @@ export const createCouponService = async (data = {}) => {
     description: data.description || "",
     discountType,
     discountValue,
-    maxDiscount: Number(data.maxDiscount) || 0,
-    minOrderAmount: Number(data.minOrderAmount) || 0,
+    maxDiscount,
+    minOrderAmount,
     usageLimit: Number(data.usageLimit) || 0,
     expiresAt: parseCouponExpiry(data.expiresAt),
     isActive: data.isActive !== "false"
@@ -84,6 +110,16 @@ export const updateCouponService = async (id, data = {}) => {
     throw new Error("Percentage discount cannot exceed 90%");
   }
 
+  const maxDiscount = Number(data.maxDiscount) || 0;
+  const minOrderAmount = Number(data.minOrderAmount) || 0;
+
+  validateCouponSetup({
+    discountType,
+    discountValue,
+    maxDiscount,
+    minOrderAmount
+  });
+
   const exists = await Coupon.findOne({ code, _id: { $ne: id } });
   if (exists) throw new Error("Coupon code already exists");
 
@@ -91,8 +127,8 @@ export const updateCouponService = async (id, data = {}) => {
   coupon.description = data.description || "";
   coupon.discountType = discountType;
   coupon.discountValue = discountValue;
-  coupon.maxDiscount = Number(data.maxDiscount) || 0;
-  coupon.minOrderAmount = Number(data.minOrderAmount) || 0;
+  coupon.maxDiscount = maxDiscount;
+  coupon.minOrderAmount = minOrderAmount;
   coupon.usageLimit = Number(data.usageLimit) || 0;
   coupon.expiresAt = parseCouponExpiry(data.expiresAt);
   coupon.isActive = data.isActive !== "false";
@@ -155,8 +191,18 @@ export const validateCouponForCheckout = async (code = "", subtotal = 0) => {
     throw new Error("Coupon usage limit reached");
   }
 
+  const discount = calculateCouponDiscount(coupon, orderSubtotal);
+
+  if (discount <= 0) {
+    throw new Error("Coupon not applicable for this order");
+  }
+
+  if (discount >= orderSubtotal) {
+    throw new Error("Coupon discount cannot be equal to or greater than order amount");
+  }
+
   return {
     coupon,
-    discount: calculateCouponDiscount(coupon, orderSubtotal)
+    discount
   };
 };

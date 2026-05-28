@@ -101,6 +101,7 @@ const revalidateOrderCouponAfterCancellation = async (order) => {
   order.grandTotal = Math.max(0, activeSubtotal + shippingCharge + tax - Number(order.discount || 0));
 
   return {
+    previousGrandTotal,
     refundDelta: Math.max(0, previousGrandTotal - Number(order.grandTotal || 0)),
     couponMessage
   };
@@ -178,8 +179,14 @@ export const cancelOrderService = async (userId, orderId, reason = "") => {
     couponMessage = recalculation.couponMessage;
     order.refundStatus = order.paymentMethod === "COD" ? "none" : "refunded";
     const fullRefundAmount = order.paymentMethod === "COD"
-    ? Math.min(Number(order.walletAmountUsed || 0), recalculation.refundDelta || Number(order.walletAmountUsed || 0))
-    : recalculation.refundDelta;
+    ? Math.min(Number(order.walletAmountUsed || 0), recalculation.previousGrandTotal || Number(order.walletAmountUsed || 0))
+    : recalculation.previousGrandTotal;
+
+    order.items.forEach((item) => {
+      if (item.status === "cancelled") {
+        item.refundedAt = item.refundedAt || new Date();
+      }
+    });
     await refundCancelledOrder(order,fullRefundAmount,"Refund for cancelled order");
   } else if (hasCancellationRequest) {
     order.refundStatus = "pending";
@@ -247,13 +254,20 @@ export const cancelOrderItemService = async (userId, orderId, itemIndex, reason 
   if (!needsAdminApproval) {
     const recalculation = await revalidateOrderCouponAfterCancellation(order);
     couponMessage = recalculation.couponMessage;
-    item.refundAmount = recalculation.refundDelta;
-    item.refundedAt = recalculation.refundDelta > 0 ? (item.refundedAt || new Date()) : item.refundedAt;
+    const isFullOrderCancellation = order.status === "cancelled";
+    const immediateRefundAmount = isFullOrderCancellation && order.paymentMethod !== "COD"
+      ? recalculation.previousGrandTotal
+      : isFullOrderCancellation
+        ? Math.min(Number(order.walletAmountUsed || 0), recalculation.previousGrandTotal)
+        : order.paymentMethod === "COD"
+          ? Math.min(Number(order.walletAmountUsed || 0), recalculation.refundDelta)
+          : recalculation.refundDelta;
+
+    item.refundAmount = immediateRefundAmount;
+    item.refundedAt = immediateRefundAmount > 0 ? (item.refundedAt || new Date()) : item.refundedAt;
     await refundCancelledOrder(
       order,
-      order.paymentMethod === "COD"
-        ? Math.min(Number(order.walletAmountUsed || 0), recalculation.refundDelta)
-        : recalculation.refundDelta,
+      immediateRefundAmount,
       "Refund for cancelled item"
     );
   }

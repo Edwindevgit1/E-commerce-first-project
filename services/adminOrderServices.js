@@ -143,8 +143,17 @@ const revalidateOrderCouponAfterItemFinalization = async (order) => {
   order.shippingCharge = shippingCharge;
   order.grandTotal = Math.max(0, activeSubtotal + shippingCharge + tax - Number(order.discount || 0));
 
-  return Math.max(0, previousGrandTotal - Number(order.grandTotal || 0));
+  return {
+    previousGrandTotal,
+    refundDelta: Math.max(0, previousGrandTotal - Number(order.grandTotal || 0))
+  };
 };
+
+const getAlreadyRefundedAmount = (order) =>
+  (order.items || []).reduce(
+    (sum, item) => sum + (Number(item.refundAmount) || 0),
+    0
+  );
 
 export const getAdminOrdersService = async ({
   search = "",
@@ -240,6 +249,10 @@ export const updateAdminOrderStatusService = async (id, status) => {
   }
 
   if (status === "cancelled") {
+    const currentGrandTotal = Number(order.grandTotal || 0);
+    const alreadyRefundedAmount = getAlreadyRefundedAmount(order);
+    const fullWalletUsage = Number(order.walletAmountUsed || 0);
+
     for (const item of order.items) {
       if (item.status === "cancelled") continue;
 
@@ -251,7 +264,31 @@ export const updateAdminOrderStatusService = async (id, status) => {
 
       item.status = "cancelled";
     }
+
+    let refundAmount = 0;
+    if (order.paymentMethod === "COD") {
+      refundAmount = Math.max(0, Math.min(currentGrandTotal, fullWalletUsage - alreadyRefundedAmount));
+    } else {
+      refundAmount = Math.max(0, currentGrandTotal);
+    }
+
+    if (refundAmount > 0) {
+      await creditWallet(
+        order.user,
+        refundAmount,
+        "Refund for admin cancelled order",
+        order._id
+      );
+    }
+
+    order.items.forEach((item) => {
+      if (!item.refundedAt) {
+        item.refundedAt = refundAmount > 0 ? new Date() : item.refundedAt;
+      }
+    });
+
     order.status = "cancelled";
+    order.refundStatus = refundAmount > 0 ? "refunded" : "none";
     await order.save();
     return order;
   }
@@ -301,16 +338,29 @@ export const verifyAndRestockOrderItemService = async (id, itemIndex) => {
   item.stockRestored = true;
   item.restockVerifiedAt = new Date();
 
-  const refundDelta = await revalidateOrderCouponAfterItemFinalization(order);
-  item.refundAmount = refundDelta;
-  item.refundedAt = refundDelta > 0 ? (item.refundedAt || new Date()) : item.refundedAt;
+  const recalculation = await revalidateOrderCouponAfterItemFinalization(order);
+  const refundDelta = recalculation.refundDelta;
 
-  if (refundDelta > 0 && (order.paymentMethod !== "COD" || Number(order.walletAmountUsed || 0) > 0)) {
+  const orderWillBeFullyCancelledAfterVerify = order.items.every((orderItem, orderItemIndex) => {
+    if (orderItemIndex === index) return true;
+    return orderItem.status === "cancelled";
+  });
+
+  const acceptedRefundAmount = orderWillBeFullyCancelledAfterVerify && order.paymentMethod !== "COD"
+    ? recalculation.previousGrandTotal
+    : orderWillBeFullyCancelledAfterVerify
+      ? Math.min(Number(order.walletAmountUsed || 0), recalculation.previousGrandTotal)
+      : order.paymentMethod === "COD"
+        ? Math.min(Number(order.walletAmountUsed || 0), refundDelta)
+        : refundDelta;
+
+  item.refundAmount = acceptedRefundAmount;
+  item.refundedAt = acceptedRefundAmount > 0 ? (item.refundedAt || new Date()) : item.refundedAt;
+
+  if (acceptedRefundAmount > 0 && (order.paymentMethod !== "COD" || Number(order.walletAmountUsed || 0) > 0)) {
     await creditWallet(
       order.user,
-      order.paymentMethod === "COD"
-        ? Math.min(Number(order.walletAmountUsed || 0), refundDelta)
-        : refundDelta,
+      acceptedRefundAmount,
       item.status === "returned" ? "Refund for accepted return" : "Refund for accepted cancellation",
       order._id
     );

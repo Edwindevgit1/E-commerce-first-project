@@ -180,11 +180,15 @@
 
         <h2>Price Details</h2>
 
-        <% if (typeof message !== "undefined" && message) { %>
-          <p class="feedback success"><%= message %></p>
-        <% } %>
-        <% if (typeof error !== "undefined" && error) { %>
-          <p class="feedback error"><%= error %></p>
+        <% if ((typeof message !== "undefined" && message) || (typeof error !== "undefined" && error)) { %>
+          <div class="checkout-feedback-stack">
+            <% if (typeof message !== "undefined" && message) { %>
+              <p class="feedback feedback--success" data-auto-dismiss="true"><%= message %></p>
+            <% } %>
+            <% if (typeof error !== "undefined" && error) { %>
+              <p class="feedback feedback--error" data-auto-dismiss="true"><%= error %></p>
+            <% } %>
+          </div>
         <% } %>
 
         <div class="summary-row">
@@ -461,6 +465,19 @@
             placeOrderAddressId.value = radio.value;
           }
         });
+      });
+
+      document.querySelectorAll('[data-auto-dismiss="true"]').forEach((message) => {
+        window.setTimeout(() => {
+          message.classList.add("feedback--hidden");
+          window.setTimeout(() => {
+            const stack = message.closest(".checkout-feedback-stack");
+            message.remove();
+            if (stack && !stack.querySelector(".feedback")) {
+              stack.remove();
+            }
+          }, 260);
+        }, 3000);
       });
     })();
   </script>

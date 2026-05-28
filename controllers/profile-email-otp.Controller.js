@@ -1,9 +1,34 @@
 import User from "../models/User.js";
+import {
+  ensureUserReferralCode,
+  getReferralSettings
+} from "../services/referralServices.js";
 
 const EMAIL_OTP_EXPIRY_MS = 10 * 60 * 1000;
 const EMAIL_OTP_COOLDOWN_SEC = 30;
+const PROFILE_NAME_REGEX = /^[A-Za-z0-9 ]+$/;
 
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const renderProfileWithError = async (req, res, user, error, statusCode = 400) => {
+  const referralSettings = await getReferralSettings();
+
+  if (referralSettings.referralDisplayEnabled !== false) {
+    await ensureUserReferralCode(user);
+  }
+
+  user.authProvider = req.session.authProvider || user.provider || "local";
+
+  return res.status(statusCode).render("user/profile", {
+    user,
+    error,
+    referralSettings,
+    referralLink:
+      referralSettings.referralDisplayEnabled === false
+        ? ""
+        : `${req.protocol}://${req.get("host")}/api/auth/register?ref=${encodeURIComponent(user.referralCode || "")}`
+  });
+};
 
 export const updateProfile = async (req,res) => {
  try{
@@ -22,6 +47,19 @@ export const updateProfile = async (req,res) => {
     const newProfileImage = req.file ? `/uploads/${req.file.filename}` : user.profileImage;
     console.log("New email:", newEmail);
     console.log("Old email:", user.email);
+
+    if (!name) {
+      return renderProfileWithError(req, res, user, "Name is required");
+    }
+
+    if (name.length < 4) {
+      return renderProfileWithError(req, res, user, "Name must be at least 4 characters long");
+    }
+
+    if (!PROFILE_NAME_REGEX.test(name)) {
+      return renderProfileWithError(req, res, user, "Name can contain only letters, numbers, and spaces");
+    }
+
     if(!newEmail||newEmail===user.email){
       user.name=name || user.name;
       user.profileImage=newProfileImage || user.profileImage;
@@ -31,10 +69,7 @@ export const updateProfile = async (req,res) => {
 
     const emailTaken = await User.findOne({email:newEmail,id:{$ne:userId}})
     if(emailTaken){
-      return res.render('user/profile',{
-        user,
-        error:'Email is already in use'
-      })
+      return renderProfileWithError(req, res, user, "Email is already in use")
     }
     const otp = generateOtp()
     req.session.emailChangeOtp=otp;

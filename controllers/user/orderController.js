@@ -231,38 +231,151 @@ const buildInvoiceSvg = async (order) => {
 };
 
 export const buildInvoicePdfBuffer = async (order) => {
-  const { default: sharp } = await import("sharp");
-  const svgMarkup = await buildInvoiceSvg(order);
-  const jpegBuffer = await sharp(Buffer.from(svgMarkup))
-    .jpeg({ quality: 92 })
-    .toBuffer();
+  const orderDate = order?.createdAt
+    ? new Date(order.createdAt).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      })
+    : "N/A";
+  const customerName = order?.user?.name || order?.address?.fullName || "Customer";
+  const customerEmail = order?.user?.email || "N/A";
+  const shippingAddress = [
+    order?.address?.fullName || "",
+    order?.address?.street || "",
+    [order?.address?.city, order?.address?.state].filter(Boolean).join(", "),
+    order?.address?.pincode || "",
+    order?.address?.mobile ? `Phone: ${order.address.mobile}` : ""
+  ].filter(Boolean);
+  const pdfEscape = (value = "") =>
+    String(value)
+      .replaceAll("\\", "\\\\")
+      .replaceAll("(", "\\(")
+      .replaceAll(")", "\\)");
+  const clipText = (value = "", max = 26) => {
+    const text = String(value ?? "");
+    return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+  };
 
-  const pageWidth = 1440;
-  const pageHeight = 1080;
+  const pageWidth = 595;
+  const pageHeight = 842;
+  const content = [];
+  const push = (line = "") => content.push(line);
+  const addText = (text, x, y, size = 11, font = "F1", color = "0.08 0.14 0.25") => {
+    push(`BT /${font} ${size} Tf ${color} rg 1 0 0 1 ${x} ${y} Tm (${pdfEscape(text)}) Tj ET`);
+  };
+  const addRect = (x, y, width, height, stroke = "0.81 0.88 0.98", fill = null) => {
+    if (fill) {
+      push(`${fill} rg ${x} ${y} ${width} ${height} re B`);
+    } else {
+      push(`${stroke} RG ${x} ${y} ${width} ${height} re S`);
+    }
+  };
+  const addLine = (x1, y1, x2, y2, stroke = "0.81 0.88 0.98") => {
+    push(`${stroke} RG ${x1} ${y1} m ${x2} ${y2} l S`);
+  };
+
+  addText("Invoice", 40, 790, 28, "F2", "0.09 0.23 0.50");
+  addText(`Order ID: ${order?.orderId || "N/A"}`, 40, 765, 11, "F1", "0.34 0.47 0.69");
+  addText(`Date: ${orderDate}`, 220, 765, 11, "F1", "0.34 0.47 0.69");
+  addText(`Payment: ${order?.paymentMethod || "COD"}`, 380, 765, 11, "F1", "0.34 0.47 0.69");
+
+  addRect(40, 650, 515, 88, "0.81 0.88 0.98");
+  addText("Customer", 52, 718, 13, "F2", "0.09 0.23 0.50");
+  addText(customerName, 52, 695, 11, "F2", "0.08 0.14 0.25");
+  addText(customerEmail, 52, 677, 11, "F1", "0.34 0.47 0.69");
+  addText("Shipping Address", 300, 718, 13, "F2", "0.09 0.23 0.50");
+  shippingAddress.slice(0, 4).forEach((line, index) => {
+    addText(line, 300, 695 - index * 16, 11, "F1", "0.34 0.47 0.69");
+  });
+
+  const tableLeft = 40;
+  const tableTop = 605;
+  const rowHeight = 28;
+  const colWidths = [120, 110, 38, 62, 82, 103];
+  const headers = ["Product", "Variant", "Qty", "Price", "Status", "Total"];
+  const colStarts = [];
+  let cursorX = tableLeft;
+  colWidths.forEach((width) => {
+    colStarts.push(cursorX);
+    cursorX += width;
+  });
+
+  addRect(tableLeft, tableTop, 515, rowHeight, "0.81 0.88 0.98", "0.96 0.97 0.99");
+  headers.forEach((header, index) => {
+    addText(header, colStarts[index] + 8, tableTop + 10, 10, "F2", "0.09 0.23 0.50");
+    if (index > 0) {
+      addLine(colStarts[index], tableTop, colStarts[index], tableTop + rowHeight);
+    }
+  });
+
+  let currentY = tableTop - rowHeight;
+  const items = Array.isArray(order?.items) ? order.items : [];
+  items.slice(0, 8).forEach((item, itemIndex) => {
+    const variant = [item?.size ? `S:${item.size}` : "", item?.color ? `C:${item.color}` : ""]
+      .filter(Boolean)
+      .join(" ")
+      || "-";
+    const values = [
+      clipText(item?.productName || "Product", 24),
+      clipText(variant, 18),
+      String(item?.quantity || 0),
+      formatCurrency(item?.price || 0),
+      clipText(titleizeOrderValue(item?.status || "pending"), 16),
+      formatCurrency(item?.subtotal || 0)
+    ];
+    const fill = itemIndex % 2 === 0 ? "1 1 1" : "0.985 0.99 1";
+    addRect(tableLeft, currentY, 515, rowHeight, "0.81 0.88 0.98", fill);
+    values.forEach((value, index) => {
+      addText(value, colStarts[index] + 8, currentY + 10, 10, index === 0 ? "F2" : "F1", "0.08 0.14 0.25");
+      if (index > 0) {
+        addLine(colStarts[index], currentY, colStarts[index], currentY + rowHeight);
+      }
+    });
+    currentY -= rowHeight;
+  });
+
+  const summaryTop = currentY - 18;
+  addText("Order Summary", 40, summaryTop + 100, 14, "F2", "0.09 0.23 0.50");
+  addRect(330, summaryTop + 12, 225, 110, "0.81 0.88 0.98");
+
+  const summaryRows = [
+    ["Subtotal", formatCurrency(order?.subtotal || 0)],
+    ["Discount", formatCurrency(order?.discount || 0)],
+    ["Shipping", formatCurrency(order?.shippingCharge || 0)],
+    ["Tax", formatCurrency(order?.tax || 0)],
+    ["Grand Total", formatCurrency(order?.grandTotal || 0)]
+  ];
+  summaryRows.forEach(([label, value], index) => {
+    const y = summaryTop + 98 - index * 20;
+    const bold = index === summaryRows.length - 1;
+    addText(label, 344, y, bold ? 11 : 10, bold ? "F2" : "F1", bold ? "0.09 0.23 0.50" : "0.34 0.47 0.69");
+    addText(value, 455, y, bold ? 11 : 10, bold ? "F2" : "F1", "0.08 0.14 0.25");
+  });
+  addText(
+    "Thank you for shopping with us. Keep this invoice for returns, refunds, and support.",
+    40,
+    summaryTop + 62,
+    10,
+    "F1",
+    "0.34 0.47 0.69"
+  );
+
+  const contentStream = content.join("\n");
   const objects = [];
   const addObject = (buffer) => {
     objects.push(Buffer.isBuffer(buffer) ? buffer : Buffer.from(String(buffer)));
     return objects.length;
   };
 
-  const imageMetadata = await sharp(jpegBuffer).metadata();
-  const imageObjectId = addObject(
-    Buffer.concat([
-      Buffer.from(
-        `<< /Type /XObject /Subtype /Image /Width ${imageMetadata.width} /Height ${imageMetadata.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBuffer.length} >>\nstream\n`
-      ),
-      jpegBuffer,
-      Buffer.from("\nendstream")
-    ])
-  );
-
-  const contentStream = Buffer.from(`q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im0 Do\nQ`);
+  const fontRegularId = addObject(Buffer.from("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"));
+  const fontBoldId = addObject(Buffer.from("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>"));
   const contentObjectId = addObject(
-    Buffer.from(`<< /Length ${contentStream.length} >>\nstream\n${contentStream.toString()}\nendstream`)
+    Buffer.from(`<< /Length ${Buffer.byteLength(contentStream, "utf8")} >>\nstream\n${contentStream}\nendstream`)
   );
   const pageObjectId = addObject(
     Buffer.from(
-      `<< /Type /Page /Parent PAGES_REF /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im0 ${imageObjectId} 0 R >> >> /Contents ${contentObjectId} 0 R >>`
+      `<< /Type /Page /Parent PAGES_REF /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${fontRegularId} 0 R /F2 ${fontBoldId} 0 R >> >> /Contents ${contentObjectId} 0 R >>`
     )
   );
   const pagesObjectId = addObject(Buffer.from(`<< /Type /Pages /Count 1 /Kids [${pageObjectId} 0 R] >>`));
@@ -273,7 +386,6 @@ export const buildInvoicePdfBuffer = async (order) => {
 
   const chunks = [Buffer.from("%PDF-1.4\n")];
   const offsets = [0];
-
   objects.forEach((objectBuffer, index) => {
     offsets.push(Buffer.concat(chunks).length);
     chunks.push(Buffer.from(`${index + 1} 0 obj\n`));
@@ -284,7 +396,6 @@ export const buildInvoicePdfBuffer = async (order) => {
   const bodyBuffer = Buffer.concat(chunks);
   const xrefOffset = bodyBuffer.length;
   const xrefLines = [`xref\n0 ${objects.length + 1}\n`, "0000000000 65535 f \n"];
-
   for (let index = 1; index <= objects.length; index += 1) {
     xrefLines.push(`${String(offsets[index]).padStart(10, "0")} 00000 n \n`);
   }
