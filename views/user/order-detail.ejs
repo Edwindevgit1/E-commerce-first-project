@@ -59,7 +59,9 @@
 
         <div class="orders-inline-links">
           <a href="/api/user/orders" class="orders-link">Back to Orders</a>
-          <a href="/api/user/orders/<%= order._id %>/invoice" class="orders-link orders-link--primary">Download Invoice</a>
+          <% if (["delivered", "cancelled", "returned"].includes(order.status)) { %>
+            <a href="/api/user/orders/<%= order._id %>/invoice" class="orders-link orders-link--primary">Download Invoice</a>
+          <% } %>
         </div>
 
         <section class="order-detail-grid">

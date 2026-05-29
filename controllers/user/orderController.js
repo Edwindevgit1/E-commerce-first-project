@@ -8,6 +8,12 @@ import {
 } from "../../services/userOrderServices.js";
 
 const formatCurrency = (amount = 0) => `₹${Number(amount || 0).toLocaleString("en-IN")}`;
+const formatInvoiceCurrency = (amount = 0) => `Rs. ${Number(amount || 0).toLocaleString("en-IN")}`;
+
+const USER_INVOICE_FINAL_STATUSES = new Set(["delivered", "cancelled", "returned"]);
+
+export const canDownloadUserInvoice = (order) =>
+  USER_INVOICE_FINAL_STATUSES.has(String(order?.status || "").toLowerCase());
 
 const titleizeOrderValue = (value = "") =>
   String(value)
@@ -252,6 +258,10 @@ export const buildInvoicePdfBuffer = async (order) => {
       .replaceAll("\\", "\\\\")
       .replaceAll("(", "\\(")
       .replaceAll(")", "\\)");
+  const normalizePdfText = (value = "") =>
+    String(value ?? "")
+      .replaceAll("₹", "Rs. ")
+      .replace(/[^\x20-\x7E]/g, "");
   const clipText = (value = "", max = 26) => {
     const text = String(value ?? "");
     return text.length > max ? `${text.slice(0, max - 1)}…` : text;
@@ -259,14 +269,16 @@ export const buildInvoicePdfBuffer = async (order) => {
 
   const pageWidth = 595;
   const pageHeight = 842;
+  const margin = 40;
+  const innerWidth = pageWidth - margin * 2;
   const content = [];
   const push = (line = "") => content.push(line);
   const addText = (text, x, y, size = 11, font = "F1", color = "0.08 0.14 0.25") => {
-    push(`BT /${font} ${size} Tf ${color} rg 1 0 0 1 ${x} ${y} Tm (${pdfEscape(text)}) Tj ET`);
+    push(`BT /${font} ${size} Tf ${color} rg 1 0 0 1 ${x} ${y} Tm (${pdfEscape(normalizePdfText(text))}) Tj ET`);
   };
   const addRect = (x, y, width, height, stroke = "0.81 0.88 0.98", fill = null) => {
     if (fill) {
-      push(`${fill} rg ${x} ${y} ${width} ${height} re B`);
+      push(`${stroke} RG ${fill} rg ${x} ${y} ${width} ${height} re B`);
     } else {
       push(`${stroke} RG ${x} ${y} ${width} ${height} re S`);
     }
@@ -275,24 +287,28 @@ export const buildInvoicePdfBuffer = async (order) => {
     push(`${stroke} RG ${x1} ${y1} m ${x2} ${y2} l S`);
   };
 
-  addText("Invoice", 40, 790, 28, "F2", "0.09 0.23 0.50");
-  addText(`Order ID: ${order?.orderId || "N/A"}`, 40, 765, 11, "F1", "0.34 0.47 0.69");
-  addText(`Date: ${orderDate}`, 220, 765, 11, "F1", "0.34 0.47 0.69");
-  addText(`Payment: ${order?.paymentMethod || "COD"}`, 380, 765, 11, "F1", "0.34 0.47 0.69");
+  addRect(margin, 52, innerWidth, 740, "0.81 0.88 0.98");
 
-  addRect(40, 650, 515, 88, "0.81 0.88 0.98");
-  addText("Customer", 52, 718, 13, "F2", "0.09 0.23 0.50");
-  addText(customerName, 52, 695, 11, "F2", "0.08 0.14 0.25");
-  addText(customerEmail, 52, 677, 11, "F1", "0.34 0.47 0.69");
-  addText("Shipping Address", 300, 718, 13, "F2", "0.09 0.23 0.50");
+  addText("Invoice", 58, 748, 28, "F2", "0.09 0.23 0.50");
+  addText(`Order ID: ${order?.orderId || "N/A"}`, 58, 724, 11, "F1", "0.34 0.47 0.69");
+  addText(`Date: ${orderDate}`, 236, 724, 11, "F1", "0.34 0.47 0.69");
+  addText(`Payment: ${order?.paymentMethod || "COD"}`, 370, 724, 11, "F1", "0.34 0.47 0.69");
+
+  addRect(58, 622, 479, 78, "0.81 0.88 0.98", "1 1 1");
+  addLine(290, 622, 290, 700);
+  addText("Customer", 72, 678, 13, "F2", "0.09 0.23 0.50");
+  addText(customerName, 72, 655, 11, "F2", "0.08 0.14 0.25");
+  addText(customerEmail, 72, 637, 11, "F1", "0.34 0.47 0.69");
+  addText("Shipping Address", 306, 678, 13, "F2", "0.09 0.23 0.50");
   shippingAddress.slice(0, 4).forEach((line, index) => {
-    addText(line, 300, 695 - index * 16, 11, "F1", "0.34 0.47 0.69");
+    addText(clipText(line, 30), 306, 655 - index * 15, 10, "F1", "0.34 0.47 0.69");
   });
 
-  const tableLeft = 40;
-  const tableTop = 605;
-  const rowHeight = 28;
-  const colWidths = [120, 110, 38, 62, 82, 103];
+  addText("Order Items", 58, 590, 14, "F2", "0.09 0.23 0.50");
+  const tableLeft = 58;
+  const tableTop = 560;
+  const rowHeight = 30;
+  const colWidths = [124, 98, 38, 62, 88, 69];
   const headers = ["Product", "Variant", "Qty", "Price", "Status", "Total"];
   const colStarts = [];
   let cursorX = tableLeft;
@@ -301,9 +317,9 @@ export const buildInvoicePdfBuffer = async (order) => {
     cursorX += width;
   });
 
-  addRect(tableLeft, tableTop, 515, rowHeight, "0.81 0.88 0.98", "0.96 0.97 0.99");
+  addRect(tableLeft, tableTop, 479, rowHeight, "0.81 0.88 0.98", "0.93 0.96 1");
   headers.forEach((header, index) => {
-    addText(header, colStarts[index] + 8, tableTop + 10, 10, "F2", "0.09 0.23 0.50");
+    addText(header, colStarts[index] + 6, tableTop + 11, 9, "F2", "0.09 0.23 0.50");
     if (index > 0) {
       addLine(colStarts[index], tableTop, colStarts[index], tableTop + rowHeight);
     }
@@ -311,7 +327,7 @@ export const buildInvoicePdfBuffer = async (order) => {
 
   let currentY = tableTop - rowHeight;
   const items = Array.isArray(order?.items) ? order.items : [];
-  items.slice(0, 8).forEach((item, itemIndex) => {
+  items.slice(0, 10).forEach((item, itemIndex) => {
     const variant = [item?.size ? `S:${item.size}` : "", item?.color ? `C:${item.color}` : ""]
       .filter(Boolean)
       .join(" ")
@@ -320,14 +336,17 @@ export const buildInvoicePdfBuffer = async (order) => {
       clipText(item?.productName || "Product", 24),
       clipText(variant, 18),
       String(item?.quantity || 0),
-      formatCurrency(item?.price || 0),
+      formatInvoiceCurrency(item?.price || 0),
       clipText(titleizeOrderValue(item?.status || "pending"), 16),
-      formatCurrency(item?.subtotal || 0)
+      formatInvoiceCurrency(item?.subtotal || 0)
     ];
     const fill = itemIndex % 2 === 0 ? "1 1 1" : "0.985 0.99 1";
-    addRect(tableLeft, currentY, 515, rowHeight, "0.81 0.88 0.98", fill);
+    addRect(tableLeft, currentY, 479, rowHeight, "0.81 0.88 0.98", fill);
     values.forEach((value, index) => {
-      addText(value, colStarts[index] + 8, currentY + 10, 10, index === 0 ? "F2" : "F1", "0.08 0.14 0.25");
+      const statusColor = index === 4 && String(value).toLowerCase().includes("cancel")
+        ? "0.70 0.18 0.18"
+        : "0.08 0.14 0.25";
+      addText(value, colStarts[index] + 6, currentY + 11, 9, index === 0 ? "F2" : "F1", statusColor);
       if (index > 0) {
         addLine(colStarts[index], currentY, colStarts[index], currentY + rowHeight);
       }
@@ -335,28 +354,45 @@ export const buildInvoicePdfBuffer = async (order) => {
     currentY -= rowHeight;
   });
 
-  const summaryTop = currentY - 18;
-  addText("Order Summary", 40, summaryTop + 100, 14, "F2", "0.09 0.23 0.50");
-  addRect(330, summaryTop + 12, 225, 110, "0.81 0.88 0.98");
+  if (items.length > 10) {
+    addText(`+${items.length - 10} more item(s) included in this order`, tableLeft + 8, currentY + 8, 9, "F1", "0.34 0.47 0.69");
+    currentY -= 18;
+  }
 
+  const summaryTitleY = Math.max(currentY - 46, 244);
+  const summaryBoxY = summaryTitleY - 138;
+  addText("Order Summary", 58, summaryTitleY, 14, "F2", "0.09 0.23 0.50");
+  addRect(58, summaryBoxY, 479, 116, "0.81 0.88 0.98", "1 1 1");
+  addLine(380, summaryBoxY, 380, summaryBoxY + 116);
+
+  const hasActiveCoupon = Boolean(
+    String(order?.coupon?.code || "").trim() &&
+    Number(order?.coupon?.discount || order?.discount || 0) > 0
+  );
   const summaryRows = [
-    ["Subtotal", formatCurrency(order?.subtotal || 0)],
-    ["Discount", formatCurrency(order?.discount || 0)],
-    ["Shipping", formatCurrency(order?.shippingCharge || 0)],
-    ["Tax", formatCurrency(order?.tax || 0)],
-    ["Grand Total", formatCurrency(order?.grandTotal || 0)]
+    ["Subtotal", formatInvoiceCurrency(order?.subtotal || 0)],
+    ...(hasActiveCoupon
+      ? [
+          [`Coupon (${String(order.coupon.code).trim()})`, `- ${formatInvoiceCurrency(order?.coupon?.discount || order?.discount || 0)}`]
+        ]
+      : []),
+    ["Shipping", formatInvoiceCurrency(order?.shippingCharge || 0)],
+    ["Tax", formatInvoiceCurrency(order?.tax || 0)],
+    ["Grand Total", formatInvoiceCurrency(order?.grandTotal || 0)]
   ];
   summaryRows.forEach(([label, value], index) => {
-    const y = summaryTop + 98 - index * 20;
+    const y = summaryBoxY + 94 - index * 22;
     const bold = index === summaryRows.length - 1;
-    addText(label, 344, y, bold ? 11 : 10, bold ? "F2" : "F1", bold ? "0.09 0.23 0.50" : "0.34 0.47 0.69");
-    addText(value, 455, y, bold ? 11 : 10, bold ? "F2" : "F1", "0.08 0.14 0.25");
+    const couponColor = label.startsWith("Coupon") ? "0.18 0.62 0.38" : "0.34 0.47 0.69";
+    addText(label, 78, y, bold ? 11 : 10, bold ? "F2" : "F1", bold ? "0.09 0.23 0.50" : couponColor);
+    addText(value, 405, y, bold ? 11 : 10, bold ? "F2" : "F1", label.startsWith("Coupon") ? "0.18 0.62 0.38" : "0.08 0.14 0.25");
   });
+  addLine(58, 96, 537, 96);
   addText(
-    "Thank you for shopping with us. Keep this invoice for returns, refunds, and support.",
-    40,
-    summaryTop + 62,
-    10,
+    "Thank you for shopping with us. Keep this invoice for support.",
+    58,
+    78,
+    9,
     "F1",
     "0.34 0.47 0.69"
   );
@@ -524,6 +560,13 @@ export const downloadInvoiceController = async (req, res) => {
     if (!order) {
       return res.redirect("/api/user/orders?error=Order not found");
     }
+
+    if (!canDownloadUserInvoice(order)) {
+      return res.redirect(
+        `/api/user/orders/${req.params.orderId}?error=${encodeURIComponent("Invoice available only after order is delivered or fully cancelled")}`
+      );
+    }
+
     const pdfBuffer = await buildInvoicePdfBuffer(order);
 
     res.setHeader("Content-Type", "application/pdf");
