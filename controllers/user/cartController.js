@@ -80,10 +80,15 @@ export const addToCartController = async (req, res) => {
     if (!productId) {
       return res.redirect("/api/user/products");
     }
-    await addToCartService(userId, productId, {
+    const addResult = await addToCartService(userId, productId, {
       size: req.body.size,
       color: req.body.color
     })
+    if (req.body.redirectTo === "checkout" && addResult?.cartItemId) {
+      return res.redirect(
+        `/api/user/checkout?selectedCartItemIds=${encodeURIComponent(addResult.cartItemId)}`
+      );
+    }
     return res.redirect("/api/user/cart");
   } catch (error) {
     if (!isExpectedCartError(error)) {

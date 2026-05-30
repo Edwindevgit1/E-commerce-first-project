@@ -296,7 +296,10 @@ export const addToCartService = async (userId, productId, selection = {}) => {
     console.log(error, "Wishlist removal failed");
   }
 
-  return savedCart;
+  return {
+    cart: savedCart,
+    cartItemId: buildCartItemId(productId, size, color)
+  };
 };
 
 export const removeFromCartService = async (userId, productId, selection = {}) => {

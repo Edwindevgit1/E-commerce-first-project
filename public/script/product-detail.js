@@ -21,12 +21,15 @@
   var thumbRow   = document.getElementById("thumbRow");
   var sizeInput  = document.getElementById("selectedVariantSize");
   var colorInput = document.getElementById("selectedVariantColor");
+  var buySizeInput  = document.getElementById("buyNowVariantSize");
+  var buyColorInput = document.getElementById("buyNowVariantColor");
   var priceEl    = document.getElementById("selectedVariantPrice");
   var origPrEl   = document.getElementById("selectedVariantOriginalPrice");
   var stockBox   = document.querySelector(".stock-box");
   var statusP    = document.querySelector(".detail-status-message p");
   var labelEl    = document.getElementById("selectedVariantLabel");
-  var cartBtn    = document.querySelector(".detail-action-row .cart-btn");
+  var cartBtn    = document.querySelector(".detail-add-cart-btn");
+  var buyNowBtn  = document.querySelector(".detail-buy-now-btn");
   var sizeBtns   = Array.from(document.querySelectorAll("[data-size-option]"));
   var colorBtns  = Array.from(document.querySelectorAll("[data-color-option]"));
   var tabs       = Array.from(document.querySelectorAll("[data-detail-tab]"));
@@ -74,6 +77,8 @@
     /* hidden form inputs */
     if(sizeInput)  sizeInput.value  = variant.size  || "";
     if(colorInput) colorInput.value = variant.color || "";
+    if(buySizeInput)  buySizeInput.value  = variant.size  || "";
+    if(buyColorInput) buyColorInput.value = variant.color || "";
 
     var as=norm(variant.size), ac=norm(variant.color);
 
@@ -132,6 +137,11 @@
       var out=variant.stock<=0;
       cartBtn.disabled=!canSell||out;
       cartBtn.textContent=!canSell?initLabel:out?"Sold out":"Add to cart";
+    }
+    if(buyNowBtn){
+      var buyOut=variant.stock<=0;
+      buyNowBtn.disabled=!canSell||buyOut;
+      buyNowBtn.textContent=!canSell?initLabel:buyOut?"Sold out":"Buy now";
     }
   }
 

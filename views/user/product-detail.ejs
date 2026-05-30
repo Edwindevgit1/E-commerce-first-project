@@ -198,17 +198,18 @@
           <form action="/api/user/cart/add/<%= product._id %>" method="POST">
             <input type="hidden" name="size" id="selectedVariantSize" value="<%= selectedVariantSize %>">
             <input type="hidden" name="color" id="selectedVariantColor" value="<%= selectedVariantColor %>">
-            <button class="cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
+            <button class="cart-btn detail-add-cart-btn" <%= !canAddToCart ? "disabled" : "" %>>
               <%= addToCartLabel %>
             </button>
           </form>
-          <a
-            href="<%= canAddToCart ? '/api/user/cart' : '#' %>"
-            class="cart-btn detail-cart-link <%= !canAddToCart ? 'cart-btn--disabled-link' : '' %>"
-            <%= !canAddToCart ? 'aria-disabled="true"' : '' %>
-          >
-            Buy now
-          </a>
+          <form action="/api/user/cart/add/<%= product._id %>" method="POST">
+            <input type="hidden" name="size" id="buyNowVariantSize" value="<%= selectedVariantSize %>">
+            <input type="hidden" name="color" id="buyNowVariantColor" value="<%= selectedVariantColor %>">
+            <input type="hidden" name="redirectTo" value="checkout">
+            <button class="cart-btn detail-cart-link detail-buy-now-btn" <%= !canAddToCart ? "disabled" : "" %>>
+              Buy now
+            </button>
+          </form>
         </div>
       </section>
     </section>
