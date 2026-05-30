@@ -192,6 +192,10 @@ const orderSchema = new mongoose.Schema({
   cancellationReason:{
     type:String,
     default:""
+  },
+  userNotice:{
+    type:String,
+    default:""
   }
 },{timestamps:true})
 

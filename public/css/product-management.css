@@ -322,16 +322,27 @@ body {
 
 .feedback {
   margin-bottom: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
 }
 
 .feedback.error {
-  color: #a52424;
-  background: #ffefef;
-  border: 1px solid #f0c0c0;
+  color: #9f1d1d;
+  background: #fff1f1;
+  border: 1px solid #f0b7b7;
+  border-left: 5px solid #d93030;
+  box-shadow: 0 8px 18px rgba(217, 48, 48, 0.08);
+}
+
+.feedback.success {
+  color: #1f7a38;
+  background: #ebfff1;
+  border: 1px solid #b8eac3;
+  border-left: 5px solid #1f9d55;
+  box-shadow: 0 8px 18px rgba(31, 157, 85, 0.08);
 }
 
 .table-wrap {

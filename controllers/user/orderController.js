@@ -4,7 +4,8 @@ import {
   cancelOrderService,
   cancelOrderItemService,
   returnOrderService,
-  returnOrderItemService
+  returnOrderItemService,
+  clearOrderUserNoticeService
 } from "../../services/userOrderServices.js";
 
 const formatCurrency = (amount = 0) => `₹${Number(amount || 0).toLocaleString("en-IN")}`;
@@ -485,10 +486,15 @@ export const getOrderDetailPage = async (req, res) => {
       return res.redirect("/api/user/orders?error=Order not found");
     }
 
+    const storedNotice = order.userNotice || "";
+    if (storedNotice) {
+      await clearOrderUserNoticeService(req.user._id, req.params.orderId);
+    }
+
     return res.render("user/order-detail", {
       user: req.user,
       order,
-      message: req.query.message || null,
+      message: req.query.message || storedNotice || null,
       error: req.query.error || null
     });
   } catch (error) {

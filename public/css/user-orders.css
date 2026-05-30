@@ -246,6 +246,17 @@ body {
   line-height: 1.45;
 }
 
+.order-card__notice {
+  border: 1px solid #eab2b2;
+  background: #fdeeee;
+  color: #b41e1e;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .expand-toggle {
   display: inline-flex;
   align-items: center;

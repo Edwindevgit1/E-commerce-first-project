@@ -82,7 +82,11 @@
 
                   <% if (["pending", "shipped"].includes(item.status) && !item.cancellationRejected) { %>
                     <form method="POST" action="/api/user/orders/<%= order._id %>/items/<%= index %>/cancel" class="orders-action-group">
-                      <input type="text" name="reason" placeholder="Cancellation reason (optional)" />
+                      <input
+                        type="text"
+                        name="reason"
+                        placeholder="<%= item.status === 'shipped' ? 'Cancellation reason required after shipping' : 'Cancellation reason (optional)' %>"
+                      />
                       <button type="submit" class="orders-btn">Cancel This Item</button>
                     </form>
                   <% } %>
@@ -129,8 +133,13 @@
                 });
             %>
             <% if (canCancelFullOrder) { %>
+              <% const fullCancelNeedsReason = order.items.some(function(item) { return item.status === "shipped" && !item.cancellationRejected; }); %>
               <form method="POST" action="/api/user/orders/<%= order._id %>/cancel" class="orders-action-group">
-                <input type="text" name="reason" placeholder="Cancellation reason (optional)" />
+                <input
+                  type="text"
+                  name="reason"
+                  placeholder="<%= fullCancelNeedsReason ? 'Cancellation reason required after shipping' : 'Cancellation reason (optional)' %>"
+                />
                 <button type="submit" class="orders-btn">Cancel Full Order</button>
               </form>
             <% } %>
@@ -152,6 +161,13 @@
   setTimeout(() => {
     document.querySelectorAll(".orders-message").forEach((msg) => msg.remove());
   }, 3000);
+
+  const flashUrl = new URL(window.location.href);
+  if (flashUrl.searchParams.has("message") || flashUrl.searchParams.has("error")) {
+    flashUrl.searchParams.delete("message");
+    flashUrl.searchParams.delete("error");
+    window.history.replaceState({}, "", flashUrl.toString());
+  }
 </script>
 </body>
 </html>

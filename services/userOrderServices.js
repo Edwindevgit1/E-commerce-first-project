@@ -74,13 +74,16 @@ const revalidateOrderCouponAfterCancellation = async (order) => {
   if (previousCouponCode) {
     const coupon = await Coupon.findOne({ code: previousCouponCode });
     const minimumAmount = Number(coupon?.minOrderAmount || 0);
+    const couponExpired = Boolean(coupon?.expiresAt && new Date(coupon.expiresAt) < new Date());
+    const couponInactive = Boolean(!coupon || !coupon.isActive || couponExpired);
+    const belowMinimum = activeSubtotal < minimumAmount;
 
-    if (!coupon || !coupon.isActive || (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) || activeSubtotal < minimumAmount) {
+    if (couponInactive || belowMinimum) {
       order.coupon = { code: "", discount: 0 };
       order.discount = 0;
-      couponMessage = minimumAmount > 0
-        ? `Coupon removed because remaining order total is below minimum order amount of Rs. ${minimumAmount}`
-        : "Coupon removed because it is no longer valid";
+      couponMessage = belowMinimum && minimumAmount > 0
+        ? `Coupon removed because remaining product total is Rs. ${activeSubtotal}, below minimum purchase of Rs. ${minimumAmount}.`
+        : "Coupon removed because it is no longer valid.";
 
       if (coupon) {
         coupon.usedCount = Math.max(0, Number(coupon.usedCount || 0) - 1);
@@ -88,8 +91,16 @@ const revalidateOrderCouponAfterCancellation = async (order) => {
       }
     } else {
       discount = calculateCouponDiscount(coupon, activeSubtotal);
-      order.coupon = { code: coupon.code, discount };
-      order.discount = discount;
+      if (discount <= 0 || discount >= activeSubtotal) {
+        order.coupon = { code: "", discount: 0 };
+        order.discount = 0;
+        couponMessage = `Coupon removed because it is no longer applicable for remaining product total of Rs. ${activeSubtotal}.`;
+        coupon.usedCount = Math.max(0, Number(coupon.usedCount || 0) - 1);
+        await coupon.save();
+      } else {
+        order.coupon = { code: coupon.code, discount };
+        order.discount = discount;
+      }
     }
   } else {
     order.coupon = { code: "", discount: 0 };
@@ -133,6 +144,13 @@ export const getOrderDetailService = async (userId, orderId) => {
     .lean();
 };
 
+export const clearOrderUserNoticeService = async (userId, orderId) => {
+  await Order.updateOne(
+    { _id: orderId, user: userId },
+    { $set: { userNotice: "" } }
+  );
+};
+
 export const cancelOrderService = async (userId, orderId, reason = "") => {
   const order = await Order.findOne({ _id: orderId, user: userId });
 
@@ -144,11 +162,19 @@ export const cancelOrderService = async (userId, orderId, reason = "") => {
     throw new Error("This order cannot be cancelled");
   }
 
+  const trimmedReason = String(reason || "").trim();
+  const hasShippedItem = order.items.some((item) =>
+    item.status === "shipped" && !item.cancellationRejected
+  );
+  if (hasShippedItem && !trimmedReason) {
+    throw new Error("Cancellation reason is required after shipping.");
+  }
+
   for (const item of order.items) {
     if (["cancelled", "cancellation_requested"].includes(item.status) || item.cancellationRejected) continue;
     const needsAdminApproval = item.status === "shipped";
     item.status = needsAdminApproval ? "cancellation_requested" : "cancelled";
-    item.cancellationReason = reason || "";
+    item.cancellationReason = trimmedReason;
     item.stockRestored = false;
     item.restockVerifiedAt = null;
     if (!needsAdminApproval) {
@@ -172,7 +198,7 @@ export const cancelOrderService = async (userId, orderId, reason = "") => {
   } else {
     order.status = hasActiveItems ? "partially_cancelled" : "cancelled";
   }
-  order.cancellationReason = reason || "";
+  order.cancellationReason = trimmedReason;
   let couponMessage = "";
   if (order.status === "cancelled") {
     const recalculation = await revalidateOrderCouponAfterCancellation(order);
@@ -226,8 +252,13 @@ export const cancelOrderItemService = async (userId, orderId, itemIndex, reason 
   }
 
   const needsAdminApproval = item.status === "shipped";
+  const trimmedReason = String(reason || "").trim();
+  if (needsAdminApproval && !trimmedReason) {
+    throw new Error("Cancellation reason is required after shipping.");
+  }
+
   item.status = needsAdminApproval ? "cancellation_requested" : "cancelled";
-  item.cancellationReason = reason || "";
+  item.cancellationReason = trimmedReason;
   item.stockRestored = false;
   item.restockVerifiedAt = null;
 

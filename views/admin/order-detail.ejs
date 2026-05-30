@@ -359,6 +359,13 @@
   setTimeout(() => {
     document.querySelectorAll("[data-flash-message]").forEach((msg) => msg.remove());
   }, 3000);
+
+  const flashUrl = new URL(window.location.href);
+  if (flashUrl.searchParams.has("message") || flashUrl.searchParams.has("error")) {
+    flashUrl.searchParams.delete("message");
+    flashUrl.searchParams.delete("error");
+    window.history.replaceState({}, "", flashUrl.toString());
+  }
 </script>
 </body>
 </html>

@@ -116,14 +116,21 @@ const revalidateOrderCouponAfterItemFinalization = async (order) => {
   const shippingCharge = activeSubtotal <= 0 ? 0 : activeSubtotal >= 1000 ? 0 : 50;
   const tax = Number(order.tax || 0);
   let discount = 0;
+  let couponMessage = "";
 
   if (previousCouponCode) {
     const coupon = await Coupon.findOne({ code: previousCouponCode });
     const minimumAmount = Number(coupon?.minOrderAmount || 0);
+    const couponExpired = Boolean(coupon?.expiresAt && new Date(coupon.expiresAt) < new Date());
+    const couponInactive = Boolean(!coupon || !coupon.isActive || couponExpired);
+    const belowMinimum = activeSubtotal < minimumAmount;
 
-    if (!coupon || !coupon.isActive || (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) || activeSubtotal < minimumAmount) {
+    if (couponInactive || belowMinimum) {
       order.coupon = { code: "", discount: 0 };
       order.discount = 0;
+      couponMessage = belowMinimum && minimumAmount > 0
+        ? `Coupon removed because remaining product total is Rs. ${activeSubtotal}, below minimum purchase of Rs. ${minimumAmount}.`
+        : "Coupon removed because it is no longer valid.";
 
       if (coupon) {
         coupon.usedCount = Math.max(0, Number(coupon.usedCount || 0) - 1);
@@ -131,8 +138,16 @@ const revalidateOrderCouponAfterItemFinalization = async (order) => {
       }
     } else {
       discount = calculateCouponDiscount(coupon, activeSubtotal);
-      order.coupon = { code: coupon.code, discount };
-      order.discount = discount;
+      if (discount <= 0 || discount >= activeSubtotal) {
+        order.coupon = { code: "", discount: 0 };
+        order.discount = 0;
+        couponMessage = `Coupon removed because it is no longer applicable for remaining product total of Rs. ${activeSubtotal}.`;
+        coupon.usedCount = Math.max(0, Number(coupon.usedCount || 0) - 1);
+        await coupon.save();
+      } else {
+        order.coupon = { code: coupon.code, discount };
+        order.discount = discount;
+      }
     }
   } else {
     order.coupon = { code: "", discount: 0 };
@@ -145,7 +160,8 @@ const revalidateOrderCouponAfterItemFinalization = async (order) => {
 
   return {
     previousGrandTotal,
-    refundDelta: Math.max(0, previousGrandTotal - Number(order.grandTotal || 0))
+    refundDelta: Math.max(0, previousGrandTotal - Number(order.grandTotal || 0)),
+    couponMessage
   };
 };
 
@@ -340,6 +356,9 @@ export const verifyAndRestockOrderItemService = async (id, itemIndex) => {
 
   const recalculation = await revalidateOrderCouponAfterItemFinalization(order);
   const refundDelta = recalculation.refundDelta;
+  if (recalculation.couponMessage) {
+    order.userNotice = recalculation.couponMessage;
+  }
 
   const orderWillBeFullyCancelledAfterVerify = order.items.every((orderItem, orderItemIndex) => {
     if (orderItemIndex === index) return true;
@@ -390,7 +409,10 @@ export const verifyAndRestockOrderItemService = async (id, itemIndex) => {
   }
 
   await order.save();
-  return order;
+  return {
+    order,
+    couponMessage: recalculation.couponMessage
+  };
 };
 
 export const rejectCancellationRequestService = async (id, itemIndex) => {

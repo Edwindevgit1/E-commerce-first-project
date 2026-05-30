@@ -118,6 +118,9 @@
                       </div>
                     <% }) %>
                   </div>
+                  <% if (order.userNotice) { %>
+                    <p class="order-card__notice"><%= order.userNotice %></p>
+                  <% } %>
                 </div>
 
                 <div class="order-card__meta">
@@ -165,6 +168,17 @@
       panel.classList.toggle("is-open");
     });
   });
+
+  setTimeout(() => {
+    document.querySelectorAll(".orders-message").forEach((msg) => msg.remove());
+  }, 3000);
+
+  const flashUrl = new URL(window.location.href);
+  if (flashUrl.searchParams.has("message") || flashUrl.searchParams.has("error")) {
+    flashUrl.searchParams.delete("message");
+    flashUrl.searchParams.delete("error");
+    window.history.replaceState({}, "", flashUrl.toString());
+  }
 </script>
 </body>
 </html>

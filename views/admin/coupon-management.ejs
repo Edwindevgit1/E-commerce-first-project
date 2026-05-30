@@ -28,8 +28,8 @@
     </div>
   </section>
 
-  <% if (message) { %><p class="feedback success"><%= message %></p><% } %>
-  <% if (error) { %><p class="feedback error"><%= error %></p><% } %>
+  <% if (message) { %><p class="feedback success" data-flash-message><%= message %></p><% } %>
+  <% if (error) { %><p class="feedback error" data-flash-message><%= error %></p><% } %>
 
   <form method="POST" action="/api/admin/coupons" class="toolbar-grid">
     <input name="code" placeholder="Code" required />
@@ -153,6 +153,12 @@
       setCouponRowMode(button.getAttribute("data-coupon-row"), false, true);
     });
   });
+
+  setTimeout(function() {
+    document.querySelectorAll("[data-flash-message]").forEach(function(messageNode) {
+      messageNode.remove();
+    });
+  }, 3000);
 </script>
 </body>
 </html>

@@ -112,7 +112,7 @@ export const updateAdminOrderStatusController = async (req, res) => {
 export const verifyAndRestockOrderItemController = async (req, res) => {
   try {
     await verifyAndRestockOrderItemService(req.params.id, req.params.itemIndex);
-    return res.redirect(`/api/admin/orders/${req.params.id}?message=Product verified and stock restored`);
+    return res.redirect(`/api/admin/orders/${req.params.id}?message=Product%20verified%20and%20stock%20restored`);
   } catch (error) {
     return res.redirect(
       `/api/admin/orders/${req.params.id}?error=${encodeURIComponent(error.message || "Unable to restock item")}`
